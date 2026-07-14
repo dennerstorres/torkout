@@ -1,4 +1,5 @@
 import { createAuthClient } from 'better-auth/client';
+import type { HistoryPage } from '@torkout/contracts';
 
 export interface SessionView {
   createdAt: string | Date;
@@ -49,6 +50,7 @@ export interface AppApi {
   }>;
   listSessions(): Promise<SessionView[]>;
   loadDaily(localDate: string): Promise<DailyBootstrap>;
+  loadHistoryPage(from: string, through: string, cursor?: string): Promise<HistoryPage>;
   importDailyHistory(): Promise<{ created: boolean; sessionId: string }>;
   requestPasswordReset(email: string): Promise<void>;
   decideProgression(
@@ -119,6 +121,11 @@ export const browserApi: AppApi = {
       painReports: painReports.items,
       sessions: sessions.items,
     };
+  },
+  loadHistoryPage: (from, through, cursor) => {
+    const query = new URLSearchParams({ from, limit: '14', through });
+    if (cursor) query.set('cursor', cursor);
+    return productRequest(`/history?${query.toString()}`);
   },
   importDailyHistory: () =>
     productRequest('/daily-history/import', {

@@ -628,3 +628,68 @@ Este arquivo é o diário técnico, cronológico e append-only do projeto. Ele r
 ### Próximo passo
 
 - Iniciar a Fase 8 com calendário mensal, detalhe diário e edição histórica sincronizada.
+
+## 2026-07-14 — Fase 8: Calendário e edição histórica
+
+**Status:** concluída
+
+**Commit de encerramento:** `feat(phase-8): implement calendar and history`
+
+### Escopo executado
+
+- Criado calendário mensal responsivo, com semana iniciada na segunda-feira, navegação por mês, seleção por data civil e detalhe diário agregado.
+- Cada sessão exibe badges textuais separados de tipo e estado; dias com caminhada e força preservam ambos os pares de badges e suportam múltiplas sessões.
+- Implementados filtros combináveis por atividade, estado efetivo e presença de relato de dor.
+- Sessões executáveis ainda planejadas em data passada recebem estado `missed` derivado, identificado como tal, com ação explícita para confirmá-lo. Descanso e cancelamento nunca são convertidos automaticamente.
+- O detalhe permite corrigir estado e observação da sessão, entrada de hábito, peso/cintura e intensidade/observação de dor por meio da mesma outbox local-first das telas anteriores.
+- A edição histórica muta somente os agregados registrados; templates e seus alvos futuros permanecem intactos.
+- Dias indicam textualmente pendência e conflito, sem depender apenas de cor.
+- Criado endpoint autenticado `GET /api/v1/history` com intervalo de datas, limite de até 31 datas civis, cursor opaco e isolamento pelo titular.
+- A tela percorre todas as páginas do mês, preserva registros locais pendentes/conflitantes durante hidratação e permite navegar pelos meses em cache sem rede.
+
+### Evidências TDD e validação
+
+- RED de domínio e contratos — os testes falharam porque regras de calendário, `missed`, filtros e schemas históricos ainda não existiam.
+- GREEN de domínio — grade civil iniciada na segunda-feira, descanso/cancelamento, estado perdido e filtros que correlacionam tipo/estado na mesma sessão passaram em cinco testes.
+- RED de API — PostgreSQL real respondeu `404` para `/api/v1/history`; após a implementação, paginação, duas atividades na mesma data e isolamento horizontal passaram.
+- RED de UI — o componente `HistoryScreen` era inexistente; três testes passaram após comprovar badges múltiplos, descanso, filtros, outbox para quatro agregados e navegação offline.
+- RED de configuração — o verificador estrutural falhou pela ausência de `verify:phase-8` antes de ser incorporado ao gate raiz.
+- GREEN final — 70 testes unitários/componentes, 40 testes de integração PostgreSQL e sete jornadas Playwright móveis passaram.
+- REFACTOR — cálculo de calendário/filtros ficou no domínio puro, schemas no pacote de contratos, consulta agregada na API e persistência/edição na camada web.
+
+### Alterações técnicas
+
+- Novo contrato `historyQuerySchema` limita o intervalo a 366 dias e cada página a 31 datas; o cursor codifica apenas a próxima data autorizada do intervalo e é validado no servidor.
+- O endpoint agrega sessões completas, relatos de dor, entradas de hábito, medidas e definições de hábito sem aceitar `userId` do cliente.
+- A hidratação reutiliza a proteção que impede dados do servidor de sobrescrever registros locais em estado `pending` ou `conflict`.
+- Migrações: nenhuma; as tabelas e índices das Fases 2, 5 e 6 já cobriam o histórico.
+- Dependências externas: nenhuma.
+- Gate estrutural `verify:phase-8` adicionado ao `pnpm check`.
+
+### Decisões e ADRs
+
+- Mantidos os ADRs 0001 e 0002; a fase amplia a leitura paginada e a interface sobre o monólito modular e a réplica local-first existentes.
+- A paginação avança por data civil, inclusive datas sem registro, para que o cliente saiba quando um mês foi percorrido integralmente e possa operar offline de forma determinística.
+- `missed` derivado não grava silenciosamente no servidor. A confirmação do titular gera uma mutação sincronizável e auditável pelo change log existente.
+
+### Segurança, privacidade e dados
+
+- Todas as consultas históricas derivam o titular da sessão; teste com segundo usuário confirma que sessões alheias não aparecem.
+- Cursor inválido ou fora do intervalo é rejeitado sem revelar existência de registros.
+- Notas, dores, hábitos e medidas não foram adicionados a logs.
+- A tela continua usando IndexedDB particionado por usuário, e a paginação não usa Cache Storage para dados privados.
+
+### Desvios do plano
+
+- Não houve alteração de schema: a fase foi implementada como consulta paginada, regra derivada e interface sobre entidades sincronizáveis existentes.
+- O calendário atenua visualmente dias fora do filtro, mantendo-os focáveis para não remover navegação temporal nem esconder o contexto do mês.
+
+### Pendências e riscos conhecidos
+
+- A réplica mantém os meses efetivamente visitados; não há pré-carregamento ilimitado de todo o histórico.
+- Conflitos continuam resolvidos no nível do agregado completo conforme o ADR-0002; o calendário identifica o dia, e o painel geral oferece a decisão entre versão local e servidor.
+- Agregações analíticas e gráficos pertencem à Fase 9 e não foram antecipados.
+
+### Próximo passo
+
+- Iniciar a Fase 9 com indicadores e gráficos acessíveis sobre o histórico paginado agora disponível.

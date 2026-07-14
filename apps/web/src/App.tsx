@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { type AppApi, browserApi, type PrivacyDocumentView } from './auth-client';
 import { AccountScreen } from './components/AccountScreen';
 import { AuthScreen } from './components/AuthScreen';
 import { OnboardingScreen } from './components/OnboardingScreen';
+import { HistoryScreen } from './components/HistoryScreen';
 import { PlanningScreen } from './components/PlanningScreen';
 import { ProgressionScreen } from './components/ProgressionScreen';
 import { ResetPasswordScreen } from './components/ResetPasswordScreen';
@@ -16,6 +17,7 @@ import { useSyncRuntime } from './sync/use-sync-runtime';
 type View =
   | 'account'
   | 'home'
+  | 'history'
   | 'loading'
   | 'offline-locked'
   | 'onboarding'
@@ -77,6 +79,39 @@ export function App({ api = browserApi }: { api?: AppApi }) {
   const [timeZone, setTimeZone] = useState('America/Cuiaba');
   const [userId, setUserId] = useState<string | null>(null);
   const sync = useSyncRuntime(api === browserApi ? userId : null);
+  const loadHistoryRange = useCallback(
+    async (from: string, through: string) => {
+      if (!sync.database) return;
+      let cursor: string | undefined;
+      const visited = new Set<string>();
+      do {
+        const page = await api.loadHistoryPage(from, through, cursor);
+        await cacheDailyData(sync.database, [
+          { entityType: 'habit_definition', items: page.habits },
+          {
+            entityType: 'workout_session',
+            items: page.days.flatMap((day) => day.sessions),
+          },
+          {
+            entityType: 'habit_entry',
+            items: page.days.flatMap((day) => day.habitEntries),
+          },
+          {
+            entityType: 'pain_report',
+            items: page.days.flatMap((day) => day.painReports),
+          },
+          {
+            entityType: 'body_measurement',
+            items: page.days.flatMap((day) => day.measurements),
+          },
+        ]);
+        cursor = page.nextCursor ?? undefined;
+        if (cursor && visited.has(cursor)) throw new Error('HISTORY_CURSOR_LOOP');
+        if (cursor) visited.add(cursor);
+      } while (cursor);
+    },
+    [api, sync.database],
+  );
 
   useEffect(() => {
     const online = () => setOffline(false);
@@ -230,6 +265,17 @@ export function App({ api = browserApi }: { api?: AppApi }) {
       />
     );
   }
+  if (view === 'history' && sync.database) {
+    return (
+      <HistoryScreen
+        database={sync.database}
+        initialMonth={civilDate(new Date(), timeZone).slice(0, 7)}
+        onBack={() => setView('home')}
+        {...(offline ? {} : { onLoadRange: loadHistoryRange })}
+        today={civilDate(new Date(), timeZone)}
+      />
+    );
+  }
   if (view === 'progression') {
     return <ProgressionScreen api={api} onBack={() => setView('home')} />;
   }
@@ -258,6 +304,9 @@ export function App({ api = browserApi }: { api?: AppApi }) {
         </button>
         <button className="primary" type="button" onClick={() => void openToday()}>
           Hoje
+        </button>
+        <button className="primary" type="button" onClick={() => setView('history')}>
+          CalendÃ¡rio e histÃ³rico
         </button>
         <button
           className="primary"

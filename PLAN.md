@@ -6,7 +6,7 @@
 
 **Unidade de entrega:** fase completa com commit de encerramento
 
-**Status geral:** Fases 0, 1, 2, 3, 4, 5, 6 e 7 concluídas; Fase 8 ainda não iniciada
+**Status geral:** Fases 0, 1, 2, 3, 4, 5, 6, 7 e 8 concluídas; Fase 9 ainda não iniciada
 
 ## 1. Regras de execução
 
@@ -349,31 +349,31 @@ O hash não é escrito no próprio `HISTORY.md`, evitando o ciclo em que alterar
 
 ### Fase 8 — Calendário e edição histórica
 
-**Status:** pendente
+**Status:** concluída
 
 **Commit esperado:** `feat(phase-8): implement calendar and history`
 
 #### Tarefas
 
-- [ ] Calendário mensal responsivo.
-- [ ] Badges separados para estado e tipo.
-- [ ] Múltiplas sessões por data.
-- [ ] Detalhe diário agregado.
-- [ ] Edição de sessão, hábitos, medidas e dores.
-- [ ] Filtros por tipo, estado e dor.
-- [ ] Estado perdido derivado/confirmado.
-- [ ] Tratamento correto de descanso e cancelamento.
-- [ ] Indicador de pendência/conflito por dia.
-- [ ] Sincronização offline e paginação histórica.
+- [x] Calendário mensal responsivo.
+- [x] Badges separados para estado e tipo.
+- [x] Múltiplas sessões por data.
+- [x] Detalhe diário agregado.
+- [x] Edição de sessão, hábitos, medidas e dores.
+- [x] Filtros por tipo, estado e dor.
+- [x] Estado perdido derivado/confirmado.
+- [x] Tratamento correto de descanso e cancelamento.
+- [x] Indicador de pendência/conflito por dia.
+- [x] Sincronização offline e paginação histórica.
 
 #### Testes primeiro
 
-- [ ] Dia com caminhada e força mostra ambos.
-- [ ] Descanso não vira perdido.
-- [ ] Dia passado planejado segue regra de `missed`.
-- [ ] Edição histórica não altera template.
-- [ ] Filtros combinados são corretos.
-- [ ] Navegação por calendário funciona offline.
+- [x] Dia com caminhada e força mostra ambos.
+- [x] Descanso não vira perdido.
+- [x] Dia passado planejado segue regra de `missed`.
+- [x] Edição histórica não altera template.
+- [x] Filtros combinados são corretos.
+- [x] Navegação por calendário funciona offline.
 
 #### Critérios de saída
 

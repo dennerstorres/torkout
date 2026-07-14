@@ -21,6 +21,7 @@ function createApi(overrides: Record<string, unknown> = {}) {
       painReports: [],
       sessions: [],
     })),
+    loadHistoryPage: vi.fn(async () => ({ days: [], habits: [], nextCursor: null })),
     importDailyHistory: vi.fn(async () => ({ created: true, sessionId: 'history-session' })),
     requestPasswordReset: vi.fn(async () => undefined),
     decideProgression: vi.fn(async () => ({

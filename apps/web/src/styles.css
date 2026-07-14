@@ -57,12 +57,129 @@
 }
 
 .planning-layout,
-.today-layout {
+.today-layout,
+.history-layout {
   display: grid;
   gap: 1rem;
   margin: 0 auto;
   max-width: 48rem;
   padding: max(1rem, env(safe-area-inset-top)) 1rem max(5rem, env(safe-area-inset-bottom));
+}
+
+.history-layout {
+  max-width: 76rem;
+}
+
+.history-header,
+.history-layout > .sync-note {
+  grid-column: 1 / -1;
+}
+
+.history-calendar,
+.history-detail {
+  width: 100%;
+  max-width: none;
+}
+
+.calendar-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.history-filters,
+.history-fields {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.calendar-weekdays,
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.calendar-weekdays span {
+  padding: 0.5rem 0.15rem;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.calendar-day {
+  align-content: start;
+  border-color: #d3ddd5;
+  border-radius: 0;
+  display: grid;
+  gap: 0.2rem;
+  min-height: 5.5rem;
+  min-width: 0;
+  padding: 0.25rem;
+  text-align: left;
+}
+
+.calendar-day[aria-current='date'] {
+  box-shadow: inset 0 0 0 3px #245b3c;
+}
+
+.calendar-day.outside-month {
+  background: #f3f5f3;
+  color: #607066;
+}
+
+.calendar-day[data-filtered-out='true'] {
+  opacity: 0.38;
+}
+
+.calendar-number {
+  font-weight: 850;
+}
+
+.calendar-badge-group {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.badge {
+  border: 1px solid currentColor;
+  border-radius: 0.3rem;
+  display: block;
+  font-size: 0.58rem;
+  line-height: 1.2;
+  overflow: hidden;
+  padding: 0.12rem 0.2rem;
+  text-overflow: ellipsis;
+}
+
+.activity-badge {
+  background: #eef7f4;
+  color: #176b5b;
+}
+
+.status-badge {
+  background: #f5f1e8;
+  color: #6b4f17;
+}
+
+.pain-badge,
+.conflict-badge {
+  background: #fff1ee;
+  color: #8a3425;
+}
+
+.sync-badge {
+  background: #f4effc;
+  color: #5b3788;
+}
+
+.history-record {
+  border-top: 1px solid #d9dfdd;
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+
+.history-record h3 {
+  margin-top: 0;
 }
 
 .planning-header {
@@ -166,6 +283,23 @@
   .sync-note,
   .sticky-action {
     grid-column: 1 / -1;
+  }
+
+  .history-layout {
+    grid-template-columns: minmax(30rem, 1.35fr) minmax(20rem, 0.65fr);
+  }
+
+  .history-filters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .calendar-day {
+    min-height: 8rem;
+    padding: 0.45rem;
+  }
+
+  .badge {
+    font-size: 0.7rem;
   }
 }
 
