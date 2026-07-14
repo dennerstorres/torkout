@@ -244,3 +244,74 @@ Este arquivo é o diário técnico, cronológico e append-only do projeto. Ele r
 ### Próximo passo
 
 - Iniciar a Fase 2 com testes de migração, schema fundamental, constraints e utilitários temporais.
+
+## 2026-07-14 — Fase 2: Banco, contratos fundamentais e datas
+
+**Status:** concluída
+
+**Commit de encerramento:** `feat(phase-2): establish database and core contracts`
+
+### Escopo executado
+
+- Configurados Drizzle ORM/Kit, cliente PostgreSQL e executor de migrações para aplicação e CLI.
+- Criado schema com as 30 tabelas especificadas para identidade, privacidade, planejamento, execução, hábitos, corpo, progressão, sincronização e auditoria.
+- Padronizados UUID gerado pelo banco, `timestamptz`, versão otimista, atualização automática e tombstones nas entidades sincronizáveis.
+- Modeladas as quatro tabelas exigidas pelo Better Auth, incluindo unicidade de e-mail sem distinção de caixa.
+- Criados checks, índices, chaves estrangeiras e unicidades para consistência de séries, ordens, datas, valores, hábitos, dor e progressão.
+- Criados snapshots de exercício nas sessões para impedir que alterações posteriores reescrevam o histórico.
+- Criado catálogo global inicial com Flexão e Agachamento livre e versão inicial auditável das regras de progressão.
+- Criados utilitários baseados em Temporal para UTC, data civil e fuso IANA, incluindo rejeição de horários inexistentes ou ambíguos.
+- Criadas factories determinísticas com domínio `.invalid`, sem dados pessoais reais.
+- Criado gate estrutural específico da fase e incluído no comando raiz `pnpm check`.
+
+### Evidências TDD
+
+- RED estrutural — `pnpm verify:phase-2`: falhou enumerando 15 contratos ausentes, ausência de migração e scripts de banco.
+- RED de migração — `pnpm test:integration`: em PostgreSQL real e banco limpo, falhou porque ainda não existia o journal de migrações.
+- GREEN de migração/schema — `pnpm test:integration`: duas suítes e seis testes passaram após aplicar as duas migrações.
+- RED temporal comportamental — teste de horário inexistente na transição de verão falhou porque a conversão aceitava o horário por compatibilidade.
+- GREEN temporal — quatro testes passaram após tornar a desambiguação estrita e emitir erro em português.
+- GREEN estrutural — `pnpm verify:phase-2`: passou para 15 arquivos obrigatórios e duas migrações versionadas.
+- REFACTOR — schemas foram separados por contexto, exports centralizados e metadados sincronizáveis aplicados por convenção única.
+- GREEN final — instalação com lockfile congelado, peer check, `pnpm check`, seis testes de integração PostgreSQL e E2E móvel passaram em sequência.
+
+### Alterações técnicas
+
+- Configuração: `drizzle.config.ts` e scripts `db:generate`, `db:migrate` e `verify:phase-2`.
+- Banco: cliente, migrador, schemas Drizzle, duas migrações SQL e metadados do Drizzle Kit.
+- Domínio: conversão temporal com `@js-temporal/polyfill`.
+- Testes: integração PostgreSQL do schema e testes unitários temporais.
+- Dados iniciais: somente catálogo técnico e regras globais; nenhum histórico pessoal foi inserido.
+- Endpoints: nenhum; API de aplicação começa em fases posteriores.
+
+### Decisões e ADRs
+
+- Mantidas as decisões dos ADRs 0001–0003; nenhuma mudança arquitetural exigiu novo ADR.
+- Entidades sincronizáveis recebem `version` e `deleted_at`; entidades imutáveis, de autenticação ou append-only mantêm apenas os metadados pertinentes.
+- Datas civis são armazenadas como `date`, instantes como `timestamptz` e o fuso IANA usado no planejamento fica gravado no próprio registro histórico.
+- Atualizações em entidades sincronizáveis incrementam a versão no PostgreSQL por trigger, evitando dependência da disciplina de cada cliente.
+- Catálogo de sistema usa UUIDs determinísticos reservados; fixtures usam UUIDs e endereços fictícios estáveis.
+
+### Segurança, privacidade e dados
+
+- Nenhuma senha, token, segredo ou dado pessoal real foi adicionado.
+- Credenciais presentes na configuração são exclusivamente fixtures locais do PostgreSQL efêmero.
+- Aceites de privacidade guardam somente hash de IP opcional e família minimizada de user agent.
+- `audit_events` contém metadados operacionais genéricos e não exige nem armazena conteúdo de saúde.
+- Isolamento por usuário foi incorporado às chaves e índices; a autorização de consultas será implementada na API nas fases 3 e seguintes.
+
+### Desvios do plano
+
+- A migração foi dividida em uma parte gerada para o schema e uma parte customizada para triggers e seeds globais, preservando revisão e reprodutibilidade.
+- O PostgreSQL retornou inicialmente `date` como objeto no driver; o teste passou a comparar sua representação SQL textual para validar a data civil sem conversão implícita de fuso.
+
+### Pendências e riscos conhecidos
+
+- Better Auth ainda não está integrado; esta fase entrega apenas o schema compatível e a integração pertence à Fase 3.
+- O `change_log` e as operações idempotentes estão modelados, mas seu preenchimento e protocolo push/pull pertencem à Fase 4.
+- Validação de existência de fusos IANA ocorre na camada de domínio; PostgreSQL armazena o identificador textual para preservar portabilidade.
+- Políticas de retenção de tombstones, auditoria e backups serão operacionalizadas nas fases específicas.
+
+### Próximo passo
+
+- Fase 2 encerrada. A Fase 3 não foi iniciada por solicitação explícita de parada após esta fase.

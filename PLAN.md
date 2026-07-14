@@ -6,7 +6,7 @@
 
 **Unidade de entrega:** fase completa com commit de encerramento
 
-**Status geral:** Fases 0 e 1 concluídas; Fase 2 ainda não iniciada
+**Status geral:** Fases 0, 1 e 2 concluídas; Fase 3 ainda não iniciada
 
 ## 1. Regras de execução
 
@@ -117,33 +117,33 @@ O hash não é escrito no próprio `HISTORY.md`, evitando o ciclo em que alterar
 
 ### Fase 2 — Banco, contratos fundamentais e datas
 
-**Status:** pendente
+**Status:** concluída
 
 **Commit esperado:** `feat(phase-2): establish database and core contracts`
 
 #### Tarefas
 
-- [ ] Configurar Drizzle e PostgreSQL.
-- [ ] Criar convenções de UUID, timestamps, versão e tombstone.
-- [ ] Implementar schema de identidade exigido pelo Better Auth.
-- [ ] Implementar perfil, documentos e aceites de privacidade.
-- [ ] Implementar exercícios e catálogo inicial.
-- [ ] Implementar entidades de planejamento e execução.
-- [ ] Implementar dor, hábitos, medidas e progressão.
-- [ ] Implementar change log, operações de sync e dispositivos.
-- [ ] Criar migração inicial revisada.
-- [ ] Criar factories de testes, sem dados pessoais reais.
-- [ ] Implementar utilitários de UTC, data civil e fuso IANA.
-- [ ] Criar índices, uniques e checks definidos na especificação.
+- [x] Configurar Drizzle e PostgreSQL.
+- [x] Criar convenções de UUID, timestamps, versão e tombstone.
+- [x] Implementar schema de identidade exigido pelo Better Auth.
+- [x] Implementar perfil, documentos e aceites de privacidade.
+- [x] Implementar exercícios e catálogo inicial.
+- [x] Implementar entidades de planejamento e execução.
+- [x] Implementar dor, hábitos, medidas e progressão.
+- [x] Implementar change log, operações de sync e dispositivos.
+- [x] Criar migração inicial revisada.
+- [x] Criar factories de testes, sem dados pessoais reais.
+- [x] Implementar utilitários de UTC, data civil e fuso IANA.
+- [x] Criar índices, uniques e checks definidos na especificação.
 
 #### Testes primeiro
 
-- [ ] Banco vazio migra até a versão atual.
-- [ ] Constraints rejeitam valores inválidos.
-- [ ] Relacionamentos preservam histórico.
-- [ ] Tombstone e versão funcionam.
-- [ ] Datas próximas da meia-noite mantêm data civil correta.
-- [ ] Fuso alterado não reescreve histórico.
+- [x] Banco vazio migra até a versão atual.
+- [x] Constraints rejeitam valores inválidos.
+- [x] Relacionamentos preservam histórico.
+- [x] Tombstone e versão funcionam.
+- [x] Datas próximas da meia-noite mantêm data civil correta.
+- [x] Fuso alterado não reescreve histórico.
 
 #### Critérios de saída
 
