@@ -179,7 +179,7 @@ export const scheduleRules = pgTable(
   },
   (table) => [
     index('schedule_rules_user_id_idx').on(table.userId),
-    check('schedule_rules_weekday_check', sql`${table.weekday} between 0 and 6`),
+    check('schedule_rules_weekday_check', sql`${table.weekday} between 1 and 7`),
     check(
       'schedule_rules_validity_check',
       sql`${table.validUntil} is null or ${table.validUntil} >= ${table.validFrom}`,
@@ -195,6 +195,10 @@ export const workoutSessions = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     templateId: uuid('template_id').references(() => workoutTemplates.id, { onDelete: 'set null' }),
+    scheduleRuleId: uuid('schedule_rule_id').references(() => scheduleRules.id, {
+      onDelete: 'set null',
+    }),
+    templateNameSnapshot: text('template_name_snapshot').notNull(),
     plannedLocalDate: date('planned_local_date', { mode: 'string' }).notNull(),
     suggestedLocalTime: time('suggested_local_time'),
     timeZone: text('time_zone').notNull(),
@@ -207,6 +211,9 @@ export const workoutSessions = pgTable(
   },
   (table) => [
     index('workout_sessions_user_date_idx').on(table.userId, table.plannedLocalDate),
+    uniqueIndex('workout_sessions_rule_date_unique')
+      .on(table.scheduleRuleId, table.plannedLocalDate)
+      .where(sql`${table.scheduleRuleId} is not null and ${table.deletedAt} is null`),
     check(
       'workout_sessions_chronology_check',
       sql`${table.completedAt} is null or ${table.startedAt} is null or ${table.completedAt} >= ${table.startedAt}`,

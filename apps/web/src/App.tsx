@@ -4,13 +4,15 @@ import { type AppApi, browserApi, type PrivacyDocumentView } from './auth-client
 import { AccountScreen } from './components/AccountScreen';
 import { AuthScreen } from './components/AuthScreen';
 import { OnboardingScreen } from './components/OnboardingScreen';
+import { PlanningScreen } from './components/PlanningScreen';
 import { ResetPasswordScreen } from './components/ResetPasswordScreen';
 import { SyncPanel } from './components/SyncPanel';
 import { clearOfflineIdentity, readOfflineIdentity, recordOnlineIdentity } from './offline-auth';
 import { deleteUserSyncDatabase } from './sync/local-database';
 import { useSyncRuntime } from './sync/use-sync-runtime';
 
-type View = 'account' | 'home' | 'loading' | 'offline-locked' | 'onboarding' | 'public';
+type View =
+  'account' | 'home' | 'loading' | 'offline-locked' | 'onboarding' | 'planning' | 'public';
 
 export function App({ api = browserApi }: { api?: AppApi }) {
   const resetToken =
@@ -121,6 +123,16 @@ export function App({ api = browserApi }: { api?: AppApi }) {
       />
     );
   }
+  if (view === 'planning' && sync.database) {
+    return (
+      <PlanningScreen
+        database={sync.database}
+        onBack={() => setView('home')}
+        onSync={() => void sync.sync()}
+        syncState={offline ? 'offline' : sync.snapshot.state}
+      />
+    );
+  }
 
   return (
     <main className="centered-layout">
@@ -141,6 +153,9 @@ export function App({ api = browserApi }: { api?: AppApi }) {
           pendingOperations={sync.pendingOperations}
           state={offline ? 'offline' : sync.snapshot.state}
         />
+        <button className="primary" type="button" onClick={() => setView('planning')}>
+          Planejamento
+        </button>
         <button
           className="primary"
           disabled={offline}

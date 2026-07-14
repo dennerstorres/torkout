@@ -6,7 +6,7 @@
 
 **Unidade de entrega:** fase completa com commit de encerramento
 
-**Status geral:** Fases 0, 1, 2, 3 e 4 concluídas; Fase 5 ainda não iniciada
+**Status geral:** Fases 0, 1, 2, 3, 4 e 5 concluídas; Fase 6 ainda não iniciada
 
 ## 1. Regras de execução
 
@@ -235,33 +235,33 @@ O hash não é escrito no próprio `HISTORY.md`, evitando o ciclo em que alterar
 
 ### Fase 5 — Exercícios, templates e planejamento
 
-**Status:** pendente
+**Status:** concluída
 
 **Commit esperado:** `feat(phase-5): implement workout planning`
 
 #### Tarefas
 
-- [ ] CRUD de exercícios do usuário.
-- [ ] Catálogo inicial de flexão e agachamento.
-- [ ] CRUD de planos e templates.
-- [ ] Séries por repetições, duração e distância.
-- [ ] Regras semanais e horários locais.
-- [ ] Materializador de sessões futuras idempotente.
-- [ ] Alteração com vigência futura.
-- [ ] Sessões avulsas, reagendamento e cancelamento.
-- [ ] Múltiplas sessões por data.
-- [ ] UI mobile-first de planejamento.
-- [ ] Sincronização offline das entidades da fase.
+- [x] CRUD de exercícios do usuário.
+- [x] Catálogo inicial de flexão e agachamento.
+- [x] CRUD de planos e templates.
+- [x] Séries por repetições, duração e distância.
+- [x] Regras semanais e horários locais.
+- [x] Materializador de sessões futuras idempotente.
+- [x] Alteração com vigência futura.
+- [x] Sessões avulsas, reagendamento e cancelamento.
+- [x] Múltiplas sessões por data.
+- [x] UI mobile-first de planejamento.
+- [x] Sincronização offline das entidades da fase.
 
 #### Testes primeiro
 
-- [ ] Alterar template não muda sessão histórica.
-- [ ] Materializar duas vezes não duplica.
-- [ ] Alterar regra afeta somente futuro não iniciado.
-- [ ] Segunda/sexta e fuso são calculados corretamente.
-- [ ] Mais de uma sessão no dia é suportada.
-- [ ] Dados de outro usuário permanecem inacessíveis.
-- [ ] Jornada de planejar offline e sincronizar por E2E.
+- [x] Alterar template não muda sessão histórica.
+- [x] Materializar duas vezes não duplica.
+- [x] Alterar regra afeta somente futuro não iniciado.
+- [x] Segunda/sexta e fuso são calculados corretamente.
+- [x] Mais de uma sessão no dia é suportada.
+- [x] Dados de outro usuário permanecem inacessíveis.
+- [x] Jornada de planejar offline e sincronizar por E2E.
 
 #### Critérios de saída
 

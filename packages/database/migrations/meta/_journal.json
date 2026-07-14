@@ -29,6 +29,13 @@
       "when": 1784052464990,
       "tag": "0003_phase_4_sync",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1784058554490,
+      "tag": "0004_phase_5_planning",
+      "breakpoints": true
     }
   ]
 }

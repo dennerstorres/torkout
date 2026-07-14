@@ -462,3 +462,69 @@ Este arquivo é o diário técnico, cronológico e append-only do projeto. Ele r
 ### Próximo passo
 
 - Iniciar a Fase 5 com exercícios, planos, templates e materialização futura sobre a fundação local-first concluída.
+
+## 2026-07-14 — Fase 5: Exercícios, templates e planejamento
+
+**Status:** concluída
+
+**Commit de encerramento:** `feat(phase-5): implement workout planning`
+
+### Escopo executado
+
+- Implementados contratos Zod para exercícios personalizados, planos, templates, séries por métrica, regras semanais, sessões avulsas e janelas de materialização.
+- Implementado CRUD autenticado sob `/api/v1/exercises`, `/api/v1/plans` e `/api/v1/templates`, com concorrência otimista, desativação/arquivamento e isolamento horizontal.
+- Implementados `/api/v1/sessions`, reagendamento, cancelamento e `POST /api/v1/sessions/materialize` com janela máxima de 120 dias.
+- Criado materializador puro por data civil, horário local e fuso IANA, aceitando múltiplas regras no mesmo dia e preservando snapshots de exercícios, métricas e alvos.
+- Alterações de template com `effectiveFrom` removem somente materializações futuras ainda planejadas; sessões iniciadas ou concluídas mantêm o snapshot anterior.
+- Ampliada a sincronização local-first para os agregados `exercise`, `training_plan`, `workout_template` e `workout_session`, mantendo idempotência, versão, tombstone, pull incremental e conflito explícito.
+- Criada tela mobile-first de planejamento com catálogo inicial, exercício personalizado, plano semanal, segunda/sexta, horário local, sessão avulsa, reagendamento, cancelamento e ação manual de sync.
+- Criada jornada Playwright que planeja durante falha da API, recarrega pela identidade offline, confirma persistência no IndexedDB e envia a outbox após a conexão retornar.
+
+### Evidências TDD
+
+- RED de domínio — o módulo de planejamento não existia; três testes falharam antes da implementação do materializador.
+- GREEN de domínio — segunda/sexta, `America/Cuiaba`, múltiplas sessões, idempotência, snapshot e vigência futura passaram em testes puros.
+- RED de contratos — payloads de planejamento e métricas específicas eram rejeitados ou inexistentes; os contratos estritos passaram a validar cada alvo aplicável.
+- RED de API — exercícios, planos, templates e sessões retornaram `404` antes do registro das rotas; seis cenários de integração passaram contra PostgreSQL real.
+- RED de sync — agregados de planejamento causaram falha no push; o registro de adaptadores passou a persistir e devolver os quatro tipos no pull incremental.
+- RED de UI — a tela de planejamento não existia; o teste de componente passou após comprovar dado e operação na mesma réplica Dexie.
+- GREEN final — `pnpm check` passou com 43 testes unitários/componentes, `pnpm test:integration` passou com 31 testes PostgreSQL e `pnpm test:e2e` passou com quatro jornadas móveis.
+- REFACTOR — contratos, domínio puro, persistência agregada, rotas, adaptadores de sync e componente React foram mantidos em limites separados.
+
+### Alterações técnicas
+
+- Migração `0004_phase_5_planning.sql`: adiciona `schedule_rule_id`, snapshot do nome do template, unicidade por regra/data e corrige dia da semana para ISO (`1` a `7`).
+- O backfill da migração preenche nomes de sessões existentes antes de tornar o snapshot obrigatório, permitindo forward migration sem coluna nula.
+- A chave única parcial `(schedule_rule_id, planned_local_date)` garante idempotência também sob concorrência no servidor.
+- Templates e sessões são sincronizados como agregados: exercícios/séries internos são gravados juntos, evitando estados relacionais parciais na experiência offline.
+- O pacote da API passou a depender do pacote de domínio já existente no workspace; nenhuma dependência externa foi adicionada.
+- Gate estrutural `verify:phase-5` foi incorporado ao `pnpm check`.
+
+### Decisões e ADRs
+
+- Mantidos os ADRs 0001 e 0002; a fase aplica a arquitetura monolítica e local-first aprovada sem mudança arquitetural que exija novo ADR.
+- Dia da semana usa ISO de segunda `1` a domingo `7`, alinhado ao `Temporal` e à preferência inicial de semana do produto.
+- A edição recorrente substitui a definição do agregado e rematerializa apenas o futuro planejado; o passado permanece desacoplado por snapshot.
+
+### Segurança, privacidade e dados
+
+- Todas as consultas e mutações de domínio derivam `userId` da sessão; payloads não autorizam acesso e testes confirmam que o segundo usuário não lê nem altera recursos do primeiro.
+- Catálogo de sistema é somente leitura para usuários; exercícios personalizados pertencem obrigatoriamente à conta autenticada.
+- Push valida referências de plano e exercício dentro do usuário antes de gravar templates.
+- Nenhum corpo de treino, nota ou identificador sensível foi adicionado a logs.
+- `pnpm audit --prod --audit-level moderate` não encontrou vulnerabilidades conhecidas.
+
+### Desvios do plano
+
+- O materializador é disparado explicitamente pela API dentro de uma janela informada. Agendamento automático periódico fica para a operação de produção, sem afetar idempotência ou a jornada funcional.
+- A UI inicial concentra a criação semanal em um exercício por template para manter o fluxo móvel curto; os contratos e APIs já suportam múltiplos exercícios e até 100 séries/exercícios por agregado.
+
+### Pendências e riscos conhecidos
+
+- Edições concorrentes continuam resolvidas no nível do agregado completo, conforme a política da Fase 4; não há merge silencioso de campos internos.
+- Sessões futuras só aparecem depois da chamada de materialização; um job operacional poderá antecipar essa chamada quando a janela padrão de produção for definida.
+- A tela Hoje, execução real de séries e registros diários pertencem à Fase 6 e ainda não foram iniciados.
+
+### Próximo passo
+
+- Iniciar a Fase 6 com dashboard Hoje, salvamento incremental de execução, dor, hábitos e medidas sobre os snapshots e a sincronização já disponíveis.

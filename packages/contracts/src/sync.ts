@@ -1,6 +1,23 @@
 import { z } from 'zod';
 
-export const syncEntityTypeSchema = z.enum(['body_measurement']);
+import {
+  exerciseCreateSchema,
+  exerciseUpdateSchema,
+  trainingPlanCreateSchema,
+  trainingPlanUpdateSchema,
+  workoutSessionCreateSchema,
+  workoutSessionUpdateSchema,
+  workoutTemplateCreateSchema,
+  workoutTemplateUpdateSchema,
+} from './planning.js';
+
+export const syncEntityTypeSchema = z.enum([
+  'body_measurement',
+  'exercise',
+  'training_plan',
+  'workout_template',
+  'workout_session',
+]);
 export const syncOperationKindSchema = z.enum(['create', 'update', 'delete']);
 
 const bodyMeasurementFields = {
@@ -33,29 +50,96 @@ const operationBase = {
   clientOccurredAt: z.iso.datetime({ offset: true }),
   deviceId: z.uuid(),
   entityId: z.uuid(),
-  entityType: syncEntityTypeSchema,
   operationId: z.uuid(),
 };
 
-export const syncOperationSchema = z.discriminatedUnion('operation', [
-  z.strictObject({
-    ...operationBase,
-    baseVersion: z.null(),
-    operation: z.literal('create'),
-    payload: bodyMeasurementCreatePayloadSchema,
-  }),
-  z.strictObject({
-    ...operationBase,
-    baseVersion: z.number().int().positive(),
-    operation: z.literal('update'),
-    payload: bodyMeasurementUpdatePayloadSchema,
-  }),
-  z.strictObject({
-    ...operationBase,
-    baseVersion: z.number().int().positive(),
-    operation: z.literal('delete'),
-    payload: z.strictObject({}),
-  }),
+const versionSchema = z.number().int().positive();
+const emptyPayloadSchema = z.strictObject({});
+const exerciseSyncUpdateSchema = z
+  .preprocess(
+    (value) => ({ ...(typeof value === 'object' && value !== null ? value : {}), version: 1 }),
+    exerciseUpdateSchema,
+  )
+  .transform(({ version, ...value }) => {
+    void version;
+    return value;
+  });
+const planSyncUpdateSchema = z
+  .preprocess(
+    (value) => ({ ...(typeof value === 'object' && value !== null ? value : {}), version: 1 }),
+    trainingPlanUpdateSchema,
+  )
+  .transform(({ version, ...value }) => {
+    void version;
+    return value;
+  });
+const templateSyncUpdateSchema = z
+  .preprocess(
+    (value) => ({ ...(typeof value === 'object' && value !== null ? value : {}), version: 1 }),
+    workoutTemplateUpdateSchema,
+  )
+  .transform(({ version, ...value }) => {
+    void version;
+    return value;
+  });
+const sessionSyncUpdateSchema = z
+  .preprocess(
+    (value) => ({ ...(typeof value === 'object' && value !== null ? value : {}), version: 1 }),
+    workoutSessionUpdateSchema,
+  )
+  .transform(({ version, ...value }) => {
+    void version;
+    return value;
+  });
+
+function operationVariants<
+  EntityType extends z.ZodLiteral<string>,
+  CreatePayload extends z.ZodType,
+  UpdatePayload extends z.ZodType,
+>(entityType: EntityType, createPayload: CreatePayload, updatePayload: UpdatePayload) {
+  return [
+    z.strictObject({
+      ...operationBase,
+      baseVersion: z.null(),
+      entityType,
+      operation: z.literal('create'),
+      payload: createPayload,
+    }),
+    z.strictObject({
+      ...operationBase,
+      baseVersion: versionSchema,
+      entityType,
+      operation: z.literal('update'),
+      payload: updatePayload,
+    }),
+    z.strictObject({
+      ...operationBase,
+      baseVersion: versionSchema,
+      entityType,
+      operation: z.literal('delete'),
+      payload: emptyPayloadSchema,
+    }),
+  ] as const;
+}
+
+export const syncOperationSchema = z.union([
+  ...operationVariants(
+    z.literal('body_measurement'),
+    bodyMeasurementCreatePayloadSchema,
+    bodyMeasurementUpdatePayloadSchema,
+  ),
+  ...operationVariants(z.literal('exercise'), exerciseCreateSchema, exerciseSyncUpdateSchema),
+  ...operationVariants(z.literal('training_plan'), trainingPlanCreateSchema, planSyncUpdateSchema),
+  ...operationVariants(
+    z.literal('workout_template'),
+    workoutTemplateCreateSchema,
+    templateSyncUpdateSchema,
+  ),
+  ...operationVariants(
+    z.literal('workout_session'),
+    workoutSessionCreateSchema,
+    sessionSyncUpdateSchema,
+  ),
 ]);
 
 export const syncPushRequestSchema = z.strictObject({

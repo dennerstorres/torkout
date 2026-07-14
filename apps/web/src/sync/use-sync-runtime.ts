@@ -41,6 +41,7 @@ export function useSyncRuntime(userId: string | null) {
   }, [runtime]);
 
   return {
+    database: runtime?.database,
     conflicts: runtime ? conflicts : [],
     pendingOperations: runtime ? pendingOperations : [],
     exportPending: async () => {

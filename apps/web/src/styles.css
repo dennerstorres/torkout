@@ -12,6 +12,73 @@
   text-rendering: optimizeLegibility;
 }
 
+.planning-layout {
+  display: grid;
+  gap: 1rem;
+  margin: 0 auto;
+  max-width: 48rem;
+  padding: max(1rem, env(safe-area-inset-top)) 1rem max(5rem, env(safe-area-inset-bottom));
+}
+
+.planning-header {
+  align-items: start;
+  display: flex;
+  justify-content: space-between;
+}
+
+.planning-header h1,
+.planning-section h2 {
+  margin-top: 0;
+}
+
+.planning-section form {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.compact-list {
+  padding-left: 1.25rem;
+}
+
+.inline-check {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.inline-check input {
+  width: auto;
+}
+
+.sync-note {
+  background: #eef7f4;
+  border-left: 0.25rem solid #176b5b;
+  padding: 0.75rem;
+}
+
+.session-card {
+  border-top: 1px solid #d9dfdd;
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+
+.sticky-action {
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  position: sticky;
+}
+
+@media (min-width: 48rem) {
+  .planning-layout {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .planning-header,
+  .sync-note,
+  .sticky-action {
+    grid-column: 1 / -1;
+  }
+}
+
 * {
   box-sizing: border-box;
 }

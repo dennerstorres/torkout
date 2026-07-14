@@ -140,8 +140,8 @@ describe('initial PostgreSQL schema', () => {
     );
     const session = await pool.query<{ id: string }>(
       `insert into workout_sessions
-         (user_id, template_id, planned_local_date, time_zone, type, source)
-       values ($1, $2, '2026-07-14', 'America/Cuiaba', 'strength', 'scheduled') returning id`,
+         (user_id, template_id, template_name_snapshot, planned_local_date, time_zone, type, source)
+       values ($1, $2, 'Treino A', '2026-07-14', 'America/Cuiaba', 'strength', 'scheduled') returning id`,
       [userId, template.rows[0]!.id],
     );
     await pool.query(
@@ -170,8 +170,8 @@ describe('initial PostgreSQL schema', () => {
     ]);
     const session = await pool.query<{ id: string }>(
       `insert into workout_sessions
-         (user_id, planned_local_date, suggested_local_time, time_zone, type, source)
-       values ($1, '2026-07-13', '23:30', 'America/Cuiaba', 'strength', 'ad_hoc') returning id`,
+         (user_id, template_name_snapshot, planned_local_date, suggested_local_time, time_zone, type, source)
+       values ($1, 'Sessão avulsa', '2026-07-13', '23:30', 'America/Cuiaba', 'strength', 'ad_hoc') returning id`,
       [userId],
     );
 
