@@ -13,6 +13,7 @@
     "@torkout/contracts": "workspace:*",
     "@torkout/domain": "workspace:*",
     "better-auth": "1.6.23",
+    "dexie": "^4.4.4",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   }

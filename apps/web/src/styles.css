@@ -194,6 +194,28 @@ hr {
   border: 0;
   border-top: 1px solid #d3ddd5;
 }
+.sync-panel {
+  margin-block: 1.5rem;
+  padding: 1rem;
+  border: 1px solid #d3ddd5;
+  border-radius: 0.75rem;
+  background: #f7faf7;
+}
+.sync-panel h2,
+.sync-conflict h3 {
+  margin-top: 0;
+}
+.sync-conflict {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  border-left: 4px solid #a9681f;
+  background: #fff8ed;
+  overflow-wrap: anywhere;
+}
+.sync-operation-list {
+  padding-left: 1.25rem;
+  overflow-wrap: anywhere;
+}
 
 @media (min-width: 760px) {
   .auth-layout {

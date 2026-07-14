@@ -6,6 +6,7 @@ import { registerAdminRoutes } from './admin-routes.js';
 import { ApiHttpError, type ApiDependencies, registerAuthRoutes } from './auth-routes.js';
 import { registerPrivacyRoutes } from './privacy.js';
 import { registerProfileRoutes } from './profile-routes.js';
+import { registerSyncRoutes } from './sync-routes.js';
 
 export function buildApp(dependencies?: ApiDependencies): FastifyInstance {
   const app = Fastify({
@@ -25,6 +26,7 @@ export function buildApp(dependencies?: ApiDependencies): FastifyInstance {
     registerProfileRoutes(app, dependencies);
     registerAdminRoutes(app, dependencies);
     registerAccountRoutes(app, dependencies);
+    registerSyncRoutes(app, dependencies);
   }
 
   app.setErrorHandler((error, _request, reply) => {

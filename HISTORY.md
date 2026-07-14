@@ -390,3 +390,75 @@ Este arquivo é o diário técnico, cronológico e append-only do projeto. Ele r
 ### Próximo passo
 
 - Iniciar a Fase 4 com réplica Dexie particionada, outbox e protocolo de sincronização idempotente.
+
+## 2026-07-14 — Fase 4: Fundação de sincronização local-first
+
+**Status:** concluída
+
+**Commit de encerramento:** `feat(phase-4): implement local-first sync foundation`
+
+### Escopo executado
+
+- Criado banco Dexie físico por UUID de usuário, com tabelas tipadas para réplica, outbox, cursor/dispositivo e conflitos.
+- Implementada escrita atômica do registro local e sua operação, incluindo coalescência de edições offline consecutivas para evitar conflitos com o próprio dispositivo.
+- Implementado coordenador de sincronização com estados `offline`, `pending`, `syncing`, `synced`, `conflict`, `auth-required` e `error`.
+- Implementados gatilhos ao abrir, retomar, recuperar conexão e por ação manual, sem depender de Background Sync.
+- Implementados `POST /api/v1/sync/push` e `GET /api/v1/sync/pull`, com lote por item, paginação por cursor opaco e isolamento pelo usuário da sessão.
+- Implementada idempotência persistente com lock transacional por usuário/operação e armazenamento da resposta original para recuperar queda após commit.
+- Implementada concorrência otimista, snapshots no `change_log`, tombstones e resolução explícita com versões local/servidor.
+- Criada UI acessível para estado, inspeção, repetição, exportação de pendências e decisão de conflitos.
+- Logout agora oferece manter a réplica protegida ou removê-la; exclusão confirmada da conta remove o banco local.
+- Implementada retenção mínima: tombstones autoritativos permanecem no servidor e somente tombstones locais já sincronizados são removidos após 90 dias.
+
+### Evidências TDD
+
+- RED de contratos — o scaffold permissivo aceitou combinações inválidas de operação e `baseVersion`; o contrato estrito passou a rejeitá-las sem impedir validação individual do lote.
+- RED local — réplica/outbox não sobreviveram à reabertura, sessão expirada não preservou envio e a UI não expôs estado/conflito antes da implementação.
+- RED de coalescência — uma edição após criação offline falhou por não possuir versão do servidor; a mutação passou a atualizar atomicamente a operação pendente original.
+- RED de transporte — metadados internos da outbox seriam enviados ao contrato estrito; o coordenador passou a projetar somente o envelope público.
+- RED de API — todos os seis cenários retornaram `404` antes do registro das rotas.
+- GREEN local — sete cenários determinísticos passaram com IndexedDB simulado: reload, isolamento, coalescência, reautenticação, queda pós-commit, não ressurreição e retenção.
+- GREEN API — seis cenários passaram contra PostgreSQL real: lote parcialmente inválido, repetição idempotente, conflito, reordenação, pull/tombstone paginado e dispositivo isolado.
+- GREEN UI/contratos — quatro testes de contrato/componente passaram para validação estrita, inspeção, exportação, repetição e resolução.
+- REFACTOR — transporte HTTP, banco local, coordenador, hook React, painel e registro de adaptadores do servidor foram separados por responsabilidade.
+- GREEN final — `pnpm check`, 25 testes de integração PostgreSQL, três E2E móveis, build e auditoria de dependências passaram.
+
+### Alterações técnicas
+
+- Migração `0003_phase_4_sync.sql`: adiciona snapshot JSON ao `change_log` e resposta idempotente persistida às `sync_operations`.
+- Contratos Zod compartilhados para operações, resultados, registros, push e pull de sincronização.
+- Registro extensível de adaptadores com `body_measurement` como primeira entidade representativa completa; fases seguintes adicionam entidades sem alterar o protocolo.
+- Cursor de pull codifica versão e sequência sem expor consulta cross-user; todas as buscas continuam filtradas pelo usuário autenticado.
+- Dependências novas: Dexie 4 para IndexedDB e `fake-indexeddb` apenas para testes, ambas Apache-2.0.
+- Gate estrutural `verify:phase-4` incorporado ao `pnpm check`.
+
+### Decisões e ADRs
+
+- Mantido o ADR-0002; a implementação concretiza sua estratégia sem introduzir CRDT, fila, WebSocket ou Background Sync.
+- Resultados rejeitados e conflitos válidos também são persistidos por `operationId`, garantindo que uma repetição nunca mude retroativamente o resultado observado.
+- Operações malformadas são rejeitadas individualmente e não entram na tabela idempotente porque podem não possuir identidade válida.
+- A limpeza local exige simultaneamente tombstone sincronizado e idade superior a 90 dias; pendências e conflitos nunca são removidos pelo coletor.
+
+### Segurança, privacidade e dados
+
+- O nome físico do IndexedDB contém somente o UUID técnico e bancos de usuários distintos não compartilham tabelas nem consultas.
+- `userId` nunca é aceito no payload de sincronização; autorização deriva exclusivamente da sessão.
+- Um UUID de dispositivo já pertencente a outro usuário retorna `unauthorized` sem revelar ou alterar o registro.
+- Outbox não é apagada por expiração de sessão, falha de rede ou logout com preservação escolhida.
+- Logs permanecem sem corpos ou conteúdo de saúde; o protocolo não adicionou logging de payload.
+- `pnpm audit --prod --audit-level moderate` não encontrou vulnerabilidades conhecidas.
+
+### Desvios do plano
+
+- A fundação registra um adaptador completo de medição corporal como prova do motor genérico. Exercícios, templates e planejamento entram na Fase 5 usando o mesmo registro, evitando antecipar CRUD daquela fase.
+- Tombstones do PostgreSQL não são apagados automaticamente nesta fase: a retenção é deliberadamente conservadora até existir reconciliação integral para dispositivos inativos. A limpeza segura de 90 dias já é aplicada à réplica local sincronizada.
+
+### Pendências e riscos conhecidos
+
+- IndexedDB protege isolamento lógico/físico por conta, mas não oferece criptografia própria; a segurança continua dependendo do bloqueio do dispositivo e da janela offline de 30 dias.
+- O protocolo suporta uma entidade representativa; cada nova entidade exige schema Zod e adaptador transacional específico nas fases funcionais.
+- Conflitos são resolvidos por registro completo nesta fundação. Mesclagens de campos somente serão adicionadas quando houver regra determinística específica e testada.
+
+### Próximo passo
+
+- Iniciar a Fase 5 com exercícios, planos, templates e materialização futura sobre a fundação local-first concluída.

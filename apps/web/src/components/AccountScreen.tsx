@@ -2,7 +2,15 @@ import { type FormEvent, useEffect, useState } from 'react';
 
 import type { AppApi, SessionView } from '../auth-client';
 
-export function AccountScreen({ api, onBack }: { api: AppApi; onBack(): void }) {
+export function AccountScreen({
+  api,
+  onAccountDeleted,
+  onBack,
+}: {
+  api: AppApi;
+  onAccountDeleted?(): Promise<void> | void;
+  onBack(): void;
+}) {
   const [sessions, setSessions] = useState<SessionView[]>([]);
   const [message, setMessage] = useState('');
 
@@ -26,6 +34,7 @@ export function AccountScreen({ api, onBack }: { api: AppApi; onBack(): void }) 
         confirmation: String(data.get('confirmation') ?? ''),
         password: String(data.get('password') ?? ''),
       });
+      await onAccountDeleted?.();
       setMessage('Conta excluída. Os dados locais serão removidos após a confirmação do servidor.');
     } catch {
       setMessage('Não foi possível excluir a conta. Confira a senha e a frase de confirmação.');

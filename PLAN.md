@@ -6,7 +6,7 @@
 
 **Unidade de entrega:** fase completa com commit de encerramento
 
-**Status geral:** Fases 0, 1, 2 e 3 concluídas; Fase 4 ainda não iniciada
+**Status geral:** Fases 0, 1, 2, 3 e 4 concluídas; Fase 5 ainda não iniciada
 
 ## 1. Regras de execução
 
@@ -197,35 +197,35 @@ O hash não é escrito no próprio `HISTORY.md`, evitando o ciclo em que alterar
 
 ### Fase 4 — Fundação de sincronização local-first
 
-**Status:** pendente
+**Status:** concluída
 
 **Commit esperado:** `feat(phase-4): implement local-first sync foundation`
 
 #### Tarefas
 
-- [ ] Criar banco Dexie particionado por usuário.
-- [ ] Modelar réplica local, outbox, cursor e metadados.
-- [ ] Implementar transação local dado + operação.
-- [ ] Implementar `/sync/push` com resultados por item.
-- [ ] Implementar idempotência persistente.
-- [ ] Implementar `change_log` e `/sync/pull` paginado.
-- [ ] Implementar versão otimista e tombstones.
-- [ ] Implementar máquina de estados de sincronização.
-- [ ] Implementar reautenticação preservando outbox.
-- [ ] Implementar limpeza/retenção de tombstones.
-- [ ] Implementar UI base de pendências e conflito.
+- [x] Criar banco Dexie particionado por usuário.
+- [x] Modelar réplica local, outbox, cursor e metadados.
+- [x] Implementar transação local dado + operação.
+- [x] Implementar `/sync/push` com resultados por item.
+- [x] Implementar idempotência persistente.
+- [x] Implementar `change_log` e `/sync/pull` paginado.
+- [x] Implementar versão otimista e tombstones.
+- [x] Implementar máquina de estados de sincronização.
+- [x] Implementar reautenticação preservando outbox.
+- [x] Implementar limpeza/retenção de tombstones.
+- [x] Implementar UI base de pendências e conflito.
 
 #### Testes primeiro
 
-- [ ] Reload não perde mutação local.
-- [ ] Mesmo push repetido não duplica registro.
-- [ ] Queda após commit do servidor é recuperada idempotentemente.
-- [ ] Operações fora de ordem são tratadas.
-- [ ] Versão antiga gera conflito.
-- [ ] Tombstone não ressuscita.
-- [ ] Operação inválida não bloqueia o restante do lote.
-- [ ] Usuários diferentes não compartilham IndexedDB lógico.
-- [ ] Sessão expirada preserva e depois envia pendências.
+- [x] Reload não perde mutação local.
+- [x] Mesmo push repetido não duplica registro.
+- [x] Queda após commit do servidor é recuperada idempotentemente.
+- [x] Operações fora de ordem são tratadas.
+- [x] Versão antiga gera conflito.
+- [x] Tombstone não ressuscita.
+- [x] Operação inválida não bloqueia o restante do lote.
+- [x] Usuários diferentes não compartilham IndexedDB lógico.
+- [x] Sessão expirada preserva e depois envia pendências.
 
 #### Critérios de saída
 

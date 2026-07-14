@@ -73,6 +73,7 @@ export const syncOperations = pgTable(
     baseVersion: integer('base_version'),
     result: syncOperationResultEnum('result').notNull(),
     errorCode: text('error_code'),
+    response: jsonb('response').$type<Record<string, unknown>>().default({}).notNull(),
     clientOccurredAt: timestamp('client_occurred_at', {
       mode: 'date',
       withTimezone: true,
@@ -104,6 +105,7 @@ export const changeLog = pgTable(
     operation: syncOperationTypeEnum('operation').notNull(),
     changedAt: timestamp('changed_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
     deletedAt: timestamp('deleted_at', { mode: 'date', withTimezone: true }),
+    payload: jsonb('payload').$type<Record<string, unknown>>().default({}).notNull(),
   },
   (table) => [
     index('change_log_user_sequence_idx').on(table.userId, table.sequence),

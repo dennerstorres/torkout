@@ -5,7 +5,10 @@ import { AccountScreen } from './components/AccountScreen';
 import { AuthScreen } from './components/AuthScreen';
 import { OnboardingScreen } from './components/OnboardingScreen';
 import { ResetPasswordScreen } from './components/ResetPasswordScreen';
+import { SyncPanel } from './components/SyncPanel';
 import { clearOfflineIdentity, readOfflineIdentity, recordOnlineIdentity } from './offline-auth';
+import { deleteUserSyncDatabase } from './sync/local-database';
+import { useSyncRuntime } from './sync/use-sync-runtime';
 
 type View = 'account' | 'home' | 'loading' | 'offline-locked' | 'onboarding' | 'public';
 
@@ -18,6 +21,8 @@ export function App({ api = browserApi }: { api?: AppApi }) {
   const [name, setName] = useState('');
   const [documents, setDocuments] = useState<PrivacyDocumentView[]>([]);
   const [offline, setOffline] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const sync = useSyncRuntime(api === browserApi ? userId : null);
 
   useEffect(() => {
     if (resetToken) return;
@@ -31,6 +36,7 @@ export function App({ api = browserApi }: { api?: AppApi }) {
           return;
         }
         setName(session.user.name);
+        setUserId(session.user.id);
         recordOnlineIdentity({ name: session.user.name, userId: session.user.id });
         try {
           const profile = await api.getProfile();
@@ -50,6 +56,7 @@ export function App({ api = browserApi }: { api?: AppApi }) {
         const cached = readOfflineIdentity();
         if (cached.allowed && cached.identity) {
           setName(cached.identity.name);
+          setUserId(cached.identity.userId);
           setOffline(true);
           setView('home');
         } else if (cached.reason === 'expired') {
@@ -100,7 +107,20 @@ export function App({ api = browserApi }: { api?: AppApi }) {
       />
     );
   }
-  if (view === 'account') return <AccountScreen api={api} onBack={() => setView('home')} />;
+  if (view === 'account') {
+    return (
+      <AccountScreen
+        api={api}
+        onAccountDeleted={async () => {
+          if (userId) await deleteUserSyncDatabase(userId);
+          clearOfflineIdentity();
+          setUserId(null);
+          setView('public');
+        }}
+        onBack={() => setView('home')}
+      />
+    );
+  }
 
   return (
     <main className="centered-layout">
@@ -111,6 +131,16 @@ export function App({ api = browserApi }: { api?: AppApi }) {
         {offline && (
           <p role="status">Você está no modo offline. A sincronização aguardará a conexão.</p>
         )}
+        <SyncPanel
+          conflicts={sync.conflicts}
+          onExport={() => void sync.exportPending()}
+          onResolve={(id, choice) => void sync.resolve(id, choice)}
+          onRetry={() => void sync.retry()}
+          onSync={() => void sync.sync()}
+          pendingCount={sync.snapshot.pendingCount}
+          pendingOperations={sync.pendingOperations}
+          state={offline ? 'offline' : sync.snapshot.state}
+        />
         <button
           className="primary"
           disabled={offline}
@@ -119,18 +149,21 @@ export function App({ api = browserApi }: { api?: AppApi }) {
         >
           Minha conta
         </button>
-        <button
-          type="button"
-          onClick={() =>
-            void api.signOut().then(() => {
-              clearOfflineIdentity();
-              setView('public');
-            })
-          }
-        >
-          Sair
+        <button type="button" onClick={() => void signOut(false)}>
+          Sair e manter dados neste dispositivo
+        </button>
+        <button type="button" onClick={() => void signOut(true)}>
+          Sair e remover dados deste dispositivo
         </button>
       </section>
     </main>
   );
+
+  async function signOut(removeLocalData: boolean): Promise<void> {
+    await api.signOut();
+    if (removeLocalData && userId) await deleteUserSyncDatabase(userId);
+    clearOfflineIdentity();
+    setUserId(null);
+    setView('public');
+  }
 }
