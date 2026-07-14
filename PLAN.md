@@ -6,7 +6,7 @@
 
 **Unidade de entrega:** fase completa com commit de encerramento
 
-**Status geral:** Fases 0, 1, 2, 3, 4 e 5 concluídas; Fase 6 ainda não iniciada
+**Status geral:** Fases 0, 1, 2, 3, 4, 5 e 6 concluídas; Fase 7 ainda não iniciada
 
 ## 1. Regras de execução
 
@@ -270,37 +270,37 @@ O hash não é escrito no próprio `HISTORY.md`, evitando o ciclo em que alterar
 
 ### Fase 6 — Tela Hoje e registros diários
 
-**Status:** pendente
+**Status:** concluída
 
 **Commit esperado:** `feat(phase-6): implement daily workout tracking`
 
 #### Tarefas
 
-- [ ] Dashboard da data atual no fuso do usuário.
-- [ ] Execução por série e métrica.
-- [ ] Conclusão total, parcial, interrupção e exercício ignorado.
-- [ ] Salvamento incremental local.
-- [ ] Caminhadas e detalhes.
-- [ ] Relatos de dor com região, intensidade e momento.
-- [ ] Confirmação explícita de ausência de dor articular.
-- [ ] Definições e entradas de hábitos.
-- [ ] Hábitos iniciais de café, arroz, proteína e salada.
-- [ ] Peso e cintura.
-- [ ] Observações por sessão/exercício/dor.
-- [ ] Estados visuais de sincronização.
-- [ ] Cadastro autenticado do histórico de 13/07/2026 pela interface/importação, nunca como seed global.
+- [x] Dashboard da data atual no fuso do usuário.
+- [x] Execução por série e métrica.
+- [x] Conclusão total, parcial, interrupção e exercício ignorado.
+- [x] Salvamento incremental local.
+- [x] Caminhadas e detalhes.
+- [x] Relatos de dor com região, intensidade e momento.
+- [x] Confirmação explícita de ausência de dor articular.
+- [x] Definições e entradas de hábitos.
+- [x] Hábitos iniciais de café, arroz, proteína e salada.
+- [x] Peso e cintura.
+- [x] Observações por sessão/exercício/dor.
+- [x] Estados visuais de sincronização.
+- [x] Cadastro autenticado do histórico de 13/07/2026 pela interface/importação, nunca como seed global.
 
 #### Testes primeiro
 
-- [ ] Séries planejadas e reais são independentes.
-- [ ] Série adicional não altera template.
-- [ ] Parcialidade é calculada corretamente.
-- [ ] Dor durante a série mantém o vínculo correto.
-- [ ] Ausência não confirmada continua desconhecida.
-- [ ] Um hábito/data respeita unicidade.
-- [ ] Múltiplas medidas no dia são aceitas.
-- [ ] Formulário sobrevive a reload offline.
-- [ ] Jornada completa Hoje em viewport móvel.
+- [x] Séries planejadas e reais são independentes.
+- [x] Série adicional não altera template.
+- [x] Parcialidade é calculada corretamente.
+- [x] Dor durante a série mantém o vínculo correto.
+- [x] Ausência não confirmada continua desconhecida.
+- [x] Um hábito/data respeita unicidade.
+- [x] Múltiplas medidas no dia são aceitas.
+- [x] Formulário sobrevive a reload offline.
+- [x] Jornada completa Hoje em viewport móvel.
 
 #### Critérios de saída
 

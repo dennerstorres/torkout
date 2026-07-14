@@ -5,11 +5,12 @@ const STORAGE_KEY = 'torkout:offline-identity';
 export interface OfflineIdentity {
   lastAuthenticatedAt: string;
   name: string;
+  timeZone?: string;
   userId: string;
 }
 
 export function recordOnlineIdentity(
-  identity: { name: string; userId: string },
+  identity: { name: string; timeZone?: string; userId: string },
   now = new Date(),
 ): void {
   localStorage.setItem(

@@ -13,13 +13,23 @@ export interface PrivacyDocumentView {
   version: string;
 }
 
+export interface DailyBootstrap {
+  habits: Array<Record<string, unknown>>;
+  habitEntries: Array<Record<string, unknown>>;
+  measurements: Array<Record<string, unknown>>;
+  painReports: Array<Record<string, unknown>>;
+  sessions: Array<Record<string, unknown>>;
+}
+
 export interface AppApi {
   acceptPrivacy(input: { documentVersions: Record<string, string> }): Promise<void>;
   deleteAccount(input: { confirmation: string; password: string }): Promise<void>;
-  getProfile(): Promise<{ displayName: string }>;
+  getProfile(): Promise<{ displayName: string; timeZone?: string }>;
   getSession(): Promise<{ user: { id: string; name: string } } | null>;
   listPrivacyDocuments(): Promise<{ documents: PrivacyDocumentView[] }>;
   listSessions(): Promise<SessionView[]>;
+  loadDaily(localDate: string): Promise<DailyBootstrap>;
+  importDailyHistory(): Promise<{ created: boolean; sessionId: string }>;
   requestPasswordReset(email: string): Promise<void>;
   resetPassword(token: string, newPassword: string): Promise<void>;
   revokeSession(token: string): Promise<void>;
@@ -61,6 +71,32 @@ export const browserApi: AppApi = {
     return result.data as { user: { id: string; name: string } } | null;
   },
   listPrivacyDocuments: () => productRequest('/privacy/documents'),
+  async loadDaily(localDate) {
+    const query = encodeURIComponent(localDate);
+    const [sessions, habits, habitEntries, painReports, measurements] = await Promise.all([
+      productRequest<{ items: Array<Record<string, unknown>> }>(
+        `/sessions?from=${query}&through=${query}`,
+      ),
+      productRequest<{ items: Array<Record<string, unknown>> }>('/habits'),
+      productRequest<{ items: Array<Record<string, unknown>> }>(
+        `/habits/entries?localDate=${query}`,
+      ),
+      productRequest<{ items: Array<Record<string, unknown>> }>(`/pain-reports?localDate=${query}`),
+      productRequest<{ items: Array<Record<string, unknown>> }>(`/measurements?localDate=${query}`),
+    ]);
+    return {
+      habits: habits.items,
+      habitEntries: habitEntries.items,
+      measurements: measurements.items,
+      painReports: painReports.items,
+      sessions: sessions.items,
+    };
+  },
+  importDailyHistory: () =>
+    productRequest('/daily-history/import', {
+      body: JSON.stringify({ localDate: '2026-07-13' }),
+      method: 'POST',
+    }),
   async listSessions() {
     const result = await authClient.listSessions();
     assertAuthResult(result);

@@ -12,7 +12,8 @@
   text-rendering: optimizeLegibility;
 }
 
-.planning-layout {
+.planning-layout,
+.today-layout {
   display: grid;
   gap: 1rem;
   margin: 0 auto;
@@ -27,13 +28,48 @@
 }
 
 .planning-header h1,
-.planning-section h2 {
+.planning-section h2,
+.today-section h2 {
   margin-top: 0;
 }
 
 .planning-section form {
   display: grid;
   gap: 0.8rem;
+}
+
+.today-section {
+  width: 100%;
+}
+
+.today-session + .today-session {
+  border-top: 1px solid #d9dfdd;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+}
+
+.today-session fieldset {
+  display: grid;
+  gap: 0.75rem;
+  margin-block: 1rem;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.field-hint {
+  color: #52675a;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.safety-note {
+  border-left: 0.25rem solid #a9681f;
+  background: #fff8ed;
+  padding: 0.75rem;
 }
 
 .compact-list {
@@ -72,6 +108,16 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .today-layout {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .today-layout > .planning-header,
+  .today-layout > .sync-note,
+  .today-layout > .sticky-action {
+    grid-column: 1 / -1;
+  }
+
   .planning-header,
   .sync-note,
   .sticky-action {
@@ -88,7 +134,9 @@ body {
   min-height: 100vh;
 }
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
 }
 button {
@@ -165,7 +213,23 @@ input {
   color: inherit;
   background: #fff;
 }
+select,
+textarea {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid #9eafa4;
+  border-radius: 0.65rem;
+  padding: 0.7rem 0.8rem;
+  color: inherit;
+  background: #fff;
+}
+textarea {
+  min-height: 6rem;
+  resize: vertical;
+}
 input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
 button:focus-visible,
 summary:focus-visible {
   outline: 3px solid #73b98d;

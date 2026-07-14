@@ -8,6 +8,7 @@ import {
   workoutSessionUpdateSchema,
   workoutTemplateCreateSchema,
   workoutTemplateUpdateSchema,
+  type WorkoutExecution,
   type WorkoutTemplateCreate,
 } from '@torkout/contracts';
 import {
@@ -16,13 +17,18 @@ import {
   scheduleRules,
   sessionExercises,
   trainingPlans,
+  walkingDetails,
   workoutSessions,
   workoutTemplateExercises,
   workoutTemplates,
   workoutTemplateSets,
   type DatabaseClient,
 } from '@torkout/database';
-import { materializeWorkoutSessions, type PlanningTemplate } from '@torkout/domain';
+import {
+  calculateWorkoutCompletion,
+  materializeWorkoutSessions,
+  type PlanningTemplate,
+} from '@torkout/domain';
 import { randomUUID } from 'node:crypto';
 import { and, asc, eq, gte, inArray, isNull, lte, or } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
@@ -329,6 +335,17 @@ export async function loadSession(database: DatabaseClient, userId: string, id: 
             ),
           )
           .orderBy(asc(exerciseSets.setNumber));
+  const [walking] = await database
+    .select()
+    .from(walkingDetails)
+    .where(
+      and(
+        eq(walkingDetails.sessionId, id),
+        eq(walkingDetails.userId, userId),
+        isNull(walkingDetails.deletedAt),
+      ),
+    )
+    .limit(1);
   return {
     exercises: exerciseRows.map((exercise) => ({
       exerciseId: exercise.exerciseId,
@@ -355,17 +372,32 @@ export async function loadSession(database: DatabaseClient, userId: string, id: 
       trackingMetric: exercise.trackingMetricSnapshot,
     })),
     id: session.id,
+    completedAt: session.completedAt?.toISOString() ?? null,
+    importKey: session.importKey,
+    jointPainStatus: session.jointPainStatus,
     notes: session.notes,
     plannedLocalDate: session.plannedLocalDate,
     scheduleRuleId: session.scheduleRuleId,
     source: session.source,
     status: session.status,
+    startedAt: session.startedAt?.toISOString() ?? null,
     suggestedLocalTime: session.suggestedLocalTime?.slice(0, 5) ?? null,
     templateId: session.templateId,
     templateNameSnapshot: session.templateNameSnapshot,
     timeZone: session.timeZone,
     type: session.type,
     version: session.version,
+    walking: walking
+      ? {
+          actualDistanceMeters:
+            walking.actualDistanceMeters === null ? null : Number(walking.actualDistanceMeters),
+          distanceSource: walking.distanceSource,
+          durationSeconds: walking.durationSeconds,
+          notes: walking.notes,
+          plannedDistanceMeters:
+            walking.plannedDistanceMeters === null ? null : Number(walking.plannedDistanceMeters),
+        }
+      : null,
   };
 }
 
@@ -380,6 +412,7 @@ export async function insertSessionAggregate(
       .insert(workoutSessions)
       .values({
         id,
+        importKey: input.importKey ?? null,
         notes: input.notes ?? null,
         plannedLocalDate: input.plannedLocalDate,
         scheduleRuleId: input.scheduleRuleId ?? null,
@@ -423,6 +456,135 @@ export async function insertSessionAggregate(
     }
     return true;
   });
+}
+
+export async function applySessionExecution(
+  database: DatabaseClient,
+  userId: string,
+  sessionId: string,
+  input: {
+    execution: WorkoutExecution;
+    notes?: string | null | undefined;
+    version: number;
+  },
+): Promise<Awaited<ReturnType<typeof loadSession>>> {
+  await database.transaction(async (transaction) => {
+    const [session] = await transaction
+      .select({ id: workoutSessions.id })
+      .from(workoutSessions)
+      .where(
+        and(
+          eq(workoutSessions.id, sessionId),
+          eq(workoutSessions.userId, userId),
+          eq(workoutSessions.version, input.version),
+          isNull(workoutSessions.deletedAt),
+        ),
+      )
+      .limit(1);
+    if (!session) throw new ApiHttpError(409, 'VERSION_CONFLICT', 'A sessão foi alterada.');
+
+    const exerciseIds = input.execution.exercises.map((exercise) => exercise.id);
+    const ownedExercises =
+      exerciseIds.length === 0
+        ? []
+        : await transaction
+            .select({ id: sessionExercises.id })
+            .from(sessionExercises)
+            .where(
+              and(
+                inArray(sessionExercises.id, exerciseIds),
+                eq(sessionExercises.sessionId, sessionId),
+                eq(sessionExercises.userId, userId),
+                isNull(sessionExercises.deletedAt),
+              ),
+            );
+    if (ownedExercises.length !== new Set(exerciseIds).size) {
+      throw new ApiHttpError(400, 'INVALID_SESSION_EXERCISE', 'Exercício inválido para a sessão.');
+    }
+
+    for (const exercise of input.execution.exercises) {
+      await transaction
+        .update(sessionExercises)
+        .set({ notes: exercise.notes ?? null, status: exercise.status })
+        .where(
+          and(
+            eq(sessionExercises.id, exercise.id),
+            eq(sessionExercises.sessionId, sessionId),
+            eq(sessionExercises.userId, userId),
+          ),
+        );
+      for (const set of exercise.sets) {
+        const [currentSet] = await transaction
+          .select({ id: exerciseSets.id, sessionExerciseId: exerciseSets.sessionExerciseId })
+          .from(exerciseSets)
+          .where(and(eq(exerciseSets.id, set.id), eq(exerciseSets.userId, userId)))
+          .limit(1);
+        const values = {
+          actualDistanceMeters: set.actualDistanceMeters?.toString() ?? null,
+          actualDurationSeconds: set.actualDurationSeconds ?? null,
+          actualRepetitions: set.actualRepetitions ?? null,
+          completed: set.completed,
+        };
+        if (currentSet) {
+          if (currentSet.sessionExerciseId !== exercise.id) {
+            throw new ApiHttpError(400, 'INVALID_EXERCISE_SET', 'Série inválida para o exercício.');
+          }
+          await transaction.update(exerciseSets).set(values).where(eq(exerciseSets.id, set.id));
+        } else {
+          await transaction.insert(exerciseSets).values({
+            ...values,
+            id: set.id,
+            sessionExerciseId: exercise.id,
+            setNumber: set.setNumber,
+            userId,
+          });
+        }
+      }
+    }
+
+    if (input.execution.walking) {
+      const walking = input.execution.walking;
+      await transaction
+        .insert(walkingDetails)
+        .values({
+          actualDistanceMeters: walking.actualDistanceMeters?.toString() ?? null,
+          distanceSource: walking.distanceSource,
+          durationSeconds: walking.durationSeconds ?? null,
+          notes: walking.notes ?? null,
+          sessionId,
+          userId,
+        })
+        .onConflictDoUpdate({
+          set: {
+            actualDistanceMeters: walking.actualDistanceMeters?.toString() ?? null,
+            distanceSource: walking.distanceSource,
+            durationSeconds: walking.durationSeconds ?? null,
+            notes: walking.notes ?? null,
+          },
+          target: walkingDetails.sessionId,
+        });
+    }
+
+    const status =
+      input.execution.exercises.length === 0
+        ? 'completed'
+        : calculateWorkoutCompletion(input.execution.exercises);
+    await transaction
+      .update(workoutSessions)
+      .set({
+        completedAt: input.execution.completedAt
+          ? new Date(input.execution.completedAt)
+          : status === 'completed' || status === 'partial'
+            ? new Date()
+            : null,
+        jointPainStatus: input.execution.jointPainStatus,
+        notes: input.notes,
+        startedAt: input.execution.startedAt ? new Date(input.execution.startedAt) : new Date(),
+        status,
+      })
+      .where(and(eq(workoutSessions.id, sessionId), eq(workoutSessions.userId, userId)));
+  });
+  return loadSession(database, userId, sessionId);
 }
 
 export function registerPlanningRoutes(app: FastifyInstance, dependencies: ApiDependencies): void {

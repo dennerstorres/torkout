@@ -1,4 +1,10 @@
-import { bodyMeasurements, habitDefinitions, userProfiles, users } from '@torkout/database';
+import {
+  bodyMeasurements,
+  habitDefinitions,
+  habitOptions,
+  userProfiles,
+  users,
+} from '@torkout/database';
 import { profileUpdateSchema } from '@torkout/contracts';
 import { and, eq, inArray } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
@@ -6,10 +12,39 @@ import type { FastifyInstance } from 'fastify';
 import { ApiHttpError, type ApiDependencies, requireAuthenticatedUser } from './auth-routes.js';
 
 const initialHabits = {
-  coffee: 'Café',
-  protein: 'Proteína',
-  rice: 'Arroz',
-  salad: 'Salada',
+  coffee: {
+    name: 'Café',
+    options: [
+      ['Não consumido', 'none'],
+      ['Sem açúcar', 'no_sugar'],
+      ['Com açúcar', 'with_sugar'],
+    ],
+  },
+  protein: {
+    name: 'Proteína',
+    options: [
+      ['Não consumida', 'none'],
+      ['Uma porção', 'one_portion'],
+      ['Duas ou mais porções', 'multiple_portions'],
+    ],
+  },
+  rice: {
+    name: 'Arroz',
+    options: [
+      ['Não consumido', 'none'],
+      ['Reduzido', 'reduced'],
+      ['Habitual', 'usual'],
+      ['Aumentado', 'increased'],
+    ],
+  },
+  salad: {
+    name: 'Salada',
+    options: [
+      ['Não consumida', 'none'],
+      ['Uma porção', 'one_portion'],
+      ['Duas ou mais porções', 'multiple_portions'],
+    ],
+  },
 } as const;
 
 function civilDate(now: Date, timeZone: string): string {
@@ -89,7 +124,7 @@ export function registerProfileRoutes(app: FastifyInstance, dependencies: ApiDep
         });
       }
 
-      const knownNames = Object.values(initialHabits);
+      const knownNames = Object.values(initialHabits).map((habit) => habit.name);
       await transaction
         .update(habitDefinitions)
         .set({ active: false, updatedAt: now })
@@ -99,22 +134,44 @@ export function registerProfileRoutes(app: FastifyInstance, dependencies: ApiDep
       for (const habit of input.enabledInitialHabits) {
         const existing = await transaction
           .update(habitDefinitions)
-          .set({ active: true, updatedAt: now })
+          .set({ active: true, type: 'choice', unit: null, updatedAt: now })
           .where(
             and(
               eq(habitDefinitions.userId, user.id),
-              eq(habitDefinitions.name, initialHabits[habit]),
+              eq(habitDefinitions.name, initialHabits[habit].name),
             ),
           )
           .returning({ id: habitDefinitions.id });
-        if (existing.length === 0) {
-          await transaction.insert(habitDefinitions).values({
-            active: true,
-            name: initialHabits[habit],
-            type: 'boolean',
-            userId: user.id,
-          });
+        let definitionId = existing[0]?.id;
+        if (!definitionId) {
+          const [created] = await transaction
+            .insert(habitDefinitions)
+            .values({
+              active: true,
+              name: initialHabits[habit].name,
+              sortOrder: Object.keys(initialHabits).indexOf(habit),
+              type: 'choice',
+              userId: user.id,
+            })
+            .returning({ id: habitDefinitions.id });
+          if (!created) throw new Error('Initial habit insert did not return a row.');
+          definitionId = created.id;
         }
+        await transaction
+          .insert(habitOptions)
+          .values(
+            initialHabits[habit].options.map(([label, stableValue], sortOrder) => ({
+              habitDefinitionId: definitionId,
+              label,
+              sortOrder,
+              stableValue,
+              userId: user.id,
+            })),
+          )
+          .onConflictDoUpdate({
+            set: { deletedAt: null, updatedAt: now },
+            target: [habitOptions.habitDefinitionId, habitOptions.stableValue],
+          });
       }
     });
 

@@ -10,10 +10,22 @@ import {
   workoutTemplateCreateSchema,
   workoutTemplateUpdateSchema,
 } from './planning.js';
+import {
+  habitDefinitionCreateSchema,
+  habitDefinitionUpdateSchema,
+  habitEntryCreateSchema,
+  habitEntryUpdateSchema,
+  painReportCreateSchema,
+  painReportUpdateSchema,
+  workoutExecutionSchema,
+} from './daily.js';
 
 export const syncEntityTypeSchema = z.enum([
   'body_measurement',
   'exercise',
+  'habit_definition',
+  'habit_entry',
+  'pain_report',
   'training_plan',
   'workout_template',
   'workout_session',
@@ -91,6 +103,9 @@ const sessionSyncUpdateSchema = z
     void version;
     return value;
   });
+const sessionSyncCreateSchema = workoutSessionCreateSchema.extend({
+  execution: workoutExecutionSchema.optional(),
+});
 
 function operationVariants<
   EntityType extends z.ZodLiteral<string>,
@@ -129,6 +144,13 @@ export const syncOperationSchema = z.union([
     bodyMeasurementUpdatePayloadSchema,
   ),
   ...operationVariants(z.literal('exercise'), exerciseCreateSchema, exerciseSyncUpdateSchema),
+  ...operationVariants(
+    z.literal('habit_definition'),
+    habitDefinitionCreateSchema,
+    habitDefinitionUpdateSchema,
+  ),
+  ...operationVariants(z.literal('habit_entry'), habitEntryCreateSchema, habitEntryUpdateSchema),
+  ...operationVariants(z.literal('pain_report'), painReportCreateSchema, painReportUpdateSchema),
   ...operationVariants(z.literal('training_plan'), trainingPlanCreateSchema, planSyncUpdateSchema),
   ...operationVariants(
     z.literal('workout_template'),
@@ -137,7 +159,7 @@ export const syncOperationSchema = z.union([
   ),
   ...operationVariants(
     z.literal('workout_session'),
-    workoutSessionCreateSchema,
+    sessionSyncCreateSchema,
     sessionSyncUpdateSchema,
   ),
 ]);

@@ -528,3 +528,71 @@ Este arquivo é o diário técnico, cronológico e append-only do projeto. Ele r
 ### Próximo passo
 
 - Iniciar a Fase 6 com dashboard Hoje, salvamento incremental de execução, dor, hábitos e medidas sobre os snapshots e a sincronização já disponíveis.
+
+## 2026-07-14 — Fase 6: Tela Hoje e registros diários
+
+**Status:** concluída
+
+**Commit de encerramento:** `feat(phase-6): implement daily workout tracking`
+
+### Escopo executado
+
+- Criada a tela Hoje mobile-first com data civil calculada no fuso do perfil, sessões do dia, metas e valores reais independentes, séries adicionais, observações e detalhes de caminhada.
+- Implementados estados de exercício concluído, ignorado e interrompido, além do cálculo puro de conclusão total ou parcial da sessão.
+- Cada edição de série, hábito, dor, medida ou execução é persistida primeiro na réplica Dexie e na outbox; o formulário incompleto sobrevive a reload sem rede.
+- Implementada confirmação explícita de ausência de dor articular com estado inicial `unknown`; ausência de relato nunca é convertida implicitamente em ausência de dor.
+- Implementados contratos, API autenticada e sincronização para relatos de dor, definições/entradas de hábitos e execução agregada da sessão.
+- Hábitos iniciais de café, arroz, proteína e salada passaram a usar escolhas estáveis e ordenadas; hábitos personalizados continuam aceitando booleano, quantidade, escala ou escolha.
+- Implementados registro e consulta de múltiplas medidas de peso/cintura no mesmo dia.
+- Criada importação autenticada e idempotente do histórico de 13/07/2026, acionável somente pela interface da conta e nunca inserida como seed global.
+- A aplicação hidrata os dados do dia pela API quando há rede, preserva alterações locais pendentes e mantém a tela utilizável quando a hidratação falha.
+- Estados `offline`, `pending`, `syncing`, `synced`, `conflict`, `auth-required` e `error` possuem mensagens textuais distintas na jornada diária.
+
+### Evidências TDD
+
+- RED de domínio — o cálculo inicial retornou `completed` para série incompleta e exercício ignorado; a regra passou a produzir `partial` nesses casos.
+- RED de contratos — envelopes de execução, dor e hábitos foram rejeitados antes da ampliação estrita do discriminador de entidades e dos schemas diários.
+- RED de banco — a migração inicial não possuía `joint_pain_status` nem chave idempotente de importação; o teste PostgreSQL observou zero colunas antes da migração.
+- RED de API — execução, dor, hábitos, medidas e importação retornaram `404`; quatro cenários passaram após a implementação e um quinto comprovou os adaptadores de sync por item.
+- RED de UI — a tela Hoje exibia somente o título; testes passaram após comprovar salvamento incremental, série adicional, ausência explícita de dor, hábito, medida e restauração via IndexedDB.
+- GREEN final — `pnpm check` passou com 17 arquivos de teste e 52 testes unitários/componentes; `pnpm test:integration` passou com 37 testes PostgreSQL e `pnpm test:e2e` passou com cinco jornadas móveis.
+- REFACTOR — contratos diários, cálculo puro, rotas/persistência, adaptadores de sync, hidratação e componente React foram mantidos em limites separados.
+
+### Alterações técnicas
+
+- Migração `0005_phase_6_daily_tracking.sql`: cria enum `joint_pain_status`, adiciona confirmação de dor e `import_key` às sessões, observação às caminhadas e unicidade parcial da importação por usuário.
+- Novos endpoints: `PUT /api/v1/sessions/:id/execution`, CRUD de `/api/v1/pain-reports`, CRUD/listagem diária de `/api/v1/habits`, `/api/v1/measurements` e `POST /api/v1/daily-history/import`.
+- O agregado sincronizável `workout_session` passou a aceitar execução incremental sem misturar alvos planejados com valores reais.
+- Novos tipos sincronizáveis: `pain_report`, `habit_definition` e `habit_entry`; todos usam UUID, versão otimista, tombstone, idempotência e change log existentes.
+- Adicionado gate estrutural `verify:phase-6` ao `pnpm check`.
+- Nenhuma dependência externa foi adicionada.
+
+### Decisões e ADRs
+
+- Mantidos os ADRs 0001 e 0002; a fase estende o monólito modular e o protocolo local-first sem mudança arquitetural.
+- Execução permanece um agregado da sessão para que série, estado do exercício, caminhada e confirmação de dor sejam persistidos juntos e não exponham estados relacionais parciais ao cliente.
+- A importação histórica usa uma chave funcional privada por usuário, permitindo repetição segura sem seed ou identificador global de titular.
+- Hábitos iniciais usam valores estáveis separados de rótulos em português, preservando futura edição textual sem reescrever histórico.
+
+### Segurança, privacidade e dados
+
+- Todas as rotas e adaptadores derivam o titular da sessão; vínculos de dor, série, hábito e opção são validados dentro do mesmo usuário.
+- Testes confirmam que outro usuário não consulta sessões nem relatos de dor e que a importação aparece somente na conta autenticada que a solicitou.
+- A hidratação online nunca sobrescreve registro local `pending` ou `conflict`.
+- Observações, dor, hábitos, medidas e corpos de requisição continuam ausentes dos logs.
+- A busca por `TODO`, `.skip` e `.only` não encontrou bypasses; `pnpm audit --prod --audit-level moderate` não encontrou vulnerabilidades conhecidas.
+
+### Desvios do plano
+
+- O GPS continua opcional e não foi introduzido; caminhada aceita distância manual, duração, origem e observação conforme a especificação.
+- A importação de 13/07/2026 é um fluxo autenticado específico, e não um importador genérico. Portabilidade e formatos gerais pertencem à Fase 10.
+
+### Pendências e riscos conhecidos
+
+- A tela Hoje carrega somente a data civil atual; navegação e edição histórica geral entram na Fase 8.
+- Relatos atrasados já são persistidos com sua própria data e vínculo, mas a invalidação de sugestões pertence ao motor da Fase 7.
+- O conflito continua resolvido no nível do agregado completo, conforme a política local-first vigente.
+
+### Próximo passo
+
+- Iniciar a Fase 7 com regras puras, versionadas e explicáveis de progressão sobre as evidências explícitas de execução e dor agora disponíveis.

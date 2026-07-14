@@ -18,6 +18,66 @@ const operation = {
 };
 
 describe('sync contracts', () => {
+  it('accepts daily execution, pain and habit operations while preserving explicit unknown pain', () => {
+    const sessionExecution = {
+      ...operation,
+      baseVersion: 1,
+      entityType: 'workout_session',
+      operation: 'update',
+      payload: {
+        execution: {
+          exercises: [
+            {
+              id: '61000000-0000-4000-8000-000000000001',
+              notes: 'Execução incremental',
+              sets: [
+                {
+                  actualRepetitions: 12,
+                  completed: true,
+                  id: '61000000-0000-4000-8000-000000000002',
+                  setNumber: 1,
+                },
+                {
+                  actualRepetitions: 8,
+                  completed: false,
+                  id: '61000000-0000-4000-8000-000000000003',
+                  setNumber: 2,
+                },
+              ],
+              status: 'stopped',
+            },
+          ],
+          jointPainStatus: 'unknown',
+        },
+      },
+    };
+    const pain = {
+      ...operation,
+      entityType: 'pain_report',
+      payload: {
+        bodyRegion: 'ankle',
+        exerciseSetId: '61000000-0000-4000-8000-000000000003',
+        exerciseStopped: true,
+        intensity: 'moderate',
+        localDate: '2026-07-13',
+        moment: 'during',
+        type: 'joint',
+      },
+    };
+    const habit = {
+      ...operation,
+      entityType: 'habit_entry',
+      payload: {
+        habitDefinitionId: '62000000-0000-4000-8000-000000000001',
+        localDate: '2026-07-14',
+        selectedOptionId: '62000000-0000-4000-8000-000000000002',
+      },
+    };
+
+    expect(syncOperationSchema.safeParse(sessionExecution).success).toBe(true);
+    expect(syncOperationSchema.safeParse(pain).success).toBe(true);
+    expect(syncOperationSchema.safeParse(habit).success).toBe(true);
+  });
   it('accepts planning aggregates and validates their metric-specific payload', () => {
     const templateOperation = {
       ...operation,

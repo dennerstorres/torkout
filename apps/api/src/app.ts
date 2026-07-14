@@ -3,6 +3,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 
 import { registerAccountRoutes } from './account-routes.js';
 import { registerAdminRoutes } from './admin-routes.js';
+import { registerDailyRoutes } from './daily-routes.js';
 import { ApiHttpError, type ApiDependencies, registerAuthRoutes } from './auth-routes.js';
 import { registerPrivacyRoutes } from './privacy.js';
 import { registerProfileRoutes } from './profile-routes.js';
@@ -26,6 +27,7 @@ export function buildApp(dependencies?: ApiDependencies): FastifyInstance {
     registerPrivacyRoutes(app, dependencies);
     registerProfileRoutes(app, dependencies);
     registerPlanningRoutes(app, dependencies);
+    registerDailyRoutes(app, dependencies);
     registerAdminRoutes(app, dependencies);
     registerAccountRoutes(app, dependencies);
     registerSyncRoutes(app, dependencies);

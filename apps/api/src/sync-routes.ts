@@ -8,7 +8,12 @@ import {
 import {
   bodyMeasurements,
   changeLog,
+  exerciseSets,
   exercises,
+  habitDefinitions,
+  habitEntries,
+  habitOptions,
+  painReports,
   scheduleRules,
   type DatabaseClient,
   registeredDevices,
@@ -25,7 +30,9 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 
 import { ApiHttpError, type ApiDependencies, requireAuthenticatedUser } from './auth-routes.js';
+import { insertHabitDefinition, loadHabitDefinition } from './daily-routes.js';
 import {
+  applySessionExecution,
   insertSessionAggregate,
   insertTemplateAggregate,
   loadSession,
@@ -271,6 +278,443 @@ function serializeExercise(row: typeof exercises.$inferSelect, tombstoneOnly = f
     instructions: row.instructions,
     name: row.name,
     trackingMetric: row.trackingMetric,
+  };
+}
+
+function serializePain(row: typeof painReports.$inferSelect, tombstoneOnly = false): SyncRecord {
+  const identity = {
+    deletedAt: row.deletedAt?.toISOString() ?? null,
+    id: row.id,
+    version: row.version,
+  };
+  if (tombstoneOnly) return identity;
+  return {
+    ...identity,
+    bodyRegion: row.bodyRegion,
+    customBodyRegion: row.customBodyRegion,
+    exerciseId: row.exerciseId,
+    exerciseSetId: row.exerciseSetId,
+    exerciseStopped: row.exerciseStopped,
+    intensity: row.intensity,
+    localDate: row.localDate,
+    moment: row.moment,
+    notes: row.notes,
+    occurredAt: row.occurredAt?.toISOString() ?? null,
+    sessionId: row.sessionId,
+    type: row.type,
+  };
+}
+
+function serializeHabitEntry(
+  row: typeof habitEntries.$inferSelect,
+  tombstoneOnly = false,
+): SyncRecord {
+  const identity = {
+    deletedAt: row.deletedAt?.toISOString() ?? null,
+    id: row.id,
+    version: row.version,
+  };
+  if (tombstoneOnly) return identity;
+  return {
+    ...identity,
+    booleanValue: row.booleanValue,
+    habitDefinitionId: row.habitDefinitionId,
+    localDate: row.localDate,
+    notes: row.notes,
+    numericValue: row.numericValue === null ? null : Number(row.numericValue),
+    selectedOptionId: row.selectedOptionId,
+    textValue: row.textValue,
+  };
+}
+
+async function applyPainOperation(
+  transaction: SyncTransaction,
+  userId: string,
+  operation: SyncOperation,
+): Promise<SyncPushResult> {
+  if (operation.entityType !== 'pain_report') {
+    return {
+      errorCode: 'invalid_entity_handler',
+      operationId: operation.operationId,
+      status: 'rejected',
+    };
+  }
+  const [current] = await transaction
+    .select()
+    .from(painReports)
+    .where(and(eq(painReports.id, operation.entityId), eq(painReports.userId, userId)))
+    .limit(1);
+  if (operation.operation === 'create') {
+    if (current) {
+      return {
+        errorCode: 'entity_already_exists',
+        operationId: operation.operationId,
+        record: serializePain(current),
+        status: 'conflict',
+      };
+    }
+    const [foreign] = await transaction
+      .select({ id: painReports.id })
+      .from(painReports)
+      .where(eq(painReports.id, operation.entityId))
+      .limit(1);
+    if (foreign) return { operationId: operation.operationId, status: 'unauthorized' };
+    if (operation.payload.sessionId) {
+      const [session] = await transaction
+        .select({ id: workoutSessions.id })
+        .from(workoutSessions)
+        .where(
+          and(
+            eq(workoutSessions.id, operation.payload.sessionId),
+            eq(workoutSessions.userId, userId),
+          ),
+        )
+        .limit(1);
+      if (!session)
+        return {
+          errorCode: 'invalid_session_link',
+          operationId: operation.operationId,
+          status: 'rejected',
+        };
+    }
+    if (operation.payload.exerciseSetId) {
+      const [set] = await transaction
+        .select({ id: exerciseSets.id })
+        .from(exerciseSets)
+        .where(
+          and(
+            eq(exerciseSets.id, operation.payload.exerciseSetId),
+            eq(exerciseSets.userId, userId),
+          ),
+        )
+        .limit(1);
+      if (!set)
+        return {
+          errorCode: 'invalid_set_link',
+          operationId: operation.operationId,
+          status: 'rejected',
+        };
+    }
+    const [created] = await transaction
+      .insert(painReports)
+      .values({
+        ...operation.payload,
+        id: operation.entityId,
+        occurredAt: operation.payload.occurredAt ? new Date(operation.payload.occurredAt) : null,
+        userId,
+      })
+      .returning();
+    if (!created) throw new Error('Pain report insert did not return a row.');
+    return {
+      operationId: operation.operationId,
+      record: serializePain(created),
+      status: 'applied',
+    };
+  }
+  if (!current)
+    return {
+      errorCode: 'entity_not_found',
+      operationId: operation.operationId,
+      status: 'rejected',
+    };
+  if (current.version !== operation.baseVersion || current.deletedAt) {
+    return {
+      errorCode: 'version_conflict',
+      operationId: operation.operationId,
+      record: serializePain(current, current.deletedAt !== null),
+      status: 'conflict',
+    };
+  }
+  if (operation.operation === 'delete') {
+    const [deleted] = await transaction
+      .update(painReports)
+      .set({ deletedAt: new Date() })
+      .where(and(eq(painReports.id, operation.entityId), eq(painReports.userId, userId)))
+      .returning();
+    if (!deleted) throw new Error('Pain report delete did not return a row.');
+    return {
+      operationId: operation.operationId,
+      record: serializePain(deleted, true),
+      status: 'applied',
+    };
+  }
+  const [updated] = await transaction
+    .update(painReports)
+    .set({
+      ...operation.payload,
+      occurredAt: operation.payload.occurredAt ? new Date(operation.payload.occurredAt) : undefined,
+    })
+    .where(and(eq(painReports.id, operation.entityId), eq(painReports.userId, userId)))
+    .returning();
+  if (!updated) throw new Error('Pain report update did not return a row.');
+  return { operationId: operation.operationId, record: serializePain(updated), status: 'applied' };
+}
+
+async function applyHabitDefinitionOperation(
+  transaction: SyncTransaction,
+  userId: string,
+  operation: SyncOperation,
+): Promise<SyncPushResult> {
+  if (operation.entityType !== 'habit_definition') {
+    return {
+      errorCode: 'invalid_entity_handler',
+      operationId: operation.operationId,
+      status: 'rejected',
+    };
+  }
+  const database = transaction as unknown as DatabaseClient;
+  const current = await loadHabitDefinition(database, userId, operation.entityId);
+  if (operation.operation === 'create') {
+    if (current)
+      return {
+        errorCode: 'entity_already_exists',
+        operationId: operation.operationId,
+        record: { ...current, deletedAt: null },
+        status: 'conflict',
+      };
+    const [foreign] = await transaction
+      .select({ id: habitDefinitions.id })
+      .from(habitDefinitions)
+      .where(eq(habitDefinitions.id, operation.entityId))
+      .limit(1);
+    if (foreign) return { operationId: operation.operationId, status: 'unauthorized' };
+    await insertHabitDefinition(database, userId, operation.payload, operation.entityId);
+    const created = await loadHabitDefinition(database, userId, operation.entityId);
+    if (!created) throw new Error('Habit definition insert did not return an aggregate.');
+    return {
+      operationId: operation.operationId,
+      record: { ...created, deletedAt: null },
+      status: 'applied',
+    };
+  }
+  if (!current)
+    return {
+      errorCode: 'entity_not_found',
+      operationId: operation.operationId,
+      status: 'rejected',
+    };
+  if (current.version !== operation.baseVersion)
+    return {
+      errorCode: 'version_conflict',
+      operationId: operation.operationId,
+      record: { ...current, deletedAt: null },
+      status: 'conflict',
+    };
+  if (operation.operation === 'delete') {
+    const [deleted] = await transaction
+      .update(habitDefinitions)
+      .set({ active: false, deletedAt: new Date() })
+      .where(and(eq(habitDefinitions.id, operation.entityId), eq(habitDefinitions.userId, userId)))
+      .returning();
+    if (!deleted) throw new Error('Habit definition delete did not return a row.');
+    return {
+      operationId: operation.operationId,
+      record: {
+        deletedAt: deleted.deletedAt?.toISOString() ?? null,
+        id: deleted.id,
+        version: deleted.version,
+      },
+      status: 'applied',
+    };
+  }
+  const { options, ...changes } = operation.payload;
+  await transaction
+    .update(habitDefinitions)
+    .set(changes)
+    .where(and(eq(habitDefinitions.id, operation.entityId), eq(habitDefinitions.userId, userId)));
+  if (options) {
+    await transaction
+      .update(habitOptions)
+      .set({ deletedAt: new Date() })
+      .where(
+        and(
+          eq(habitOptions.habitDefinitionId, operation.entityId),
+          eq(habitOptions.userId, userId),
+        ),
+      );
+    if (options.length > 0)
+      await transaction.insert(habitOptions).values(
+        options.map((option) => ({
+          habitDefinitionId: operation.entityId,
+          id: option.id ?? randomUUID(),
+          label: option.label,
+          sortOrder: option.sortOrder,
+          stableValue: option.stableValue,
+          userId,
+        })),
+      );
+  }
+  const updated = await loadHabitDefinition(database, userId, operation.entityId);
+  if (!updated) throw new Error('Habit definition update did not return an aggregate.');
+  return {
+    operationId: operation.operationId,
+    record: { ...updated, deletedAt: null },
+    status: 'applied',
+  };
+}
+
+async function applyHabitEntryOperation(
+  transaction: SyncTransaction,
+  userId: string,
+  operation: SyncOperation,
+): Promise<SyncPushResult> {
+  if (operation.entityType !== 'habit_entry') {
+    return {
+      errorCode: 'invalid_entity_handler',
+      operationId: operation.operationId,
+      status: 'rejected',
+    };
+  }
+  const [current] = await transaction
+    .select()
+    .from(habitEntries)
+    .where(and(eq(habitEntries.id, operation.entityId), eq(habitEntries.userId, userId)))
+    .limit(1);
+  if (operation.operation === 'create') {
+    if (current)
+      return {
+        errorCode: 'entity_already_exists',
+        operationId: operation.operationId,
+        record: serializeHabitEntry(current),
+        status: 'conflict',
+      };
+    const [sameDay] = await transaction
+      .select()
+      .from(habitEntries)
+      .where(
+        and(
+          eq(habitEntries.userId, userId),
+          eq(habitEntries.habitDefinitionId, operation.payload.habitDefinitionId),
+          eq(habitEntries.localDate, operation.payload.localDate),
+          isNull(habitEntries.deletedAt),
+        ),
+      )
+      .limit(1);
+    if (sameDay)
+      return {
+        errorCode: 'habit_entry_already_exists',
+        operationId: operation.operationId,
+        record: serializeHabitEntry(sameDay),
+        status: 'conflict',
+      };
+    const [definition] = await transaction
+      .select({ id: habitDefinitions.id })
+      .from(habitDefinitions)
+      .where(
+        and(
+          eq(habitDefinitions.id, operation.payload.habitDefinitionId),
+          eq(habitDefinitions.userId, userId),
+          isNull(habitDefinitions.deletedAt),
+        ),
+      )
+      .limit(1);
+    if (!definition)
+      return {
+        errorCode: 'habit_not_found',
+        operationId: operation.operationId,
+        status: 'rejected',
+      };
+    if (operation.payload.selectedOptionId) {
+      const [option] = await transaction
+        .select({ id: habitOptions.id })
+        .from(habitOptions)
+        .where(
+          and(
+            eq(habitOptions.id, operation.payload.selectedOptionId),
+            eq(habitOptions.habitDefinitionId, operation.payload.habitDefinitionId),
+            eq(habitOptions.userId, userId),
+            isNull(habitOptions.deletedAt),
+          ),
+        )
+        .limit(1);
+      if (!option)
+        return {
+          errorCode: 'invalid_habit_option',
+          operationId: operation.operationId,
+          status: 'rejected',
+        };
+    }
+    const [created] = await transaction
+      .insert(habitEntries)
+      .values({
+        ...operation.payload,
+        id: operation.entityId,
+        numericValue: operation.payload.numericValue?.toString() ?? null,
+        userId,
+      })
+      .returning();
+    if (!created) throw new Error('Habit entry insert did not return a row.');
+    return {
+      operationId: operation.operationId,
+      record: serializeHabitEntry(created),
+      status: 'applied',
+    };
+  }
+  if (!current)
+    return {
+      errorCode: 'entity_not_found',
+      operationId: operation.operationId,
+      status: 'rejected',
+    };
+  if (current.version !== operation.baseVersion || current.deletedAt)
+    return {
+      errorCode: 'version_conflict',
+      operationId: operation.operationId,
+      record: serializeHabitEntry(current, current.deletedAt !== null),
+      status: 'conflict',
+    };
+  if (operation.operation === 'delete') {
+    const [deleted] = await transaction
+      .update(habitEntries)
+      .set({ deletedAt: new Date() })
+      .where(and(eq(habitEntries.id, operation.entityId), eq(habitEntries.userId, userId)))
+      .returning();
+    if (!deleted) throw new Error('Habit entry delete did not return a row.');
+    return {
+      operationId: operation.operationId,
+      record: serializeHabitEntry(deleted, true),
+      status: 'applied',
+    };
+  }
+  if (operation.payload.selectedOptionId) {
+    const [option] = await transaction
+      .select({ id: habitOptions.id })
+      .from(habitOptions)
+      .where(
+        and(
+          eq(habitOptions.id, operation.payload.selectedOptionId),
+          eq(habitOptions.habitDefinitionId, current.habitDefinitionId),
+          eq(habitOptions.userId, userId),
+          isNull(habitOptions.deletedAt),
+        ),
+      )
+      .limit(1);
+    if (!option)
+      return {
+        errorCode: 'invalid_habit_option',
+        operationId: operation.operationId,
+        status: 'rejected',
+      };
+  }
+  const changesValue = ['booleanValue', 'numericValue', 'selectedOptionId', 'textValue'].some(
+    (key) => key in operation.payload,
+  );
+  const [updated] = await transaction
+    .update(habitEntries)
+    .set({
+      ...operation.payload,
+      booleanValue: changesValue ? (operation.payload.booleanValue ?? null) : undefined,
+      numericValue: changesValue ? (operation.payload.numericValue?.toString() ?? null) : undefined,
+      selectedOptionId: changesValue ? (operation.payload.selectedOptionId ?? null) : undefined,
+      textValue: changesValue ? (operation.payload.textValue ?? null) : undefined,
+    })
+    .where(and(eq(habitEntries.id, operation.entityId), eq(habitEntries.userId, userId)))
+    .returning();
+  if (!updated) throw new Error('Habit entry update did not return a row.');
+  return {
+    operationId: operation.operationId,
+    record: serializeHabitEntry(updated),
+    status: 'applied',
   };
 }
 
@@ -689,7 +1133,13 @@ async function applySessionOperation(
       .limit(1);
     if (foreign) return { operationId: operation.operationId, status: 'unauthorized' };
     await insertSessionAggregate(database, userId, operation.payload, operation.entityId);
-    const created = await loadSession(database, userId, operation.entityId);
+    const created = operation.payload.execution
+      ? await applySessionExecution(database, userId, operation.entityId, {
+          execution: operation.payload.execution,
+          notes: operation.payload.notes,
+          version: 1,
+        })
+      : await loadSession(database, userId, operation.entityId);
     if (!created) throw new Error('Session insert did not return an aggregate.');
     return {
       operationId: operation.operationId,
@@ -732,6 +1182,19 @@ async function applySessionOperation(
       status: 'applied',
     };
   }
+  if (operation.payload.execution) {
+    const updated = await applySessionExecution(database, userId, operation.entityId, {
+      execution: operation.payload.execution,
+      notes: operation.payload.notes,
+      version: operation.baseVersion,
+    });
+    if (!updated) throw new Error('Session execution update did not return an aggregate.');
+    return {
+      operationId: operation.operationId,
+      record: { ...updated, deletedAt: null },
+      status: 'applied',
+    };
+  }
   await transaction
     .update(workoutSessions)
     .set(operation.payload)
@@ -748,6 +1211,9 @@ async function applySessionOperation(
 const entityHandlers = {
   body_measurement: applyMeasurementOperation,
   exercise: applyExerciseOperation,
+  habit_definition: applyHabitDefinitionOperation,
+  habit_entry: applyHabitEntryOperation,
+  pain_report: applyPainOperation,
   training_plan: applyPlanOperation,
   workout_session: applySessionOperation,
   workout_template: applyTemplateOperation,

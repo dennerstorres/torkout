@@ -104,6 +104,32 @@ describe('initial PostgreSQL schema', () => {
     ).rejects.toMatchObject({ constraint: 'habit_entries_exactly_one_value_check' });
   });
 
+  it('stores explicit joint-pain confirmation and an idempotent authenticated history import', async () => {
+    const columns = await pool.query<{ column_name: string }>(
+      `select column_name from information_schema.columns
+       where table_schema = 'public' and table_name = 'workout_sessions'
+         and column_name in ('joint_pain_status', 'import_key')
+       order by column_name`,
+    );
+    expect(columns.rows.map((row) => row.column_name)).toEqual(['import_key', 'joint_pain_status']);
+
+    const userId = await createUser('phase-6-schema@example.invalid');
+    await pool.query(
+      `insert into workout_sessions
+         (user_id, template_name_snapshot, planned_local_date, time_zone, type, source, import_key)
+       values ($1, 'Histórico', '2026-07-13', 'America/Cuiaba', 'strength', 'ad_hoc', 'history-2026-07-13')`,
+      [userId],
+    );
+    await expect(
+      pool.query(
+        `insert into workout_sessions
+           (user_id, template_name_snapshot, planned_local_date, time_zone, type, source, import_key)
+         values ($1, 'Duplicado', '2026-07-13', 'America/Cuiaba', 'strength', 'ad_hoc', 'history-2026-07-13')`,
+        [userId],
+      ),
+    ).rejects.toMatchObject({ constraint: 'workout_sessions_user_import_key_unique' });
+  });
+
   it('increments versions and retains tombstones for syncable records', async () => {
     const userId = await createUser('sync@example.invalid');
     const inserted = await pool.query<{ id: string; version: number }>(

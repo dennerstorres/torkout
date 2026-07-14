@@ -41,6 +41,7 @@ export const sessionExerciseStatusEnum = pgEnum('session_exercise_status', [
   'stopped',
 ]);
 export const distanceSourceEnum = pgEnum('distance_source', ['manual', 'gps', 'import']);
+export const jointPainStatusEnum = pgEnum('joint_pain_status', ['unknown', 'none', 'reported']);
 
 export const exercises = pgTable(
   'exercises',
@@ -207,6 +208,8 @@ export const workoutSessions = pgTable(
     source: sessionSourceEnum('source').notNull(),
     startedAt: timestamp('started_at', { mode: 'date', withTimezone: true }),
     completedAt: timestamp('completed_at', { mode: 'date', withTimezone: true }),
+    importKey: text('import_key'),
+    jointPainStatus: jointPainStatusEnum('joint_pain_status').default('unknown').notNull(),
     notes: text('notes'),
   },
   (table) => [
@@ -214,6 +217,9 @@ export const workoutSessions = pgTable(
     uniqueIndex('workout_sessions_rule_date_unique')
       .on(table.scheduleRuleId, table.plannedLocalDate)
       .where(sql`${table.scheduleRuleId} is not null and ${table.deletedAt} is null`),
+    uniqueIndex('workout_sessions_user_import_key_unique')
+      .on(table.userId, table.importKey)
+      .where(sql`${table.importKey} is not null and ${table.deletedAt} is null`),
     check(
       'workout_sessions_chronology_check',
       sql`${table.completedAt} is null or ${table.startedAt} is null or ${table.completedAt} >= ${table.startedAt}`,
@@ -291,6 +297,7 @@ export const walkingDetails = pgTable(
     actualDistanceMeters: numeric('actual_distance_meters', { precision: 10, scale: 2 }),
     durationSeconds: integer('duration_seconds'),
     distanceSource: distanceSourceEnum('distance_source').default('manual').notNull(),
+    notes: text('notes'),
   },
   (table) => [
     uniqueIndex('walking_details_session_unique').on(table.sessionId),

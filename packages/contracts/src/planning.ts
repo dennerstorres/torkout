@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { workoutExecutionSchema } from './daily.js';
+
 export const SYSTEM_EXERCISES = {
   pushUp: {
     category: 'Força',
@@ -184,6 +186,7 @@ export const workoutTemplateUpdateSchema = z
 export const workoutSessionCreateSchema = z.strictObject({
   exercises: z.array(plannedExerciseSchema).max(100),
   id: z.uuid().optional(),
+  importKey: z.string().trim().max(100).nullable().optional(),
   notes: nullableText(2_000),
   plannedLocalDate: z.iso.date(),
   scheduleRuleId: z.uuid().nullable().optional(),
@@ -197,6 +200,7 @@ export const workoutSessionCreateSchema = z.strictObject({
 });
 
 export const workoutSessionUpdateSchema = z.strictObject({
+  execution: workoutExecutionSchema.optional(),
   notes: nullableText(2_000),
   plannedLocalDate: z.iso.date().optional(),
   status: workoutStatusSchema.optional(),
