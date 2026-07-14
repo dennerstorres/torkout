@@ -37,6 +37,7 @@ describe('initial PostgreSQL schema', () => {
       'audit_events',
       'body_measurements',
       'change_log',
+      'consumed_auth_tokens',
       'exercise_sets',
       'exercises',
       'habit_definitions',

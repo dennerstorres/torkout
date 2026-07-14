@@ -92,3 +92,18 @@ export const verifications = pgTable(
   },
   (table) => [index('verifications_identifier_idx').on(table.identifier)],
 );
+
+export const consumedAuthTokens = pgTable(
+  'consumed_auth_tokens',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    purpose: text('purpose').notNull(),
+    tokenHash: text('token_hash').notNull(),
+    expiresAt: timestamp('expires_at', { mode: 'date', withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { mode: 'date', withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('consumed_auth_tokens_hash_unique').on(table.tokenHash),
+    index('consumed_auth_tokens_expires_at_idx').on(table.expiresAt),
+  ],
+);

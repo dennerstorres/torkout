@@ -315,3 +315,78 @@ Este arquivo é o diário técnico, cronológico e append-only do projeto. Ele r
 ### Próximo passo
 
 - Fase 2 encerrada. A Fase 3 não foi iniciada por solicitação explícita de parada após esta fase.
+
+## 2026-07-14 — Fase 3: Autenticação, cadastro público e privacidade
+
+**Status:** concluída
+
+**Commit de encerramento:** `feat(phase-3): implement secure public authentication`
+
+### Escopo executado
+
+- Integrado Better Auth 1.6 ao Fastify e ao schema Drizzle/PostgreSQL existente, com cadastro público, confirmação de e-mail obrigatória, login, logout, recuperação e exclusão de conta.
+- Configurado Argon2id com 64 MiB, três iterações, paralelismo 1, saída de 32 bytes e salt aleatório individual.
+- Criado transporte SMTP configurável exclusivamente por ambiente e mensagens textuais para confirmação e recuperação.
+- Configurados cookies `HttpOnly`, `Secure` e `SameSite=Lax`, origem confiável, proteção CSRF, CORS restrito e limites temporários específicos para endpoints públicos sensíveis.
+- Implementado consumo persistente e atômico de links de confirmação, cobrindo a exigência de rejeitar reutilização que o fluxo JWT padrão da biblioteca não fornecia.
+- Implementados documentos públicos versionados, aceites por usuário, onboarding de perfil, medidas iniciais opcionais e ativação dos quatro hábitos iniciais.
+- Implementadas listagem/revogação de sessões, papel administrativo mínimo, bloqueio de conta com revogação total e auditoria sem conteúdo de saúde.
+- Implementada exclusão com frase explícita e reautenticação por senha, usando a remoção transacional/cascata do Better Auth.
+- Criadas telas responsivas e acessíveis para autenticação, recuperação, nova senha, onboarding, sessões e exclusão.
+- Implementada autorização local por 30 dias desde a última autenticação online, com bloqueio posterior que preserva dados e outbox.
+- Criado gate estrutural `verify:phase-3` e incorporado ao `pnpm check`.
+
+### Evidências TDD
+
+- RED estrutural — `scripts/verify-phase-3.ps1` enumerou os 14 contratos inicialmente ausentes.
+- RED unitário — contratos permissivos, senha em texto e autorização offline incompleta falharam em seis assertivas comportamentais antes das implementações.
+- GREEN unitário — oito suítes e 24 testes passaram, cobrindo contratos, Argon2id, SMTP, adaptação Fastify, formulários e janela offline.
+- RED integração — cadastro, origem e rate limit retornaram `501` antes da configuração do Better Auth; rotas de perfil/privacidade/administração retornaram `404` antes do registro.
+- RED de segurança — a reutilização do JWT de confirmação foi aceita pela biblioteca e o login de conta bloqueada criou sessão antes das proteções adicionais.
+- GREEN integração — quatro suítes e 19 testes passaram contra PostgreSQL real, incluindo migração limpa, hash, enumeração, token único/expirado, reset, cookies, sessões, isolamento horizontal, bloqueio auditado e exclusão real.
+- RED web — as jornadas de autenticação, onboarding, conta, reset e expiração offline falharam antes dos componentes e estados correspondentes.
+- GREEN E2E — três jornadas passaram no perfil Chromium móvel: shell público, cadastro/recuperação e onboarding com consentimento explícito.
+- REFACTOR — autenticação, rotas de conta, privacidade, perfil e administração foram separadas por módulo; cliente web e componentes foram isolados por responsabilidade.
+- GREEN final — instalação congelada, `pnpm check`, integração PostgreSQL, E2E móvel, build e auditoria de dependências passaram.
+
+### Alterações técnicas
+
+- Migração `0002_superb_susan_delgado.sql`: tabela interna `consumed_auth_tokens`, índices e versões iniciais dos três documentos públicos.
+- Endpoints Better Auth sob `/auth/*`: cadastro, login/logout, confirmação, reset, sessão e exclusão.
+- Endpoints de produto: `GET /api/v1/privacy/documents`, `POST /api/v1/privacy/acceptances`, `GET/PUT /api/v1/profile`, `DELETE /api/v1/account` e `PUT /api/v1/admin/users/:userId/block`.
+- Contratos Zod compartilhados para perfil, aceites, exclusão e bloqueio.
+- Cliente Better Auth no React e proxy Vite local para `/auth` e `/api`.
+- Variáveis novas: `AUTH_BASE_URL`, `AUTH_SECRET`, `TRUSTED_ORIGINS` e configuração `SMTP_*`.
+
+### Decisões e ADRs
+
+- Mantido o ADR-0003; nenhuma mudança arquitetural exigiu novo ADR.
+- O plugin administrativo amplo do Better Auth não foi habilitado. Foi criada somente a operação necessária de bloqueio, reduzindo a superfície administrativa e impedindo acesso comum a conteúdo de saúde.
+- O rate limit usa memória do processo, adequado ao monólito de instância única atual; uma estratégia compartilhada será exigida antes de escalar horizontalmente.
+- Links de confirmação recebem um marcador SHA-256 persistente antes do processamento para garantir consumo no máximo uma vez, inclusive sob concorrência entre instâncias.
+- O `esbuild` transitivo legado do Drizzle Kit foi substituído por versão corrigida via override do workspace.
+
+### Segurança, privacidade e dados
+
+- Testes no PostgreSQL confirmam que senhas persistidas começam com `$argon2id$` e nunca contêm o segredo original.
+- Respostas de cadastro e recuperação permanecem genéricas; conta não verificada não recebe sessão completa.
+- Tokens de confirmação são armazenados somente como SHA-256; tokens de reset usam o armazenamento de verificação com identificador protegido do Better Auth.
+- Bloqueio remove sessões existentes, impede novas sessões e registra apenas motivo operacional e expiração.
+- Logs continuam desabilitados e nenhum corpo, cookie, senha, token ou conteúdo de saúde é emitido.
+- Aceites registram somente versão, instante e família minimizada do user agent; IP é omitido.
+- `pnpm audit --prod --audit-level moderate` terminou sem vulnerabilidades conhecidas após o override transitivo.
+
+### Desvios do plano
+
+- A verificação de e-mail da versão adotada do Better Auth usa JWT stateless e aceitava reutilização idempotente; foi acrescentado consumo persistente para cumprir o requisito mais estrito do projeto.
+- Os E2E exercitam a UI com fronteiras HTTP controladas; os mesmos fluxos de segurança do backend são cobertos separadamente contra PostgreSQL real para manter o E2E determinístico e sem SMTP externo.
+
+### Pendências e riscos conhecidos
+
+- Rate limit em memória não é compartilhado entre réplicas; não executar múltiplas instâncias públicas antes de adotar armazenamento comum ou limitar o tráfego por proxy.
+- O bloqueio offline protege a interface e preserva a outbox, mas o particionamento físico no IndexedDB começa na Fase 4.
+- SMTP precisa de credenciais, domínio e DNS reais antes da abertura pública, conforme Fase 12.
+
+### Próximo passo
+
+- Iniciar a Fase 4 com réplica Dexie particionada, outbox e protocolo de sincronização idempotente.

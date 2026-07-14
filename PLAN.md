@@ -6,7 +6,7 @@
 
 **Unidade de entrega:** fase completa com commit de encerramento
 
-**Status geral:** Fases 0, 1 e 2 concluídas; Fase 3 ainda não iniciada
+**Status geral:** Fases 0, 1, 2 e 3 concluídas; Fase 4 ainda não iniciada
 
 ## 1. Regras de execução
 
@@ -153,41 +153,41 @@ O hash não é escrito no próprio `HISTORY.md`, evitando o ciclo em que alterar
 
 ### Fase 3 — Autenticação, cadastro público e privacidade
 
-**Status:** pendente
+**Status:** concluída
 
 **Commit esperado:** `feat(phase-3): implement secure public authentication`
 
 #### Tarefas
 
-- [ ] Integrar Better Auth ao Fastify e Drizzle.
-- [ ] Configurar Argon2id.
-- [ ] Implementar cadastro e confirmação de e-mail.
-- [ ] Integrar SMTP configurável.
-- [ ] Implementar login, logout e recuperação de senha.
-- [ ] Implementar cookies e proteção CSRF/origin.
-- [ ] Implementar rate limiting e bloqueio temporário.
-- [ ] Implementar aceite versionado de privacidade/dados de saúde.
-- [ ] Implementar sessões listáveis e revogáveis.
-- [ ] Implementar papel administrativo mínimo.
-- [ ] Implementar bloqueio administrativo auditado, sem exposição de conteúdo de saúde.
-- [ ] Criar telas acessíveis de autenticação.
-- [ ] Criar fluxo de onboarding e perfil.
-- [ ] Implementar pedido de exclusão com reautenticação.
-- [ ] Implementar autorização offline local com validade máxima de 30 dias.
+- [x] Integrar Better Auth ao Fastify e Drizzle.
+- [x] Configurar Argon2id.
+- [x] Implementar cadastro e confirmação de e-mail.
+- [x] Integrar SMTP configurável.
+- [x] Implementar login, logout e recuperação de senha.
+- [x] Implementar cookies e proteção CSRF/origin.
+- [x] Implementar rate limiting e bloqueio temporário.
+- [x] Implementar aceite versionado de privacidade/dados de saúde.
+- [x] Implementar sessões listáveis e revogáveis.
+- [x] Implementar papel administrativo mínimo.
+- [x] Implementar bloqueio administrativo auditado, sem exposição de conteúdo de saúde.
+- [x] Criar telas acessíveis de autenticação.
+- [x] Criar fluxo de onboarding e perfil.
+- [x] Implementar pedido de exclusão com reautenticação.
+- [x] Implementar autorização offline local com validade máxima de 30 dias.
 
 #### Testes primeiro
 
-- [ ] Cadastro válido/inválido e e-mail duplicado sem enumeração.
-- [ ] Conta não confirmada possui acesso restrito.
-- [ ] Token expirado ou reutilizado é rejeitado.
-- [ ] Senha nunca aparece em texto puro no banco/log.
-- [ ] Reset revoga sessões conforme política.
-- [ ] CSRF/origem inválida é bloqueada.
-- [ ] Rate limit funciona.
-- [ ] Usuário A não acessa perfil de B.
-- [ ] Bloqueio administrativo impede novas sessões e não revela dados de saúde.
-- [ ] Acesso local funciona dentro da validade offline e exige revalidação depois dela sem apagar a outbox.
-- [ ] Fluxos web completos por E2E.
+- [x] Cadastro válido/inválido e e-mail duplicado sem enumeração.
+- [x] Conta não confirmada possui acesso restrito.
+- [x] Token expirado ou reutilizado é rejeitado.
+- [x] Senha nunca aparece em texto puro no banco/log.
+- [x] Reset revoga sessões conforme política.
+- [x] CSRF/origem inválida é bloqueada.
+- [x] Rate limit funciona.
+- [x] Usuário A não acessa perfil de B.
+- [x] Bloqueio administrativo impede novas sessões e não revela dados de saúde.
+- [x] Acesso local funciona dentro da validade offline e exige revalidação depois dela sem apagar a outbox.
+- [x] Fluxos web completos por E2E.
 
 #### Critérios de saída
 

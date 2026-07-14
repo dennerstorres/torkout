@@ -1,6 +1,6 @@
 :root {
-  color: #17221c;
-  background: #f5f7f5;
+  color: #16231c;
+  background: #eef2ed;
   font-family:
     Inter,
     system-ui,
@@ -15,35 +15,199 @@
 * {
   box-sizing: border-box;
 }
-
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
 }
+button,
+input {
+  font: inherit;
+}
+button {
+  min-height: 44px;
+  cursor: pointer;
+}
 
-.app-shell {
-  display: grid;
+.auth-layout,
+.centered-layout {
   min-height: 100vh;
-  align-content: center;
-  padding: 2rem;
+  padding: clamp(1rem, 4vw, 3rem);
 }
-
-.app-shell h1,
-.app-shell p {
-  margin-block: 0;
+.auth-layout {
+  display: grid;
+  gap: 1.25rem;
+  align-items: center;
 }
-
-.app-shell h1 {
-  margin-block: 0.25rem 0.75rem;
-  font-size: clamp(2.5rem, 12vw, 5rem);
-  letter-spacing: -0.06em;
+.centered-layout {
+  display: grid;
+  place-items: center;
 }
-
+.intro-panel {
+  padding: clamp(1rem, 5vw, 4rem);
+}
+.brand {
+  margin: 0.2rem 0 1rem;
+  font-size: clamp(3rem, 16vw, 7rem);
+  font-weight: 800;
+  letter-spacing: -0.07em;
+}
 .eyebrow {
-  color: #3d6f57;
-  font-size: 0.875rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  margin: 0;
+  color: #2f6d4e;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
+}
+.card {
+  width: min(100%, 34rem);
+  padding: clamp(1.25rem, 5vw, 2.5rem);
+  border: 1px solid #d3ddd5;
+  border-radius: 1.25rem;
+  background: #fff;
+  box-shadow: 0 1rem 3rem rgba(26, 54, 38, 0.08);
+}
+.wide-card {
+  width: min(100%, 52rem);
+}
+h1 {
+  margin: 0.5rem 0 1.5rem;
+  font-size: clamp(1.8rem, 7vw, 2.7rem);
+  letter-spacing: -0.04em;
+}
+h2 {
+  margin-top: 2rem;
+  font-size: 1.2rem;
+}
+form {
+  display: grid;
+  gap: 1rem;
+}
+label {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 650;
+}
+input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid #9eafa4;
+  border-radius: 0.65rem;
+  color: inherit;
+  background: #fff;
+}
+input:focus-visible,
+button:focus-visible,
+summary:focus-visible {
+  outline: 3px solid #73b98d;
+  outline-offset: 2px;
+}
+button {
+  border: 1px solid #537560;
+  border-radius: 0.65rem;
+  padding: 0.65rem 1rem;
+  color: #244b35;
+  background: #fff;
+  font-weight: 750;
+}
+.primary {
+  color: #fff;
+  border-color: #245b3c;
+  background: #245b3c;
+}
+.danger {
+  color: #fff;
+  border-color: #962e2e;
+  background: #962e2e;
+}
+.link-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+.link-actions button,
+.back-button {
+  min-height: 40px;
+  border-color: transparent;
+  padding-inline: 0.25rem;
+  text-decoration: underline;
+}
+.form-grid {
+  display: grid;
+  gap: 1rem;
+}
+fieldset {
+  margin: 0.5rem 0;
+  border: 1px solid #d3ddd5;
+  border-radius: 0.75rem;
+}
+.check-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+.check-grid label,
+.check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+.check-grid input,
+.check-row input {
+  width: 1.25rem;
+  min-height: 1.25rem;
+  margin-top: 0.15rem;
+}
+.documents {
+  display: grid;
+  gap: 0.5rem;
+}
+details {
+  padding: 0.75rem;
+  border-radius: 0.65rem;
+  background: #f2f6f2;
+}
+summary {
+  cursor: pointer;
+  font-weight: 750;
+}
+.session-list {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+.session-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem;
+  border-radius: 0.65rem;
+  background: #f2f6f2;
+}
+hr {
+  margin-block: 2rem;
+  border: 0;
+  border-top: 1px solid #d3ddd5;
+}
+
+@media (min-width: 760px) {
+  .auth-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(22rem, 34rem);
+  }
+  .form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+  }
 }

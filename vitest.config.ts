@@ -8,7 +8,7 @@ export default defineConfig({
         test: {
           environment: 'node',
           include: [
-            'apps/api/src/**/*.test.ts',
+            'apps/api/src/**/!(*.integration).test.ts',
             'packages/contracts/src/**/*.test.ts',
             'packages/domain/src/**/*.test.ts',
             'packages/test-utils/src/**/*.test.ts',
@@ -28,7 +28,11 @@ export default defineConfig({
       {
         test: {
           environment: 'node',
-          include: ['packages/database/src/**/*.integration.test.ts'],
+          fileParallelism: false,
+          include: [
+            'apps/api/src/**/*.integration.test.ts',
+            'packages/database/src/**/*.integration.test.ts',
+          ],
           name: 'integration',
           testTimeout: 10_000,
         },

@@ -10,7 +10,15 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@better-auth/drizzle-adapter": "1.6.23",
+    "@fastify/cors": "^11.3.0",
+    "@node-rs/argon2": "2.0.2",
+    "@torkout/contracts": "workspace:*",
+    "@torkout/database": "workspace:*",
+    "better-auth": "1.6.23",
+    "drizzle-orm": "0.45.2",
     "fastify": "^5.10.0",
+    "nodemailer": "9.0.3",
     "zod": "^4.4.3"
   }
 }
