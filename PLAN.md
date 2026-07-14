@@ -6,7 +6,7 @@
 
 **Unidade de entrega:** fase completa com commit de encerramento
 
-**Status geral:** Fase 0 concluída; Fase 1 ainda não iniciada
+**Status geral:** Fases 0 e 1 concluídas; Fase 2 ainda não iniciada
 
 ## 1. Regras de execução
 
@@ -84,30 +84,30 @@ O hash não é escrito no próprio `HISTORY.md`, evitando o ciclo em que alterar
 
 ### Fase 1 — Monorepo e qualidade básica
 
-**Status:** pendente
+**Status:** concluída
 
 **Commit esperado:** `chore(phase-1): scaffold monorepo and quality gates`
 
 #### Tarefas
 
-- [ ] Configurar `pnpm` workspace.
-- [ ] Criar `apps/web`, `apps/api` e pacotes compartilhados.
-- [ ] Configurar TypeScript estrito.
-- [ ] Configurar lint, formatador e ordenação de imports.
-- [ ] Configurar Vitest para unidades/componentes.
-- [ ] Configurar Playwright para E2E.
-- [ ] Configurar ambiente PostgreSQL efêmero para integração.
-- [ ] Criar scripts raiz de check, test e build.
-- [ ] Configurar CI com instalação travada, lint, typecheck, testes e build.
-- [ ] Criar Dockerfiles de desenvolvimento/release mínimos.
-- [ ] Criar validação tipada de variáveis de ambiente.
+- [x] Configurar `pnpm` workspace.
+- [x] Criar `apps/web`, `apps/api` e pacotes compartilhados.
+- [x] Configurar TypeScript estrito.
+- [x] Configurar lint, formatador e ordenação de imports.
+- [x] Configurar Vitest para unidades/componentes.
+- [x] Configurar Playwright para E2E.
+- [x] Configurar ambiente PostgreSQL efêmero para integração.
+- [x] Criar scripts raiz de check, test e build.
+- [x] Configurar CI com instalação travada, lint, typecheck, testes e build.
+- [x] Criar Dockerfiles de desenvolvimento/release mínimos.
+- [x] Criar validação tipada de variáveis de ambiente.
 
 #### Testes/verificações primeiro
 
-- [ ] Teste de fumaça web inicialmente falhando.
-- [ ] Teste de fumaça API inicialmente falhando.
-- [ ] Teste de importação do pacote de contratos inicialmente falhando.
-- [ ] Teste de validação de ambiente inicialmente falhando.
+- [x] Teste de fumaça web inicialmente falhando.
+- [x] Teste de fumaça API inicialmente falhando.
+- [x] Teste de importação do pacote de contratos inicialmente falhando.
+- [x] Teste de validação de ambiente inicialmente falhando.
 
 #### Critérios de saída
 

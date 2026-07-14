@@ -1,0 +1,17 @@
+.git
+.github
+.pnpm-store
+backups
+coverage
+dist
+**/dist
+node_modules
+**/node_modules
+playwright-report
+test-results
+.env
+.env.*
+!.env.example
+*.log
+*.dump
+*.backup

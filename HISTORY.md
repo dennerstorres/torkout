@@ -22,31 +22,39 @@ Este arquivo é o diário técnico, cronológico e append-only do projeto. Ele r
 **Commit de encerramento:** não criado | mensagem do commit
 
 ### Escopo executado
+
 - ...
 
 ### Evidências TDD
+
 - RED — teste/comando: falha esperada e motivo.
 - GREEN — teste/comando: sucesso.
 - REFACTOR — verificações executadas.
 
 ### Alterações técnicas
+
 - Arquivos/componentes/contratos relevantes.
 - Migrações: ...
 - Endpoints: ...
 
 ### Decisões e ADRs
+
 - ...
 
 ### Segurança, privacidade e dados
+
 - ...
 
 ### Desvios do plano
+
 - Nenhum | descrição, motivo e atualização documental.
 
 ### Pendências e riscos conhecidos
+
 - Nenhum | ...
 
 ### Próximo passo
+
 - ...
 ```
 
@@ -160,3 +168,79 @@ Este arquivo é o diário técnico, cronológico e append-only do projeto. Ele r
 ### Próximo passo
 
 - Iniciar a Fase 1 para criar o monorepo e os gates de qualidade executáveis.
+
+## 2026-07-14 — Fase 1: Monorepo e qualidade básica
+
+**Status:** concluída
+
+**Commit de encerramento:** `chore(phase-1): scaffold monorepo and quality gates`
+
+### Escopo executado
+
+- Criado monorepo `pnpm` com aplicações API/web e pacotes de contratos, domínio, banco e utilitários de teste.
+- Configurado TypeScript estrito, sem emissão por padrão e com builds isolados.
+- Configurados ESLint flat config, Prettier, Vitest com projetos, Testing Library e Playwright.
+- Criados shell web acessível e endpoint Fastify `/health/live`.
+- Criada validação tipada de ambiente com Zod.
+- Criado PostgreSQL 18 efêmero para testes de integração.
+- Criados Dockerfiles de release para API e frontend e `.dockerignore` restritivo.
+- Criada CI com jobs separados de qualidade, integração e E2E.
+- Fixados Node 24 LTS nos containers/CI, pnpm 11.1.2 e lockfile.
+
+### Evidências TDD
+
+- RED estrutural — `& .\scripts\verify-phase-1.ps1`: falhou com os 30 arquivos iniciais ausentes.
+- RED unitário — `pnpm test`: cinco testes falharam pelos comportamentos ainda ausentes em API, ambiente, contrato e UI.
+- GREEN unitário — `pnpm test`: três arquivos e cinco testes passaram.
+- RED integração — `pnpm test:integration`: falhou com `ECONNREFUSED` antes de subir o banco efêmero.
+- RED de infraestrutura — o primeiro PostgreSQL 18 encerrou porque o tmpfs usava o caminho legado `/var/lib/postgresql/data`.
+- GREEN integração — após usar `/var/lib/postgresql`, a consulta real `select 1` passou.
+- RED de qualidade — formatação/lint detectaram saída JavaScript emitida ao lado do TypeScript por `tsc -b`.
+- GREEN/REFACTOR — emissão desabilitada por padrão, artefatos removidos e format, lint, typecheck e build passaram.
+- RED de containerização — o gate estrutural falhou quando `.dockerignore` passou a ser exigido.
+- GREEN de containerização — gate estrutural passou para 31 arquivos; as duas imagens foram construídas e executadas, com API `ok` e frontend HTTP 200.
+- GREEN E2E — Playwright em perfil Chromium móvel passou na abertura do shell.
+- GREEN final — instalação congelada, peer check, `pnpm check`, integração PostgreSQL e Playwright passaram em sequência.
+
+### Alterações técnicas
+
+- Workspace: `package.json`, `pnpm-workspace.yaml`, `pnpm-lock.yaml` e `tsconfig.base.json`.
+- Aplicações: `apps/api` e `apps/web`.
+- Pacotes: `packages/contracts`, `database`, `domain` e `test-utils`.
+- Qualidade: `eslint.config.mjs`, `prettier.config.mjs`, `vitest.config.ts` e `playwright.config.ts`.
+- Infraestrutura: `compose.test.yml`, Dockerfiles, `.dockerignore` e `.github/workflows/ci.yml`.
+- Verificação: `scripts/verify-phase-1.ps1`.
+- Migrações: nenhuma; a modelagem começa na Fase 2.
+- Endpoint: `GET /health/live`.
+
+### Decisões e ADRs
+
+- Usado `projects` em `vitest.config.ts`; o arquivo `vitest.workspace.ts` foi evitado por estar descontinuado no toolchain atual.
+- TypeScript foi fixado em 5.9 porque a versão 7 instalada inicialmente excedia a faixa suportada pelo `typescript-eslint` 8.63.
+- pnpm usa `allowBuilds` e permite exclusivamente o script de instalação do `esbuild`.
+- PostgreSQL de testes usa a versão 18 e volume no caminho atual `/var/lib/postgresql`.
+- O shell visual é intencionalmente mínimo; funcionalidades de produto pertencem às fases seguintes.
+
+### Segurança, privacidade e dados
+
+- `.env.example` contém somente credenciais locais fictícias.
+- `.dockerignore` impede envio de ambientes, dependências, dumps, backups e relatórios ao contexto Docker.
+- API não registra requests nesta fase e o health check não expõe dependências ou configuração.
+- pnpm bloqueia scripts de dependência não aprovados; somente `esbuild` está autorizado.
+- Nenhum dado pessoal real foi criado.
+
+### Desvios do plano
+
+- Node local permaneceu em 22.22.2, ainda compatível com o toolchain; containers e CI usam Node 24.18.0 LTS.
+- O verificador estrutural passou de 30 para 31 arquivos ao incorporar `.dockerignore` como requisito.
+- A primeira instalação tentou TypeScript 7 e `onlyBuiltDependencies`; ambos foram corrigidos antes do fechamento por incompatibilidade/obsolescência no pnpm 11.
+
+### Pendências e riscos conhecidos
+
+- O Dockerfile web ainda usa configuração padrão do Nginx; hardening e roteamento SPA final pertencem às fases 11 e 12.
+- Logging estruturado da API será habilitado junto das políticas de redação, sem dados sensíveis.
+- Os pacotes de domínio e banco contêm apenas fundação; schema e regras começam na Fase 2.
+
+### Próximo passo
+
+- Iniciar a Fase 2 com testes de migração, schema fundamental, constraints e utilitários temporais.
