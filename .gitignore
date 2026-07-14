@@ -1,0 +1,57 @@
+# Dependencies and package-manager state
+node_modules/
+.pnpm-store/
+
+# Builds and generated output
+dist/
+build/
+.vite/
+.turbo/
+*.tsbuildinfo
+
+# Tests and reports
+coverage/
+playwright-report/
+test-results/
+blob-report/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Local databases, dumps and backups
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+*.backup
+backups/
+
+# Logs and process files
+*.log
+logs/
+*.pid
+*.pid.lock
+
+# Editors and operating systems
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Local tooling caches
+.eslintcache
+.cache/
+.nyc_output/
+
+# Docker/Coolify local overrides
+compose.override.yml
+docker-compose.override.yml
