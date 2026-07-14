@@ -6,7 +6,7 @@
 
 **Unidade de entrega:** fase completa com commit de encerramento
 
-**Status geral:** Fases 0, 1, 2, 3, 4, 5, 6, 7 e 8 concluídas; Fase 9 ainda não iniciada
+**Status geral:** Fases 0, 1, 2, 3, 4, 5, 6, 7, 8 e 9 concluídas; Fase 10 ainda não iniciada
 
 ## 1. Regras de execução
 
@@ -381,32 +381,32 @@ O hash não é escrito no próprio `HISTORY.md`, evitando o ciclo em que alterar
 
 ### Fase 9 — Progresso, indicadores e gráficos
 
-**Status:** pendente
+**Status:** concluída
 
 **Commit esperado:** `feat(phase-9): implement progress analytics`
 
 #### Tarefas
 
-- [ ] Consultas/agregações de peso e cintura.
-- [ ] Totais e evolução por exercício.
-- [ ] Consistência semanal versionada.
-- [ ] Caminhadas, distância e frequência.
-- [ ] Treinos concluídos e parciais.
-- [ ] Dor por tipo, intensidade e região.
-- [ ] Filtros temporais.
-- [ ] API paginada/agregada.
-- [ ] Gráficos acessíveis com alternativa textual/tabular.
-- [ ] Estados vazios e dados insuficientes.
-- [ ] Cache local das últimas análises.
+- [x] Consultas/agregações de peso e cintura.
+- [x] Totais e evolução por exercício.
+- [x] Consistência semanal versionada.
+- [x] Caminhadas, distância e frequência.
+- [x] Treinos concluídos e parciais.
+- [x] Dor por tipo, intensidade e região.
+- [x] Filtros temporais.
+- [x] API paginada/agregada.
+- [x] Gráficos acessíveis com alternativa textual/tabular.
+- [x] Estados vazios e dados insuficientes.
+- [x] Cache local das últimas análises.
 
 #### Testes primeiro
 
-- [ ] Fórmulas com semanas vazias, parciais, descanso e cancelamento.
-- [ ] Intervalos e limites de data inclusivos.
-- [ ] Soma de repetições e caminhadas.
-- [ ] Séries removidas/ignoradas não contaminam totais.
-- [ ] Dor atrasada aparece no período correto.
-- [ ] Gráficos possuem nomes e alternativa acessível.
+- [x] Fórmulas com semanas vazias, parciais, descanso e cancelamento.
+- [x] Intervalos e limites de data inclusivos.
+- [x] Soma de repetições e caminhadas.
+- [x] Séries removidas/ignoradas não contaminam totais.
+- [x] Dor atrasada aparece no período correto.
+- [x] Gráficos possuem nomes e alternativa acessível.
 
 #### Critérios de saída
 

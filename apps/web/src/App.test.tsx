@@ -22,6 +22,19 @@ function createApi(overrides: Record<string, unknown> = {}) {
       sessions: [],
     })),
     loadHistoryPage: vi.fn(async () => ({ days: [], habits: [], nextCursor: null })),
+    loadProgressAnalytics: vi.fn(async () => ({
+      consistency: {
+        explanation: 'FÃ³rmula de consistÃªncia.',
+        formulaVersion: 'weekly-consistency/v1' as const,
+        weeks: [],
+      },
+      exercises: [],
+      measurements: [],
+      pain: [],
+      range: { from: '2026-07-01', through: '2026-07-14' },
+      sessions: { completed: 0, partial: 0 },
+      walks: { distanceMeters: 0, frequencyPerWeek: 0, sessions: 0 },
+    })),
     importDailyHistory: vi.fn(async () => ({ created: true, sessionId: 'history-session' })),
     requestPasswordReset: vi.fn(async () => undefined),
     decideProgression: vi.fn(async () => ({
@@ -95,6 +108,16 @@ describe('public authentication journey', () => {
 });
 
 describe('authenticated account journey', () => {
+  it('offers progress analytics from the authenticated home', async () => {
+    const api = createApi({
+      getProfile: vi.fn(async () => ({ displayName: 'Pessoa A' })),
+      getSession: vi.fn(async () => ({ user: { id: 'user-a', name: 'Pessoa A' } })),
+    });
+    render(<App api={api} />);
+
+    expect(await screen.findByRole('button', { name: 'Progresso e indicadores' })).toBeVisible();
+  });
+
   it('collects onboarding, explicit health consent and optional initial measurements', async () => {
     const api = createApi({
       getSession: vi.fn(async () => ({ user: { id: 'user-a', name: 'Pessoa A' } })),

@@ -1,4 +1,5 @@
 export const productName = 'Torkout';
+export * from './analytics.js';
 export * from './offline-auth.js';
 export * from './daily.js';
 export * from './history.js';

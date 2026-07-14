@@ -1,4 +1,4 @@
-import type { SyncEntityType, SyncOperation } from '@torkout/contracts';
+import type { ProgressAnalyticsResponse, SyncEntityType, SyncOperation } from '@torkout/contracts';
 import Dexie, { type EntityTable } from 'dexie';
 
 export type LocalSyncStatus = 'conflict' | 'pending' | 'saved-local' | 'synced';
@@ -35,7 +35,16 @@ export interface SyncMetadata {
   value: string | null;
 }
 
+export interface AnalyticsCacheEntry {
+  cachedAt: string;
+  from: string;
+  key: string;
+  response: ProgressAnalyticsResponse;
+  through: string;
+}
+
 export class UserSyncDatabase extends Dexie {
+  analyticsCache!: EntityTable<AnalyticsCacheEntry, 'key'>;
   conflicts!: EntityTable<LocalConflict, 'id'>;
   metadata!: EntityTable<SyncMetadata, 'key'>;
   outbox!: EntityTable<OutboxEntry, 'operationId'>;
@@ -44,6 +53,13 @@ export class UserSyncDatabase extends Dexie {
   constructor(readonly userId: string) {
     super(databaseName(userId));
     this.version(1).stores({
+      conflicts: 'id, [entityType+entityId], operationId',
+      metadata: 'key',
+      outbox: 'operationId, state, clientOccurredAt, [entityType+entityId]',
+      records: 'key, entityType, syncStatus, deletedAt',
+    });
+    this.version(2).stores({
+      analyticsCache: 'key, cachedAt, [from+through]',
       conflicts: 'id, [entityType+entityId], operationId',
       metadata: 'key',
       outbox: 'operationId, state, clientOccurredAt, [entityType+entityId]',

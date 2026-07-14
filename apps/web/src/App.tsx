@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 
 import { type AppApi, browserApi, type PrivacyDocumentView } from './auth-client';
 import { AccountScreen } from './components/AccountScreen';
@@ -14,8 +14,13 @@ import { clearOfflineIdentity, readOfflineIdentity, recordOnlineIdentity } from 
 import { deleteUserSyncDatabase, entityKey, type UserSyncDatabase } from './sync/local-database';
 import { useSyncRuntime } from './sync/use-sync-runtime';
 
+const AnalyticsScreen = lazy(() =>
+  import('./components/AnalyticsScreen').then((module) => ({ default: module.AnalyticsScreen })),
+);
+
 type View =
   | 'account'
+  | 'analytics'
   | 'home'
   | 'history'
   | 'loading'
@@ -276,6 +281,28 @@ export function App({ api = browserApi }: { api?: AppApi }) {
       />
     );
   }
+  if (view === 'analytics' && sync.database) {
+    return (
+      <Suspense
+        fallback={
+          <main className="centered-layout" aria-busy="true">
+            <p>Carregando indicadoresâ€¦</p>
+          </main>
+        }
+      >
+        <AnalyticsScreen
+          database={sync.database}
+          onBack={() => setView('home')}
+          {...(offline
+            ? {}
+            : {
+                onLoad: (from: string, through: string) => api.loadProgressAnalytics(from, through),
+              })}
+          today={civilDate(new Date(), timeZone)}
+        />
+      </Suspense>
+    );
+  }
   if (view === 'progression') {
     return <ProgressionScreen api={api} onBack={() => setView('home')} />;
   }
@@ -307,6 +334,9 @@ export function App({ api = browserApi }: { api?: AppApi }) {
         </button>
         <button className="primary" type="button" onClick={() => setView('history')}>
           CalendÃ¡rio e histÃ³rico
+        </button>
+        <button className="primary" type="button" onClick={() => setView('analytics')}>
+          Progresso e indicadores
         </button>
         <button
           className="primary"

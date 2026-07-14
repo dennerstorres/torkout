@@ -693,3 +693,68 @@ Este arquivo é o diário técnico, cronológico e append-only do projeto. Ele r
 ### Próximo passo
 
 - Iniciar a Fase 9 com indicadores e gráficos acessíveis sobre o histórico paginado agora disponível.
+
+## 2026-07-14 — Fase 9: Progresso, indicadores e gráficos
+
+**Status:** concluída
+
+**Commit de encerramento:** `feat(phase-9): implement progress analytics`
+
+### Escopo executado
+
+- Implementado agregado autenticado de progresso com intervalo civil inclusivo e limitado a 366 dias, sem transportar histórico bruto ilimitado ao cliente.
+- Criadas séries de peso e cintura que preservam múltiplas medições no mesmo dia e sua ordem de medição.
+- Implementados totais e evolução por exercício para repetições, duração ou distância; séries removidas e exercícios ignorados não entram nos totais.
+- Implementada consistência semanal `weekly-consistency/v1`: concluída vale `1`, parcial vale `0,5`, perdida vale `0`; descanso e cancelamento não entram no denominador, e semanas vazias retornam percentual desconhecido em vez de zero.
+- Implementados totais de sessões concluídas/parciais, distância e frequência de caminhadas e frequência de dor por tipo, intensidade e região.
+- Relatos atrasados são atribuídos ao período de sua data civil informada, independentemente do instante de criação.
+- Criada tela mobile-first com filtros de 4, 8 e 12 semanas e intervalo personalizado, explicação de período e fórmula, estados vazios e dados insuficientes.
+- Todos os gráficos possuem nome acessível e tabela equivalente; a visualização usa Recharts, carregado sob demanda para não aumentar o bundle inicial.
+- O último agregado de cada intervalo é armazenado em uma nova tabela Dexie da réplica particionada por usuário e pode ser reaberto offline.
+
+### Evidências TDD e validação
+
+- RED de domínio — os cálculos inicialmente lançavam `Progress analytics are not implemented`; os testes cobriram semanas vazias/parciais, descanso, cancelamento, limites inclusivos, caminhadas, dor atrasada, medições múltiplas e exclusão de séries removidas/ignoradas.
+- RED de contratos — ranges e respostas eram rejeitados por schemas `never`; os schemas estritos e o limite inclusivo de 366 dias ficaram verdes.
+- RED de API — `GET /api/v1/progress` retornou `404`; depois da implementação, agregação, validação, autenticação e isolamento horizontal passaram no PostgreSQL real.
+- RED de UI — a tela exibia apenas indisponibilidade e o gate estrutural acusava a ausência de `verify:phase-9`; filtros, gráficos, tabelas, cache e navegação ficaram verdes.
+- GREEN final — `pnpm test` passou com 26 arquivos e 80 testes unitários/componentes; `pnpm test:integration` passou com 10 arquivos e 43 testes PostgreSQL; `pnpm test:e2e` passou com oito jornadas móveis.
+- Desempenho — o teste de referência consulta o intervalo agregado máximo dentro da meta de 500 ms para operação comum.
+- REFACTOR — cálculo puro, schemas, consulta autenticada, cache local e apresentação ficaram em módulos separados; o módulo Recharts foi isolado em chunk sob demanda.
+
+### Alterações técnicas
+
+- Novo endpoint: `GET /api/v1/progress?from=YYYY-MM-DD&through=YYYY-MM-DD`.
+- Novos módulos de domínio e contratos `analytics`, rota `analytics-routes` e tela `AnalyticsScreen`.
+- IndexedDB passou da versão 1 para a versão 2 de forma aditiva, com a tabela `analyticsCache`; dados, outbox, conflitos e metadados existentes são preservados.
+- Migrações PostgreSQL: nenhuma; os índices por usuário/data e as entidades das fases anteriores já cobriam a consulta.
+- Dependência adicionada: Recharts, conforme a stack aprovada no `SPEC.md`; `pnpm audit --prod --audit-level moderate` não encontrou vulnerabilidades conhecidas.
+- Gate estrutural `verify:phase-9` incorporado ao `pnpm check`.
+
+### Decisões e ADRs
+
+- Mantidos os ADRs 0001 e 0002. A fase usa o monólito modular e a réplica local-first existentes, sem mudança arquitetural.
+- O PostgreSQL calcula a visão autorizada por intervalo e devolve somente o agregado limitado; o cliente guarda apenas resultados recentes por intervalo, não uma segunda fonte de verdade analítica.
+- A fórmula semanal possui código de versão explícito e explicação exibida. Uma alteração futura deverá criar nova versão ou documentar recálculo, conforme o `SPEC.md`.
+
+### Segurança, privacidade e dados
+
+- O titular é sempre derivado da sessão; o endpoint não aceita `userId`, e teste com segunda conta comprova isolamento.
+- Consultas filtram tombstones e todas as tabelas por `user_id`; notas e payloads de saúde não foram adicionados a logs.
+- O cache analítico permanece na IndexedDB exclusiva da conta e segue a mesma limpeza local usada no logout/exclusão.
+- Gráficos não fazem afirmação clínica e a tela mantém o aviso de que indicadores não substituem orientação profissional.
+
+### Desvios do plano
+
+- A API usa uma resposta agregada limitada, em vez de cursor sobre pontos brutos. Isso atende ao requisito paginada/agregada e evita carregar histórico ilimitado sem criar paginação artificial sobre séries já resumidas.
+- Cancelamentos são excluídos do denominador porque o modelo atual não distingue justificativa; essa é a interpretação conservadora da fórmula aprovada para a versão `v1`.
+
+### Pendências e riscos conhecidos
+
+- A preferência de início da semana permanece segunda-feira, único valor inicial definido pela especificação; uma preferência adicional exigirá nova parametrização da fórmula.
+- O cache é mantido por intervalo consultado e não possui política de poda por quantidade nesta fase; continua limitado aos períodos que o titular efetivamente abriu.
+- A verificação manual final em iPhone físico pertence às Fases 11 e 13 e ainda não foi executada.
+
+### Próximo passo
+
+- Iniciar a Fase 10 com exportação versionada JSON/CSV, inclusão identificada da outbox e exclusão integral dos dados do titular.
