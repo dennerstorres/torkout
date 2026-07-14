@@ -28,6 +28,7 @@ import { z } from 'zod';
 
 import { ApiHttpError, type ApiDependencies, requireAuthenticatedUser } from './auth-routes.js';
 import { applySessionExecution } from './planning-routes.js';
+import { evaluateProgressionForSession } from './progression-service.js';
 
 const idParamsSchema = z.strictObject({ id: z.uuid() });
 const dateQuerySchema = z.strictObject({ localDate: z.iso.date() });
@@ -188,11 +189,13 @@ export function registerDailyRoutes(app: FastifyInstance, dependencies: ApiDepen
     const { id } = parse(idParamsSchema, request.params);
     const input = parse(workoutSessionUpdateSchema, request.body);
     if (!input.execution) throw new ApiHttpError(400, 'EXECUTION_REQUIRED', 'Informe a execução.');
-    return applySessionExecution(dependencies.database, user.id, id, {
+    const session = await applySessionExecution(dependencies.database, user.id, id, {
       execution: input.execution,
       notes: input.notes,
       version: input.version,
     });
+    await evaluateProgressionForSession(dependencies.database, user.id, id);
+    return session;
   });
 
   app.get('/api/v1/pain-reports', async (request) => {
@@ -231,6 +234,9 @@ export function registerDailyRoutes(app: FastifyInstance, dependencies: ApiDepen
       })
       .returning();
     if (!created) throw new Error('Pain report insert did not return a row.');
+    if (created.sessionId) {
+      await evaluateProgressionForSession(dependencies.database, user.id, created.sessionId, true);
+    }
     return reply.status(201).send(painView(created));
   });
 
@@ -245,6 +251,9 @@ export function registerDailyRoutes(app: FastifyInstance, dependencies: ApiDepen
       .where(and(eq(painReports.id, id), eq(painReports.userId, user.id)))
       .returning();
     if (!updated) throw new ApiHttpError(404, 'PAIN_REPORT_NOT_FOUND', 'Relato não encontrado.');
+    if (updated.sessionId) {
+      await evaluateProgressionForSession(dependencies.database, user.id, updated.sessionId, true);
+    }
     return painView(updated);
   });
 

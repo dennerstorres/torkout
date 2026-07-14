@@ -5,6 +5,7 @@ import { AccountScreen } from './components/AccountScreen';
 import { AuthScreen } from './components/AuthScreen';
 import { OnboardingScreen } from './components/OnboardingScreen';
 import { PlanningScreen } from './components/PlanningScreen';
+import { ProgressionScreen } from './components/ProgressionScreen';
 import { ResetPasswordScreen } from './components/ResetPasswordScreen';
 import { SyncPanel } from './components/SyncPanel';
 import { TodayScreen } from './components/TodayScreen';
@@ -20,6 +21,7 @@ type View =
   | 'onboarding'
   | 'planning'
   | 'public'
+  | 'progression'
   | 'today';
 
 function civilDate(now: Date, timeZone: string): string {
@@ -228,6 +230,9 @@ export function App({ api = browserApi }: { api?: AppApi }) {
       />
     );
   }
+  if (view === 'progression') {
+    return <ProgressionScreen api={api} onBack={() => setView('home')} />;
+  }
 
   return (
     <main className="centered-layout">
@@ -253,6 +258,14 @@ export function App({ api = browserApi }: { api?: AppApi }) {
         </button>
         <button className="primary" type="button" onClick={() => void openToday()}>
           Hoje
+        </button>
+        <button
+          className="primary"
+          disabled={offline}
+          type="button"
+          onClick={() => setView('progression')}
+        >
+          Sugestões de progressão
         </button>
         <button
           className="primary"

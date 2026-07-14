@@ -38,6 +38,7 @@ import {
   loadSession,
   loadTemplate,
 } from './planning-routes.js';
+import { evaluateProgressionForSession } from './progression-service.js';
 
 type SyncTransaction = Parameters<Parameters<DatabaseClient['transaction']>[0]>[0];
 type MeasurementRow = typeof bodyMeasurements.$inferSelect;
@@ -1304,7 +1305,18 @@ export function registerSyncRoutes(app: FastifyInstance, dependencies: ApiDepend
         });
         continue;
       }
-      results.push(await processOperation(dependencies.database, user.id, parsed.data));
+      const result = await processOperation(dependencies.database, user.id, parsed.data);
+      results.push(result);
+      if (result.status === 'applied' || result.status === 'duplicate') {
+        if (parsed.data.entityType === 'workout_session') {
+          await evaluateProgressionForSession(dependencies.database, user.id, parsed.data.entityId);
+        } else if (parsed.data.entityType === 'pain_report') {
+          const sessionId = result.record?.sessionId;
+          if (typeof sessionId === 'string') {
+            await evaluateProgressionForSession(dependencies.database, user.id, sessionId, true);
+          }
+        }
+      }
     }
     return { results };
   });

@@ -596,3 +596,35 @@ Este arquivo é o diário técnico, cronológico e append-only do projeto. Ele r
 ### Próximo passo
 
 - Iniciar a Fase 7 com regras puras, versionadas e explicáveis de progressão sobre as evidências explícitas de execução e dor agora disponíveis.
+
+## 2026-07-14 — Fase 7: Motor de progressão explicável
+
+**Status:** concluída
+
+### Escopo executado
+
+- Implementado motor puro e versionado que avalia duas sessões elegíveis, metas atingidas, confirmação explícita de ausência de dor, sessões perdidas e limites configuráveis por exercício.
+- Implementadas as regras conservadoras para dor muscular leve, moderada e forte, bloqueio por qualquer dor articular e interrupção de agachamento diante de dor articular em pé/tornozelo durante o exercício.
+- Avaliações persistem evidências imutáveis, hash SHA-256, resultado, regra e versão; a unicidade existente garante idempotência para a mesma evidência.
+- Sessões concluídas/parciais e relatos de dor recebidos pela API ou sincronização disparam avaliação. Dor atrasada invalida somente sugestões ainda pendentes e cria uma nova avaliação.
+- Criados endpoints de listagem, avaliação explícita e decisão sob `/api/v1/progression`, sempre isolados pelo usuário autenticado.
+- Aceite, recusa e adiamento são explícitos. Aceitar novamente devolve a decisão existente sem reaplicar o efeito.
+- O aceite de aumento ou redução atualiza o template recorrente e somente sessões futuras ainda planejadas; snapshots históricos permanecem intactos.
+- Criada tela mobile de sugestões com explicação, evidências, código/versão da regra e aviso de segurança textual versionado.
+
+### Evidências TDD e validação
+
+- Testes de domínio cobrem aumento, dados ausentes, todas as intensidades musculares, dor articular específica, limites e não negatividade.
+- Teste PostgreSQL comprova sugestão única, versão histórica, aceite idempotente e alteração somente de alvo futuro.
+- Teste de componente comprova explicação e ação explícita; jornada Playwright cobre revisão e aceite em viewport móvel.
+- Gate estrutural `verify:phase-7` foi incorporado ao `pnpm check`.
+
+### Segurança, privacidade e dados
+
+- Consultas, avaliações e decisões derivam o titular da sessão; nenhum `userId` é aceito como autorização.
+- Evidências médicas não são registradas em logs e a linguagem evita diagnóstico.
+- Toda sugestão persiste e exibe o aviso de que não substitui orientação profissional.
+
+### Próximo passo
+
+- Iniciar a Fase 8 com calendário mensal, detalhe diário e edição histórica sincronizada.

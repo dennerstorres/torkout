@@ -7,6 +7,7 @@ import { registerDailyRoutes } from './daily-routes.js';
 import { ApiHttpError, type ApiDependencies, registerAuthRoutes } from './auth-routes.js';
 import { registerPrivacyRoutes } from './privacy.js';
 import { registerProfileRoutes } from './profile-routes.js';
+import { registerProgressionRoutes } from './progression-routes.js';
 import { registerPlanningRoutes } from './planning-routes.js';
 import { registerSyncRoutes } from './sync-routes.js';
 
@@ -28,6 +29,7 @@ export function buildApp(dependencies?: ApiDependencies): FastifyInstance {
     registerProfileRoutes(app, dependencies);
     registerPlanningRoutes(app, dependencies);
     registerDailyRoutes(app, dependencies);
+    registerProgressionRoutes(app, dependencies);
     registerAdminRoutes(app, dependencies);
     registerAccountRoutes(app, dependencies);
     registerSyncRoutes(app, dependencies);

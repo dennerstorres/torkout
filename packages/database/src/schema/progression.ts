@@ -99,6 +99,8 @@ export const progressionSuggestions = pgTable(
     type: progressionSuggestionTypeEnum('type').notNull(),
     proposal: jsonb('proposal').$type<Record<string, unknown>>().notNull(),
     explanation: text('explanation').notNull(),
+    safetyNotice: text('safety_notice').notNull(),
+    safetyNoticeVersion: text('safety_notice_version').notNull(),
     status: progressionSuggestionStatusEnum('status').default('pending').notNull(),
     validUntil: timestamp('valid_until', { mode: 'date', withTimezone: true }),
   },

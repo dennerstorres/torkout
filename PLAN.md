@@ -6,7 +6,7 @@
 
 **Unidade de entrega:** fase completa com commit de encerramento
 
-**Status geral:** Fases 0, 1, 2, 3, 4, 5 e 6 concluídas; Fase 7 ainda não iniciada
+**Status geral:** Fases 0, 1, 2, 3, 4, 5, 6 e 7 concluídas; Fase 8 ainda não iniciada
 
 ## 1. Regras de execução
 
@@ -309,37 +309,37 @@ O hash não é escrito no próprio `HISTORY.md`, evitando o ciclo em que alterar
 
 ### Fase 7 — Motor de progressão explicável
 
-**Status:** pendente
+**Status:** concluída
 
 **Commit esperado:** `feat(phase-7): implement explainable progression engine`
 
 #### Tarefas
 
-- [ ] Implementar framework versionado de regras puras.
-- [ ] Implementar avaliação idempotente por evidência.
-- [ ] Regra de duas sessões elegíveis e `+1` repetição/série.
-- [ ] Regras de dor muscular leve, moderada e forte.
-- [ ] Bloqueio de aumento por dor articular.
-- [ ] Regra específica de dor pé/tornozelo durante agachamento.
-- [ ] Regra de sessão perdida sem compensação.
-- [ ] Limites configuráveis por exercício.
-- [ ] Persistir evidências e explicação.
-- [ ] Tela de sugestões, aceite, recusa e adiamento.
-- [ ] Aceite cria mudança futura, sem alterar passado.
-- [ ] Reavaliar/invalidar sugestão quando chega dor atrasada.
-- [ ] Exibir avisos de segurança e persistir versão textual aplicável.
+- [x] Implementar framework versionado de regras puras.
+- [x] Implementar avaliação idempotente por evidência.
+- [x] Regra de duas sessões elegíveis e `+1` repetição/série.
+- [x] Regras de dor muscular leve, moderada e forte.
+- [x] Bloqueio de aumento por dor articular.
+- [x] Regra específica de dor pé/tornozelo durante agachamento.
+- [x] Regra de sessão perdida sem compensação.
+- [x] Limites configuráveis por exercício.
+- [x] Persistir evidências e explicação.
+- [x] Tela de sugestões, aceite, recusa e adiamento.
+- [x] Aceite cria mudança futura, sem alterar passado.
+- [x] Reavaliar/invalidar sugestão quando chega dor atrasada.
+- [x] Exibir avisos de segurança e persistir versão textual aplicável.
 
 #### Testes primeiro
 
-- [ ] Matriz completa de cada regra e intensidade.
-- [ ] Dado ausente não é interpretado como ausência de dor.
-- [ ] Duas sessões sem dor explícita geram uma única sugestão.
-- [ ] Uma sessão com dor articular bloqueia aumento.
-- [ ] Dor atrasada invalida sugestão ainda não aceita.
-- [ ] Aceitar duas vezes é idempotente.
-- [ ] Aceite afeta somente sessões futuras.
-- [ ] Versão nova não altera avaliação histórica.
-- [ ] Property-based tests para limites e não negatividade.
+- [x] Matriz completa de cada regra e intensidade.
+- [x] Dado ausente não é interpretado como ausência de dor.
+- [x] Duas sessões sem dor explícita geram uma única sugestão.
+- [x] Uma sessão com dor articular bloqueia aumento.
+- [x] Dor atrasada invalida sugestão ainda não aceita.
+- [x] Aceitar duas vezes é idempotente.
+- [x] Aceite afeta somente sessões futuras.
+- [x] Versão nova não altera avaliação histórica.
+- [x] Property-based tests para limites e não negatividade.
 
 #### Critérios de saída
 

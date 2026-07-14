@@ -12,6 +12,7 @@ function createApi(overrides: Record<string, unknown> = {}) {
     }),
     getSession: vi.fn(async () => null),
     listPrivacyDocuments: vi.fn(async () => ({ documents: [] })),
+    listProgressionSuggestions: vi.fn(async () => ({ items: [] })),
     listSessions: vi.fn(async () => []),
     loadDaily: vi.fn(async () => ({
       habits: [],
@@ -22,6 +23,11 @@ function createApi(overrides: Record<string, unknown> = {}) {
     })),
     importDailyHistory: vi.fn(async () => ({ created: true, sessionId: 'history-session' })),
     requestPasswordReset: vi.fn(async () => undefined),
+    decideProgression: vi.fn(async () => ({
+      decision: 'accepted',
+      effectEntityId: null,
+      id: 'decision',
+    })),
     resetPassword: vi.fn(async () => undefined),
     revokeSession: vi.fn(async () => undefined),
     saveProfile: vi.fn(async () => undefined),

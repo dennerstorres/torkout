@@ -43,6 +43,13 @@
       "when": 1784060376838,
       "tag": "0005_phase_6_daily_tracking",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1784064000000,
+      "tag": "0006_phase_7_progression",
+      "breakpoints": true
     }
   ]
 }

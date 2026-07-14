@@ -35,6 +35,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 
 import { ApiHttpError, type ApiDependencies, requireAuthenticatedUser } from './auth-routes.js';
+import { evaluateProgressionForSession } from './progression-service.js';
 
 const idParamsSchema = z.strictObject({ id: z.uuid() });
 const deleteQuerySchema = z.strictObject({ version: z.coerce.number().int().positive() });
@@ -936,6 +937,7 @@ export function registerPlanningRoutes(app: FastifyInstance, dependencies: ApiDe
       )
       .returning({ id: workoutSessions.id });
     if (!updated) throw new ApiHttpError(404, 'SESSION_NOT_FOUND', 'Sessão não encontrada.');
+    await evaluateProgressionForSession(dependencies.database, user.id, id);
     return loadSession(dependencies.database, user.id, id);
   });
 

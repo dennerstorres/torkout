@@ -21,16 +21,40 @@ export interface DailyBootstrap {
   sessions: Array<Record<string, unknown>>;
 }
 
+export interface ProgressionSuggestionView {
+  createdAt: string;
+  evidence: unknown;
+  explanation: string;
+  exerciseName: string;
+  id: string;
+  outcome: 'eligible' | 'blocked' | 'no_change';
+  proposal: Record<string, unknown>;
+  rule: { code: string; version: string };
+  safetyNotice: string;
+  safetyNoticeVersion: string;
+  status: 'pending' | 'accepted' | 'ignored' | 'snoozed' | 'invalidated' | 'expired';
+  type: 'increase' | 'maintain' | 'reduce' | 'stop';
+  validUntil: string | null;
+  version: number;
+}
+
 export interface AppApi {
   acceptPrivacy(input: { documentVersions: Record<string, string> }): Promise<void>;
   deleteAccount(input: { confirmation: string; password: string }): Promise<void>;
   getProfile(): Promise<{ displayName: string; timeZone?: string }>;
   getSession(): Promise<{ user: { id: string; name: string } } | null>;
   listPrivacyDocuments(): Promise<{ documents: PrivacyDocumentView[] }>;
+  listProgressionSuggestions(status?: ProgressionSuggestionView['status']): Promise<{
+    items: ProgressionSuggestionView[];
+  }>;
   listSessions(): Promise<SessionView[]>;
   loadDaily(localDate: string): Promise<DailyBootstrap>;
   importDailyHistory(): Promise<{ created: boolean; sessionId: string }>;
   requestPasswordReset(email: string): Promise<void>;
+  decideProgression(
+    suggestionId: string,
+    decision: 'accepted' | 'ignored' | 'snoozed',
+  ): Promise<{ decision: string; effectEntityId: string | null; id: string }>;
   resetPassword(token: string, newPassword: string): Promise<void>;
   revokeSession(token: string): Promise<void>;
   saveProfile(input: Record<string, unknown>): Promise<void>;
@@ -71,6 +95,10 @@ export const browserApi: AppApi = {
     return result.data as { user: { id: string; name: string } } | null;
   },
   listPrivacyDocuments: () => productRequest('/privacy/documents'),
+  listProgressionSuggestions: (status) =>
+    productRequest(
+      `/progression/suggestions${status ? `?status=${encodeURIComponent(status)}` : ''}`,
+    ),
   async loadDaily(localDate) {
     const query = encodeURIComponent(localDate);
     const [sessions, habits, habitEntries, painReports, measurements] = await Promise.all([
@@ -109,6 +137,11 @@ export const browserApi: AppApi = {
     });
     assertAuthResult(result);
   },
+  decideProgression: (suggestionId, decision) =>
+    productRequest(`/progression/suggestions/${encodeURIComponent(suggestionId)}/decisions`, {
+      body: JSON.stringify({ decision }),
+      method: 'POST',
+    }),
   async resetPassword(token, newPassword) {
     const result = await authClient.resetPassword({ newPassword, token });
     assertAuthResult(result);
