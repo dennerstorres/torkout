@@ -224,6 +224,7 @@ export function App({ api = browserApi }: { api?: AppApi }) {
     return (
       <AccountScreen
         api={api}
+        {...(sync.database ? { database: sync.database } : {})}
         onAccountDeleted={async () => {
           if (userId) await deleteUserSyncDatabase(userId);
           clearOfflineIdentity();

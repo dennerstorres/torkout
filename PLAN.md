@@ -6,7 +6,7 @@
 
 **Unidade de entrega:** fase completa com commit de encerramento
 
-**Status geral:** Fases 0, 1, 2, 3, 4, 5, 6, 7, 8 e 9 concluídas; Fase 10 ainda não iniciada
+**Status geral:** Fases 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 e 10 concluídas; Fase 11 ainda não iniciada
 
 ## 1. Regras de execução
 
@@ -415,30 +415,30 @@ O hash não é escrito no próprio `HISTORY.md`, evitando o ciclo em que alterar
 
 ### Fase 10 — Exportação, portabilidade e exclusão
 
-**Status:** pendente
+**Status:** concluída
 
 **Commit esperado:** `feat(phase-10): implement data portability and erasure`
 
 #### Tarefas
 
-- [ ] Definir e versionar schema do JSON.
-- [ ] Exportar todas as entidades autorizadas.
-- [ ] Gerar ZIP com CSVs normalizados.
-- [ ] Documentar datas, unidades e relacionamentos no pacote.
-- [ ] Incluir alterações locais pendentes quando solicitado.
-- [ ] Excluir tokens e metadados internos.
-- [ ] Implementar exclusão de conta e dados ativos.
-- [ ] Documentar retenção inevitável de backups.
-- [ ] Limpar réplica local após exclusão confirmada.
+- [x] Definir e versionar schema do JSON.
+- [x] Exportar todas as entidades autorizadas.
+- [x] Gerar ZIP com CSVs normalizados.
+- [x] Documentar datas, unidades e relacionamentos no pacote.
+- [x] Incluir alterações locais pendentes quando solicitado.
+- [x] Excluir tokens e metadados internos.
+- [x] Implementar exclusão de conta e dados ativos.
+- [x] Documentar retenção inevitável de backups.
+- [x] Limpar réplica local após exclusão confirmada.
 
 #### Testes primeiro
 
-- [ ] Exportação round-trip estrutural.
-- [ ] CSV preserva acentos e abre corretamente.
-- [ ] Nenhum segredo/sessão aparece no pacote.
-- [ ] Usuário não exporta outro usuário.
-- [ ] Outbox pendente é marcada corretamente.
-- [ ] Exclusão torna conta e dados inacessíveis.
+- [x] Exportação round-trip estrutural.
+- [x] CSV preserva acentos e abre corretamente.
+- [x] Nenhum segredo/sessão aparece no pacote.
+- [x] Usuário não exporta outro usuário.
+- [x] Outbox pendente é marcada corretamente.
+- [x] Exclusão torna conta e dados inacessíveis.
 
 #### Critérios de saída
 

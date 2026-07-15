@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "pnpm --filter @torkout/contracts build && pnpm --filter @torkout/domain build && pnpm --filter @torkout/database build && pnpm --filter @torkout/test-utils build && pnpm --filter @torkout/api build && pnpm --filter @torkout/web build",
-    "check": "pnpm verify:governance && pnpm verify:phase-1 && pnpm verify:phase-2 && pnpm verify:phase-3 && pnpm verify:phase-4 && pnpm verify:phase-5 && pnpm verify:phase-6 && pnpm verify:phase-7 && pnpm verify:phase-8 && pnpm verify:phase-9 && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "check": "pnpm verify:governance && pnpm verify:phase-1 && pnpm verify:phase-2 && pnpm verify:phase-3 && pnpm verify:phase-4 && pnpm verify:phase-5 && pnpm verify:phase-6 && pnpm verify:phase-7 && pnpm verify:phase-8 && pnpm verify:phase-9 && pnpm verify:phase-10 && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build",
     "db:generate": "drizzle-kit generate --config drizzle.config.ts",
     "db:migrate": "tsx packages/database/src/migrate-cli.ts",
     "dev": "pnpm --parallel --filter @torkout/api --filter @torkout/web dev",
@@ -29,7 +29,8 @@
     "verify:phase-6": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-phase-6.ps1",
     "verify:phase-7": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-phase-7.ps1",
     "verify:phase-8": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-phase-8.ps1",
-    "verify:phase-9": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-phase-9.ps1"
+    "verify:phase-9": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-phase-9.ps1",
+    "verify:phase-10": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify-phase-10.ps1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

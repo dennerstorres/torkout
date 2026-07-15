@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   createUserSyncDatabase,
   deleteUserSyncDatabase,
+  pendingChangesForExport,
   pruneLocalTombstones,
   queueLocalMutation,
 } from './sync/local-database';
@@ -28,6 +29,33 @@ afterEach(async () => {
 });
 
 describe('local-first replica', () => {
+  it('marks pending export data without leaking device or retry metadata', async () => {
+    const database = await databaseFor(users.first);
+    await queueLocalMutation(database, {
+      entityId: '70000000-0000-4000-8000-000000000010',
+      entityType: 'body_measurement',
+      operation: 'create',
+      payload: {
+        localDate: '2026-07-14',
+        measuredAt: '2026-07-14T15:00:00.000Z',
+        weightKg: 70,
+      },
+    });
+
+    const pending = await pendingChangesForExport(database);
+    expect(pending).toEqual([
+      expect.objectContaining({
+        entityId: '70000000-0000-4000-8000-000000000010',
+        origin: 'local_pending',
+      }),
+    ]);
+    expect(pending[0]).not.toHaveProperty('deviceId');
+    expect(pending[0]).not.toHaveProperty('operationId');
+    expect(pending[0]).not.toHaveProperty('attempts');
+    expect(pending[0]).not.toHaveProperty('lastError');
+    expect(pending[0]).not.toHaveProperty('state');
+  });
+
   it('persists the record and outbox atomically across a reload', async () => {
     const database = await databaseFor(users.first);
     const operation = await queueLocalMutation(database, {

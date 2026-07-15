@@ -1,5 +1,10 @@
 import { createAuthClient } from 'better-auth/client';
-import type { HistoryPage, ProgressAnalyticsResponse } from '@torkout/contracts';
+import type {
+  AccountDeletionResponse,
+  DataExportRequest,
+  HistoryPage,
+  ProgressAnalyticsResponse,
+} from '@torkout/contracts';
 
 export interface SessionView {
   createdAt: string | Date;
@@ -39,9 +44,18 @@ export interface ProgressionSuggestionView {
   version: number;
 }
 
+export interface PortableDownload {
+  blob: Blob;
+  fileName: string;
+}
+
 export interface AppApi {
   acceptPrivacy(input: { documentVersions: Record<string, string> }): Promise<void>;
-  deleteAccount(input: { confirmation: string; password: string }): Promise<void>;
+  deleteAccount(input: {
+    confirmation: string;
+    password: string;
+  }): Promise<AccountDeletionResponse>;
+  exportData(input: DataExportRequest): Promise<PortableDownload>;
   getProfile(): Promise<{ displayName: string; timeZone?: string }>;
   getSession(): Promise<{ user: { id: string; name: string } } | null>;
   listPrivacyDocuments(): Promise<{ documents: PrivacyDocumentView[] }>;
@@ -81,6 +95,25 @@ async function productRequest<T>(path: string, init?: RequestInit): Promise<T> {
   return (response.status === 204 ? undefined : await response.json()) as T;
 }
 
+async function exportRequest(input: DataExportRequest): Promise<PortableDownload> {
+  const response = await fetch('/api/v1/exports', {
+    body: JSON.stringify(input),
+    credentials: 'include',
+    headers: { 'content-type': 'application/json' },
+    method: 'POST',
+  });
+  if (!response.ok) {
+    const error = (await response.json().catch(() => null)) as { code?: string } | null;
+    throw new Error(error?.code ?? `HTTP_${response.status}`);
+  }
+  const disposition = response.headers.get('content-disposition') ?? '';
+  const fileName = /filename="?([^";]+)"?/i.exec(disposition)?.[1];
+  return {
+    blob: await response.blob(),
+    fileName: fileName ?? `torkout-export.${input.format === 'json' ? 'json' : 'zip'}`,
+  };
+}
+
 function assertAuthResult(result: unknown): void {
   const error = (result as { error?: { message?: string } | null }).error;
   if (error) throw new Error(error.message ?? 'AUTH_ERROR');
@@ -91,6 +124,7 @@ export const browserApi: AppApi = {
     productRequest('/privacy/acceptances', { body: JSON.stringify(input), method: 'POST' }),
   deleteAccount: (input) =>
     productRequest('/account', { body: JSON.stringify(input), method: 'DELETE' }),
+  exportData: exportRequest,
   getProfile: () => productRequest('/profile'),
   async getSession() {
     const result = await authClient.getSession();

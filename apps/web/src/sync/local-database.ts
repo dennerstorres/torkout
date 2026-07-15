@@ -1,4 +1,10 @@
-import type { ProgressAnalyticsResponse, SyncEntityType, SyncOperation } from '@torkout/contracts';
+import type {
+  PendingExportChange,
+  ProgressAnalyticsResponse,
+  SyncEntityType,
+  SyncOperation,
+} from '@torkout/contracts';
+import { pendingExportChangeSchema } from '@torkout/contracts';
 import Dexie, { type EntityTable } from 'dexie';
 
 export type LocalSyncStatus = 'conflict' | 'pending' | 'saved-local' | 'synced';
@@ -85,6 +91,23 @@ export function createUserSyncDatabase(userId: string): UserSyncDatabase {
 
 export async function deleteUserSyncDatabase(userId: string): Promise<void> {
   await Dexie.delete(databaseName(userId));
+}
+
+export async function pendingChangesForExport(
+  database: UserSyncDatabase,
+): Promise<PendingExportChange[]> {
+  const entries = await database.outbox.orderBy('clientOccurredAt').toArray();
+  return entries.map((entry) =>
+    pendingExportChangeSchema.parse({
+      baseVersion: entry.baseVersion,
+      clientOccurredAt: entry.clientOccurredAt,
+      entityId: entry.entityId,
+      entityType: entry.entityType,
+      operation: entry.operation,
+      origin: 'local_pending',
+      payload: entry.payload,
+    }),
+  );
 }
 
 export async function getOrCreateDeviceId(database: UserSyncDatabase): Promise<string> {

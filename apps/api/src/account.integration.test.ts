@@ -204,7 +204,11 @@ describe('account, privacy and profile API', () => {
       payload: { confirmation: 'EXCLUIR MINHA CONTA', password: 'correct-password' },
       url: '/api/v1/account',
     });
-    expect(deleted.statusCode).toBe(204);
+    expect(deleted.statusCode).toBe(200);
+    expect(deleted.json()).toMatchObject({
+      activeDataDeleted: true,
+      backupRetention: { maximumDays: 365 },
+    });
     expect(deletedUsers).toContain(userIds.first);
   });
 });

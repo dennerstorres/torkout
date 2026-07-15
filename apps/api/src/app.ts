@@ -11,6 +11,7 @@ import { registerPrivacyRoutes } from './privacy.js';
 import { registerProfileRoutes } from './profile-routes.js';
 import { registerProgressionRoutes } from './progression-routes.js';
 import { registerPlanningRoutes } from './planning-routes.js';
+import { registerPortabilityRoutes } from './portability-routes.js';
 import { registerSyncRoutes } from './sync-routes.js';
 
 export function buildApp(dependencies?: ApiDependencies): FastifyInstance {
@@ -34,6 +35,7 @@ export function buildApp(dependencies?: ApiDependencies): FastifyInstance {
     registerHistoryRoutes(app, dependencies);
     registerAnalyticsRoutes(app, dependencies);
     registerProgressionRoutes(app, dependencies);
+    registerPortabilityRoutes(app, dependencies);
     registerAdminRoutes(app, dependencies);
     registerAccountRoutes(app, dependencies);
     registerSyncRoutes(app, dependencies);

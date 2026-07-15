@@ -758,3 +758,69 @@ Este arquivo é o diário técnico, cronológico e append-only do projeto. Ele r
 ### Próximo passo
 
 - Iniciar a Fase 10 com exportação versionada JSON/CSV, inclusão identificada da outbox e exclusão integral dos dados do titular.
+
+## 2026-07-14 — Fase 10: Exportação, portabilidade e exclusão
+
+**Status:** concluída
+
+**Commit de encerramento:** `feat(phase-10): implement data portability and erasure`
+
+### Escopo executado
+
+- Definido o contrato estrito `dataExportSchema` com `formatVersion: 1.0.0`, instante de geração, fuso, unidades, identidade segura, 21 coleções normalizadas e alterações locais pendentes separadas.
+- Implementado `POST /api/v1/exports` para JSON e ZIP/CSV, sempre derivando o titular da sessão e consultando somente suas entidades. Exercícios globais autorizados são incluídos junto aos personalizados, sem incluir dados personalizados de outro titular.
+- O ZIP usa entradas UTF-8, CSVs com BOM, CRLF, neutralização de fórmulas de planilha e `README.txt` com datas, fuso, unidades, relacionamentos e exclusões de segurança.
+- A outbox pode ser incluída por escolha explícita; cada item recebe `origin: local_pending` e perde identificador de operação, dispositivo, tentativas, erro e estado interno antes de sair do navegador.
+- Chaves de senha, token, segredo, cookie de sessão, dispositivo, operação e hash são rejeitadas recursivamente em payloads pendentes adulterados.
+- A tela de conta oferece downloads JSON e CSV/ZIP, explica o conteúdo e informa a retenção de backups antes da exclusão.
+- A exclusão reautentica por senha, exige a frase explícita, remove a conta e os dados ativos por cascata, revoga o acesso e anonimiza o identificador residual do evento interno de auditoria.
+- A resposta confirmada documenta backups isolados por 7 cópias diárias, 5 semanais e 12 mensais, limitados a 365 dias. Somente depois dessa resposta a aplicação apaga a réplica IndexedDB e a identidade offline.
+
+### Evidências TDD e validação
+
+- RED de contratos — o schema inicial permissivo aceitou metadados de dispositivo/operação e, em um segundo ciclo de segurança, aceitou `sessionToken` dentro do payload; ambos passaram a ser rejeitados pelo contrato estrito.
+- RED do pacote — o gerador inicial devolveu arquivo vazio, sem CSVs/BOM/documentação, e não neutralizou fórmula de planilha; a implementação ZIP ficou verde sem nova dependência.
+- RED da réplica/UI — a extração da outbox devolvia lista vazia e a tela não expunha portabilidade nem retenção; os testes passaram após a sanitização e o fluxo de download.
+- RED de exclusão mínima — o teste PostgreSQL mostrou que o evento interno ainda preservava o UUID do titular; a anonimização após a cascata ficou verde.
+- O primeiro ensaio da integração de exportação foi bloqueado pela indisponibilidade do Docker local. O serviço PostgreSQL efêmero previsto no repositório foi iniciado antes da validação; não houve substituição por mock de persistência.
+- GREEN final — `pnpm test` passou com 29 arquivos e 87 testes; `pnpm test:integration` passou com 11 arquivos e 46 testes PostgreSQL; `pnpm test:e2e` passou com nove jornadas móveis.
+- Gates finais — `pnpm check` passou com governança, verificadores das Fases 1–10, formatação, lint, tipagem, unidades/componentes e builds; `pnpm audit --prod --audit-level moderate` não encontrou vulnerabilidades conhecidas.
+- A jornada E2E baixa o JSON, confirma a exclusão e consulta `indexedDB.databases()` para comprovar que a réplica particionada deixou de existir.
+- REFACTOR — contratos, consulta autorizada, serialização CSV/ZIP, transporte web, sanitização local e apresentação ficaram em módulos separados; `verify:phase-10` foi incorporado ao gate raiz.
+
+### Alterações técnicas
+
+- Novo endpoint: `POST /api/v1/exports`, com `format: json | csv_zip` e até 5.000 alterações pendentes validadas.
+- `DELETE /api/v1/account` passa a devolver confirmação estruturada da remoção ativa e da política de backups.
+- O pacote JSON usa nomes estáveis em camelCase; o ZIP mapeia as coleções para arquivos snake_case e guarda estruturas aninhadas como JSON na célula.
+- Migrações PostgreSQL: nenhuma; todas as chaves estrangeiras de dados ativos já usavam cascata a partir de `users`.
+- Dependências externas: nenhuma; o escritor ZIP armazenado foi implementado com `Buffer`, CRC-32 e estruturas padrão do formato.
+
+### Decisões e ADRs
+
+- Mantidos os ADRs 0001, 0002 e 0003. A portabilidade permanece no monólito modular, a outbox continua no IndexedDB particionado e a reautenticação usa a integração Better Auth existente.
+- Operações, change log, dispositivos, auditoria, contas de provedor, hashes e sessões são metadados internos e não fazem parte da exportação. Versões de regras referenciadas por avaliações são incluídas para preservar explicação e relacionamento.
+- A limpeza local ocorre depois, e nunca antes, de o servidor confirmar a eliminação dos dados ativos.
+
+### Segurança, privacidade e dados
+
+- Teste com duas contas comprova isolamento horizontal no JSON e em cada CSV do ZIP.
+- O pacote não contém senha/hash, conta de provedor, cookie, sessão, token, dispositivo, change log, operação de sync ou auditoria interna.
+- Aceites de privacidade são exportados sem hash de IP nem família de user agent; avaliações de progressão não expõem o hash interno da evidência.
+- CSVs neutralizam células iniciadas por caracteres de fórmula para reduzir risco ao abrir o pacote em planilhas.
+- Após exclusão, sessões, dispositivos e todas as tabelas de domínio ficam vazias para o titular; uma nova tentativa autenticada de exportação recebe `401`.
+
+### Desvios do plano
+
+- Não foi criado um importador de round-trip: o critério desta fase pede round-trip estrutural, comprovado por serialização, parse e validação do mesmo contrato versionado. Importação geral não está no escopo aprovado.
+- A exportação completa exige conexão para obter a fonte autoritativa; alterações offline ainda não sincronizadas podem ser anexadas quando o endpoint volta a estar disponível.
+
+### Pendências e riscos conhecidos
+
+- A geração atual monta JSON/ZIP em memória. Históricos muito grandes poderão exigir streaming em uma versão futura do formato, preservando os mesmos limites de autorização.
+- A janela máxima de 365 dias descreve a política inicial de 12 backups mensais; uma alteração operacional de retenção deverá atualizar simultaneamente a resposta, a interface e os documentos de privacidade.
+- Backups e restauração operacionais serão configurados e exercitados na Fase 12; esta fase implementa e comunica a semântica de exclusão esperada pela aplicação.
+
+### Próximo passo
+
+- Iniciar a Fase 11 com manifesto, app shell offline, atualização segura, instalação multiplataforma e auditoria WCAG 2.2 AA.

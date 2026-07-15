@@ -1,5 +1,6 @@
-import { auditEvents } from '@torkout/database';
-import { accountDeletionSchema } from '@torkout/contracts';
+import { accountDeletionResponseSchema, accountDeletionSchema } from '@torkout/contracts';
+import { auditEvents, users } from '@torkout/database';
+import { and, eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 
 import {
@@ -37,6 +38,25 @@ export function registerAccountRoutes(app: FastifyInstance, dependencies: ApiDep
       body: { password: parsed.data.password },
       headers,
     });
-    return reply.status(204).send();
+    await dependencies.database.delete(users).where(eq(users.id, user.id));
+    await dependencies.database
+      .update(auditEvents)
+      .set({ subjectId: null, subjectType: 'deleted_user' })
+      .where(
+        and(
+          eq(auditEvents.eventType, 'account.deletion_requested'),
+          eq(auditEvents.subjectId, user.id),
+        ),
+      );
+    return reply.status(200).send(
+      accountDeletionResponseSchema.parse({
+        activeDataDeleted: true,
+        backupRetention: {
+          appliesTo: 'Cópias de segurança isoladas, sem uso no produto ativo.',
+          maximumDays: 365,
+          policy: '7 diárias, 5 semanais e 12 mensais.',
+        },
+      }),
+    );
   });
 }

@@ -6,7 +6,18 @@ import { App } from './App';
 function createApi(overrides: Record<string, unknown> = {}) {
   return {
     acceptPrivacy: vi.fn(async () => undefined),
-    deleteAccount: vi.fn(async () => undefined),
+    deleteAccount: vi.fn(async () => ({
+      activeDataDeleted: true as const,
+      backupRetention: {
+        appliesTo: 'Backups isolados.',
+        maximumDays: 365,
+        policy: '7 diárias, 5 semanais e 12 mensais.',
+      },
+    })),
+    exportData: vi.fn(async () => ({
+      blob: new Blob(['{}'], { type: 'application/json' }),
+      fileName: 'torkout-export.json',
+    })),
     getProfile: vi.fn(async () => {
       throw new Error('PROFILE_NOT_FOUND');
     }),
@@ -111,7 +122,9 @@ describe('authenticated account journey', () => {
   it('offers progress analytics from the authenticated home', async () => {
     const api = createApi({
       getProfile: vi.fn(async () => ({ displayName: 'Pessoa A' })),
-      getSession: vi.fn(async () => ({ user: { id: 'user-a', name: 'Pessoa A' } })),
+      getSession: vi.fn(async () => ({
+        user: { id: '62000000-0000-4000-8000-000000000001', name: 'Pessoa A' },
+      })),
     });
     render(<App api={api} />);
 
@@ -202,7 +215,9 @@ describe('authenticated account journey', () => {
   it('lists and revokes sessions and requires the deletion phrase and password', async () => {
     const api = createApi({
       getProfile: vi.fn(async () => ({ displayName: 'Pessoa A' })),
-      getSession: vi.fn(async () => ({ user: { id: 'user-a', name: 'Pessoa A' } })),
+      getSession: vi.fn(async () => ({
+        user: { id: '62000000-0000-4000-8000-000000000002', name: 'Pessoa A' },
+      })),
       listSessions: vi.fn(async () => [
         { createdAt: '2026-07-14T10:00:00Z', token: 'session-token', userAgent: 'Browser' },
       ]),
