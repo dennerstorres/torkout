@@ -55,7 +55,22 @@ services:
 
   bootstrap-db:
     image: postgres:18.4-alpine3.24
-    command: ['sh', '/bootstrap/001-create-app-user.sh']
+    command:
+      - sh
+      - -ec
+      - |
+        psql --set=ON_ERROR_STOP=1 --username "$$POSTGRES_USER" --dbname "$$POSTGRES_DB" \
+          --set=app_user="$$APP_DATABASE_USER" --set=app_password="$$APP_DATABASE_PASSWORD" <<'SQL'
+        SELECT format('CREATE ROLE %I LOGIN PASSWORD %L', :'app_user', :'app_password')
+        WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'app_user') \gexec
+        SELECT format('GRANT CONNECT ON DATABASE %I TO %I', current_database(), :'app_user') \gexec
+        GRANT USAGE ON SCHEMA public TO :"app_user";
+        GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO :"app_user";
+        GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO :"app_user";
+        ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO :"app_user";
+        ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO :"app_user";
+        SELECT format('ALTER ROLE %I SET statement_timeout = %L', :'app_user', '15s') \gexec
+        SQL
     depends_on:
       postgres:
         condition: service_healthy
@@ -67,8 +82,6 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-torkout_owner}
     networks: [backend]
     restart: 'no'
-    volumes:
-      - ./infra/postgres/init:/bootstrap:ro
 
   migrate:
     build:
