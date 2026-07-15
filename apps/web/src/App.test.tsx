@@ -1,4 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import 'fake-indexeddb/auto';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import { App } from './App';
@@ -35,7 +37,7 @@ function createApi(overrides: Record<string, unknown> = {}) {
     loadHistoryPage: vi.fn(async () => ({ days: [], habits: [], nextCursor: null })),
     loadProgressAnalytics: vi.fn(async () => ({
       consistency: {
-        explanation: 'FÃ³rmula de consistÃªncia.',
+        explanation: 'Fórmula de consistência.',
         formulaVersion: 'weekly-consistency/v1' as const,
         weeks: [],
       },
@@ -128,8 +130,8 @@ describe('authenticated account journey', () => {
     });
     render(<App api={api} />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Minha conta' }));
-    expect(await screen.findByRole('heading', { name: 'Sessões e conta' })).toHaveFocus();
+    fireEvent.click(await screen.findByRole('button', { name: 'Conta' }));
+    expect(await screen.findByRole('heading', { name: 'Conta' })).toHaveFocus();
   });
 
   it('offers progress analytics from the authenticated home', async () => {
@@ -141,7 +143,7 @@ describe('authenticated account journey', () => {
     });
     render(<App api={api} />);
 
-    expect(await screen.findByRole('button', { name: 'Progresso e indicadores' })).toBeVisible();
+    expect(await screen.findByRole('button', { name: 'Progresso' })).toBeVisible();
   });
 
   it('collects onboarding, explicit health consent and optional initial measurements', async () => {
@@ -208,7 +210,7 @@ describe('authenticated account journey', () => {
     });
     const first = render(<App api={api} />);
     expect(await screen.findByText(/Pessoa Offline/)).toBeVisible();
-    expect(screen.getByText(/modo offline/i)).toBeVisible();
+    expect(screen.getByRole('status')).toHaveTextContent(/modo offline/i);
     first.unmount();
 
     localStorage.setItem(
@@ -237,8 +239,8 @@ describe('authenticated account journey', () => {
     });
     render(<App api={api} />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Minha conta' }));
-    expect(await screen.findByRole('heading', { name: 'Sessões e conta' })).toBeVisible();
+    fireEvent.click(await screen.findByRole('button', { name: 'Conta' }));
+    expect(await screen.findByRole('heading', { name: 'Conta' })).toBeVisible();
     fireEvent.click(await screen.findByRole('button', { name: 'Revogar sessão' }));
     await waitFor(() => expect(api.revokeSession).toHaveBeenCalledWith('session-token'));
 

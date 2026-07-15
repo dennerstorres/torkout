@@ -6,7 +6,7 @@
 
 **Unidade de entrega:** fase completa com commit de encerramento
 
-**Status geral:** Fases 0–13 concluídas; lançamento público aguarda validações físicas e externas
+**Status geral:** Fases 0–14 implementadas e validadas localmente; lançamento público aguarda validações físicas e externas
 
 ## 1. Regras de execução
 
@@ -580,10 +580,195 @@ autorizou explicitamente commitar a Fase 13 no estado atual e informou que execu
 pendentes depois. A autorização encerra a unidade de implementação, mas não equivale a evidência
 física/externa e não autoriza tag `v1.0.0`, deploy ou abertura pública.
 
+### Fase 14 — Refactor UI/UX premium
+
+**Status:** implementada e validada localmente — checklist físico de AC-09 permanece pendente
+
+**Commit esperado:** `feat(web): deliver premium UI UX refactor`
+
+**Referência visual:** projeto Stitch `Torkout: Redesign Premium PWA`, preservado em
+`design/stitch/`
+
+**Objetivo:** substituir a interface atual por uma experiência mobile-first coerente, acessível e
+adequada ao uso durante o treino, preservando as regras de negócio, a persistência local, a
+sincronização, os contratos e os fluxos já validados nas Fases 0–13.
+
+O HTML exportado pelo Stitch é apenas uma especificação visual. Ele não deve ser incorporado
+diretamente ao bundle, pois contém Tailwind via CDN, fontes remotas, Material Symbols e scripts do
+próprio Stitch, incompatíveis com o requisito offline-first.
+
+#### Direção visual e técnica
+
+- Tema escuro com superfícies `#0e0e0e`, `#131313`, `#1c1b1b`, `#201f1f` e `#353534`.
+- Destaque primário `#d4ff00`, secundário `#7000ff` e destrutivo `#ff4d4d`.
+- Geist para títulos e Inter para corpo quando os arquivos puderem ser empacotados localmente e
+  suas licenças forem confirmadas; até lá, usar fallbacks de sistema.
+- Ícones em SVG local por meio de componente React; não depender de Material Symbols remoto.
+- CSS semântico do projeto; não adicionar Tailwind apenas para reproduzir os arquivos exportados.
+- Navegação por estado existente mantida no primeiro ciclo. Adoção de roteador fica fora desta
+  fase, salvo necessidade funcional comprovada.
+
+#### Arquitetura alvo
+
+```text
+App
+├── PublicShell
+│   ├── Auth
+│   ├── ResetPassword
+│   └── Onboarding
+└── AuthenticatedShell
+    ├── AppHeader
+    ├── PrimaryNavigation
+    ├── SyncStatusButton
+    ├── SyncDetails
+    └── PageOutlet
+        ├── TodayPage
+        ├── WorkoutSessionPage
+        ├── PlanningPage
+        ├── HistoryPage
+        ├── ProgressPage
+        ├── ProgressionPage
+        └── AccountPage
+```
+
+Os componentes compartilhados devem incluir, no mínimo, `Button`, `Card`, `EmptyState`, `Field`,
+`Icon`, `MetricCard`, `PageHeader`, `ProgressBar`, `StatusBadge` e `VisuallyHidden`. Tokens, base,
+shell, componentes e estilos por feature devem ser separados gradualmente a partir do atual
+`styles.css`, sem uma migração massiva em um único commit.
+
+#### Etapa 14.0 — Baseline e codificação
+
+- [x] Normalizar os arquivos web e os testes para UTF-8 e corrigir textos com mojibake.
+- [x] Catalogar nomes acessíveis usados pelos testes unitários e E2E.
+- [x] Criar baseline visual determinístico nos viewports 390 × 844 e 1440 × 900.
+- [x] Consolidar helpers de teste para sessão, IndexedDB e estados de sincronização.
+- [x] Confirmar typecheck, testes web e jornadas E2E antes da primeira mudança visual.
+
+**Critério de saída:** baseline verde, sem texto corrompido e com referências visuais revisáveis.
+
+#### Etapa 14.1 — Design system e shell autenticado
+
+- [x] Criar tokens semânticos de cor, espaço, raio, sombra, tipografia, controle e movimento.
+- [x] Criar componentes primitivos acessíveis e seus testes.
+- [x] Criar `AuthenticatedShell` com barra inferior no mobile e sidebar no desktop.
+- [x] Manter Hoje, Planejamento, Histórico, Progresso e Conta sempre acessíveis.
+- [x] Transformar `SyncPanel` em indicador global com detalhes expansíveis para pending, retry,
+      exportação e conflitos.
+- [x] Preservar skip link, foco no `h1`, `prefers-reduced-motion`, forced colors e safe areas.
+- [x] Fazer Hoje ser a entrada autenticada, removendo a home intermediária de botões.
+
+**Critério de saída:** todas as áreas podem ser acessadas sem voltar à home; offline, erro e
+conflito continuam visíveis e operáveis.
+
+#### Etapa 14.2 — Hoje e treino em execução
+
+- [x] Separar o dashboard diário do modo focado de execução atualmente misturados em
+      `TodayScreen.tsx`.
+- [x] Criar dashboard com saudação, data, resumo semanal, treino principal, hábitos e registros
+      rápidos.
+- [x] Criar estado vazio com ação para planejar ou adicionar treino avulso.
+- [x] Criar runner com progresso, exercício, séries, métrica, notas, pular, interromper e adicionar
+      série.
+- [x] Preservar repetições, duração e distância como métricas distintas.
+- [x] Manter confirmação de ausência de dor e alerta conservador específico para dor articular.
+- [x] Permitir conclusão completa, parcial, perdida ou cancelada conforme as regras existentes.
+- [x] Garantir persistência no IndexedDB antes de qualquer tentativa de sincronização.
+
+**Critério de saída:** todas as mutações existentes funcionam offline, sobrevivem ao reload e são
+operáveis com uma mão em 360 px sem scroll horizontal.
+
+#### Etapa 14.3 — Planejamento
+
+- [x] Reorganizar desktop em agenda, planos e editor; usar fluxo vertical e dialogs/sheets no
+      mobile.
+- [x] Separar catálogo, exercício personalizado, template recorrente e treino avulso.
+- [x] Implementar ordenação acessível sem tornar drag-and-drop obrigatório.
+- [x] Destacar que alterações recorrentes afetam apenas o futuro.
+- [x] Preservar criação, edição e outbox offline.
+
+**Critério de saída:** jornadas atuais de planejamento offline passam e todo o editor é operável por
+teclado.
+
+#### Etapa 14.4 — Histórico, progresso e progressão
+
+- [x] Usar master/detail no Histórico, com duas colunas no desktop e fluxo sequencial no mobile.
+- [x] Manter um botão acessível por dia, nome civil completo, legenda e status de sincronização.
+- [x] Exibir planejado versus executado no detalhe histórico.
+- [x] Criar cards de KPI e manter cada gráfico acompanhado por tabela acessível.
+- [x] Tratar dados insuficientes com estados vazios acionáveis.
+- [x] Usar linguagem não diagnóstica para dor e fadiga.
+- [x] Trocar evidência de progressão em `pre` por conteúdo estruturado e expansível.
+- [x] Preservar aceite, adiamento e recusa explícitos; nenhuma sugestão é aplicada automaticamente.
+
+**Critério de saída:** Histórico e Progresso reabrem do cache offline, permanecem acessíveis e não
+alteram regras ou fórmulas existentes.
+
+#### Etapa 14.5 — Conta, autenticação e estados transversais
+
+- [x] Organizar Conta em perfil, sincronização/dados, sessões e zona de risco.
+- [x] Diferenciar logout mantendo dados locais de logout removendo dados, com confirmação adequada.
+- [x] Preservar exportação, revogação de sessão e exclusão de conta.
+- [x] Harmonizar Auth, Onboarding, Reset Password, instalação PWA e bloqueio offline.
+- [x] Criar padrões únicos para loading, vazio, erro, offline, pending e conflito.
+
+**Critério de saída:** fluxos de conta e telas públicas mantêm cobertura e passam axe/WCAG AA.
+
+#### Etapa 14.6 — Polimento e remoção do legado
+
+- [x] Remover classes e componentes sem consumidores.
+- [ ] Validar em dispositivos físicos 360–430 px, tablet, desktop, zoom de 200%, teclado e safe areas de iOS (gate AC-09).
+- [x] Validar contraste, reduced motion e forced colors.
+- [x] Confirmar que fontes, ícones e assets necessários são cacheados pela PWA.
+- [x] Verificar bundle e manter lazy loading de análises.
+- [x] Atualizar screenshots, documentação, `HISTORY.md` e evidências da fase.
+
+**Critério de saída:** nenhuma dependência remota é necessária para renderizar a aplicação, não há
+CSS legado relevante e todos os gates do repositório passam.
+
+#### Testes primeiro
+
+- [x] Criar testes de componentes para papéis, labels, foco, teclado e estados disabled/loading.
+- [x] Criar testes das variantes de sincronização, incluindo pending, offline, error e conflict.
+- [x] Atualizar os E2E de Hoje para cobrir dashboard e runner como fluxos distintos.
+- [x] Preservar E2E de planejamento offline, histórico em cache, progresso em cache, progressão,
+      portabilidade e reconexão idempotente.
+- [x] Adicionar screenshots Playwright determinísticos em 390 × 844 e 1440 × 900.
+- [x] Executar axe nas principais páginas públicas e autenticadas.
+- [x] Executar `pnpm typecheck`, testes unitários web, E2E relacionados, lint e build em cada corte.
+
+#### Sequência de entregas
+
+1. UTF-8, baseline visual e helpers de teste.
+2. Tokens e componentes primitivos.
+3. Shell, navegação e status global de sincronização.
+4. Dashboard Hoje.
+5. Treino em execução.
+6. Planejamento.
+7. Histórico.
+8. Progresso e progressão.
+9. Conta e fluxos públicos.
+10. Limpeza, acessibilidade e performance.
+
+Cada entrega deve manter o repositório funcional. Mudanças visuais e mudanças de regra de negócio
+não devem ser misturadas. Lacunas funcionais percebidas nos mocks do Stitch devem ser registradas
+como trabalho posterior, não implementadas implicitamente durante o refactor.
+
+#### Critérios de saída
+
+- Navegação persistente e responsiva em todas as áreas autenticadas.
+- Hoje é a entrada principal após autenticação.
+- Dashboard e execução são experiências distintas sobre a mesma fonte de dados local.
+- Todas as funções existentes permanecem disponíveis online e offline.
+- Estado de sincronização compreensível, sem expor detalhes técnicos por padrão.
+- Contraste, foco, teclado, zoom, reduced motion e leitores de tela suportados.
+- Nenhuma dependência de Tailwind CDN, Google Fonts ou Material Symbols em runtime.
+- Interface coerente com o Stitch sem scripts ou markup do Stitch no bundle.
+- Testes unitários, E2E, typecheck, lint, formatação e build verdes.
+
 ## 5. Dependências entre fases
 
 ```text
-0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13
+0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14
 ```
 
 Trabalhos internos de uma mesma fase podem ser paralelos somente quando não compartilham arquivos ou contratos instáveis. O encerramento continua único.

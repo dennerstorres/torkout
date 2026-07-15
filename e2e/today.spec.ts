@@ -117,14 +117,16 @@ test('tracks Today offline on mobile, survives reload and imports authenticated 
 
   await page.goto('/');
   await page.getByRole('button', { name: 'Hoje' }).click();
-  await expect(page.getByRole('heading', { name: 'Hoje' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Hoje', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Iniciar Treino móvel' }).click();
 
   networkAvailable = false;
   await page.getByLabel('Série 1 de Flexão').fill('10');
   await expect(page.getByRole('status')).toContainText('Salvo localmente');
   await page.reload();
-  await expect(page.getByText(/modo offline/i)).toBeVisible();
+  await expect(page.getByText(/Você está offline/i)).toBeVisible();
   await page.getByRole('button', { name: 'Hoje' }).click();
+  await page.getByRole('button', { name: 'Iniciar Treino móvel' }).click();
   await expect(page.getByLabel('Série 1 de Flexão')).toHaveValue('10');
   await page.getByLabel('Confirmo que não houve dor articular').check();
 

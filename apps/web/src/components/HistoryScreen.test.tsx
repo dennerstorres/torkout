@@ -45,7 +45,7 @@ async function seed() {
         plannedLocalDate: '2026-07-13',
         status: 'partial',
         templateId: 'a8500000-0000-4000-8000-000000000001',
-        templateNameSnapshot: 'ForÃ§a A',
+        templateNameSnapshot: 'Força A',
         type: 'strength',
       },
       'pending',
@@ -62,7 +62,7 @@ async function seed() {
       templateNameSnapshot: 'Descanso',
       type: 'rest',
     }),
-    record('habit_definition', habitId, { active: true, name: 'ProteÃ­na', type: 'quantity' }),
+    record('habit_definition', habitId, { active: true, name: 'Proteína', type: 'quantity' }),
     record('habit_entry', entryId, {
       habitDefinitionId: habitId,
       localDate: '2026-07-13',
@@ -99,10 +99,10 @@ describe('calendar and historical editing', () => {
     );
 
     const day13 = await screen.findByRole('button', { name: /13 de julho/i });
-    expect(within(day13).getByText('ForÃ§a')).toBeVisible();
+    expect(within(day13).getByText('Força')).toBeVisible();
     expect(within(day13).getByText('Caminhada')).toBeVisible();
     expect(within(day13).getByText('Parcial')).toBeVisible();
-    expect(within(day13).getByText('ConcluÃ­do')).toBeVisible();
+    expect(within(day13).getByText('Concluído')).toBeVisible();
     expect(within(day13).getByText('Pendente')).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: /12 de julho/i }));
     expect(screen.getByRole('heading', { name: 'Descanso' })).toBeVisible();
@@ -125,12 +125,12 @@ describe('calendar and historical editing', () => {
       />,
     );
     fireEvent.click(await screen.findByRole('button', { name: /13 de julho/i }));
-    fireEvent.change(screen.getByLabelText('ObservaÃ§Ãµes de ForÃ§a A'), {
-      target: { value: 'Corrigido no histÃ³rico' },
+    fireEvent.change(screen.getByLabelText('Observações de Força A'), {
+      target: { value: 'Corrigido no histórico' },
     });
-    fireEvent.blur(screen.getByLabelText('ObservaÃ§Ãµes de ForÃ§a A'));
-    fireEvent.change(screen.getByLabelText('ProteÃ­na'), { target: { value: '3' } });
-    fireEvent.blur(screen.getByLabelText('ProteÃ­na'));
+    fireEvent.blur(screen.getByLabelText('Observações de Força A'));
+    fireEvent.change(screen.getByLabelText('Proteína'), { target: { value: '3' } });
+    fireEvent.blur(screen.getByLabelText('Proteína'));
     fireEvent.change(screen.getByLabelText('Peso em 13/07/2026'), { target: { value: '79.5' } });
     fireEvent.blur(screen.getByLabelText('Peso em 13/07/2026'));
     fireEvent.change(screen.getByLabelText('Intensidade da dor em joelho'), {
@@ -178,9 +178,9 @@ describe('calendar and historical editing', () => {
       'data-filtered-out',
       'true',
     );
-    fireEvent.click(screen.getByRole('button', { name: 'MÃªs anterior' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Mês anterior' }));
     expect(screen.getByRole('heading', { name: /junho de 2026/i })).toBeVisible();
-    fireEvent.click(screen.getByRole('button', { name: 'PrÃ³ximo mÃªs' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Próximo mês' }));
     expect(screen.getByRole('heading', { name: /julho de 2026/i })).toBeVisible();
     await waitFor(() =>
       expect(screen.getByRole('button', { name: /13 de julho/i })).toBeInTheDocument(),

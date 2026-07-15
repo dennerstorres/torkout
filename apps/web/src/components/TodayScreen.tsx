@@ -6,12 +6,15 @@ import {
   type UserSyncDatabase,
 } from '../sync/local-database';
 import type { SyncState } from '../sync/sync-coordinator';
+import { EmptyState, MetricCard, ProgressBar, StatusBadge } from './ui';
 
 interface TodayScreenProps {
   database: UserSyncDatabase;
+  name?: string;
   now?: Date;
   onBack(): void;
   onImportHistory?(): Promise<void>;
+  onPlan?(): void;
   onSync(): void;
   syncState: SyncState;
   timeZone: string;
@@ -108,9 +111,11 @@ const syncMessages: Record<SyncState, string> = {
 
 export function TodayScreen({
   database,
+  name,
   now = new Date(),
   onBack,
   onImportHistory,
+  onPlan,
   onSync,
   syncState,
   timeZone,
@@ -126,6 +131,7 @@ export function TodayScreen({
   const [painCustomRegion, setPainCustomRegion] = useState('');
   const [painMoment, setPainMoment] = useState('after');
   const [painNotes, setPainNotes] = useState('');
+  const [runnerSessionId, setRunnerSessionId] = useState<string | null>(null);
 
   async function refresh(): Promise<void> {
     setRecords(await database.records.toArray());
@@ -133,9 +139,12 @@ export function TodayScreen({
 
   useEffect(() => {
     let active = true;
-    void database.records.toArray().then((items) => {
-      if (active) setRecords(items);
-    });
+    void database.records
+      .toArray()
+      .then((items) => {
+        if (active) setRecords(items);
+      })
+      .catch(() => undefined);
     return () => {
       active = false;
     };
@@ -156,6 +165,18 @@ export function TodayScreen({
       record.entityType === 'habit_definition' &&
       record.deletedAt === null &&
       record.data.active !== false,
+  );
+  const weekStart = new Date(`${date}T12:00:00Z`);
+  weekStart.setUTCDate(weekStart.getUTCDate() - ((weekStart.getUTCDay() + 6) % 7));
+  const weekThrough = new Date(weekStart);
+  weekThrough.setUTCDate(weekThrough.getUTCDate() + 6);
+  const weeklySessions = records.filter(
+    (record) =>
+      record.entityType === 'workout_session' &&
+      record.deletedAt === null &&
+      typeof record.data.plannedLocalDate === 'string' &&
+      record.data.plannedLocalDate >= weekStart.toISOString().slice(0, 10) &&
+      record.data.plannedLocalDate <= weekThrough.toISOString().slice(0, 10),
   );
 
   async function saveExecution(
@@ -297,12 +318,37 @@ export function TodayScreen({
     await refresh();
   }
 
+  async function finishSession(
+    session: LocalRecord,
+    forcedStatus?: 'cancelled' | 'missed',
+  ): Promise<void> {
+    const execution = executionOf(session);
+    execution.exercises.forEach((exercise) => {
+      if (exercise.status === 'skipped' || exercise.status === 'stopped') return;
+      exercise.status = exercise.sets.every((set) => set.completed) ? 'completed' : 'stopped';
+    });
+    execution.completedAt = forcedStatus ? null : new Date().toISOString();
+    const complete = execution.exercises.every(
+      (exercise) => exercise.status === 'completed' && exercise.sets.every((set) => set.completed),
+    );
+    await queueLocalMutation(database, {
+      entityId: session.entityId,
+      entityType: 'workout_session',
+      operation: 'update',
+      payload: { execution, status: forcedStatus ?? (complete ? 'completed' : 'partial') },
+    });
+    setMessage('Treino salvo localmente e pendente de sincronização.');
+    setRunnerSessionId(null);
+    await refresh();
+  }
+
   return (
     <main className="today-layout">
       <header className="planning-header">
         <div>
-          <p className="eyebrow">Registro diário</p>
+          <p className="eyebrow">Seu ritmo, hoje</p>
           <h1>Hoje</h1>
+          {name && <p className="today-greeting">Olá, {name}.</p>}
           <p>{new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full', timeZone }).format(now)}</p>
         </div>
         <button type="button" onClick={onBack}>
@@ -314,360 +360,436 @@ export function TodayScreen({
         {message}
       </p>
 
+      {runnerSessionId === null && (
+        <section className="today-summary" aria-label="Resumo de hoje">
+          <MetricCard label="Treinos na semana" value={weeklySessions.length} />
+          <MetricCard label="Hábitos" value={habits.length} />
+          <MetricCard
+            label="Pendências locais"
+            value={records.filter((record) => record.syncStatus === 'pending').length}
+          />
+        </section>
+      )}
+
       <section className="card today-section" aria-labelledby="sessions-heading">
-        <h2 id="sessions-heading">Sessões</h2>
-        {sessions.length === 0 && <p>Nenhuma sessão planejada para hoje.</p>}
-        {sessions.map((session) => (
-          <article className="today-session" key={session.entityId}>
-            <h3>{stringValue(session.data, 'templateNameSnapshot', 'Sessão')}</h3>
-            <p>
-              {stringValue(session.data, 'type', 'other')} ·{' '}
-              {stringValue(session.data, 'status', 'planned')}
-            </p>
-            <label>
-              Observações da sessão
-              <textarea
-                defaultValue={stringValue(session.data, 'notes')}
-                onBlur={(event) =>
-                  void queueLocalMutation(database, {
-                    entityId: session.entityId,
-                    entityType: 'workout_session',
-                    operation: 'update',
-                    payload: { notes: event.target.value || null },
-                  }).then(refresh)
-                }
-              />
-            </label>
-            {namedExercises(session).map((exercise) => (
-              <fieldset key={exercise.id}>
-                <legend>{exercise.name}</legend>
-                {exercise.sets.map((set) => {
-                  const metric = exercise.trackingMetric ?? 'repetitions';
-                  const actual =
-                    metric === 'distance'
-                      ? set.actualDistanceMeters
-                      : metric === 'duration'
-                        ? set.actualDurationSeconds
-                        : set.actualRepetitions;
-                  const planned = dataArray<ExerciseView>(session.data, 'exercises')
-                    .find((item) => item.id === exercise.id)
-                    ?.sets.find((item) => item.id === set.id)?.[
-                    metric === 'distance'
-                      ? 'plannedDistanceMeters'
-                      : metric === 'duration'
-                        ? 'plannedDurationSeconds'
-                        : 'plannedRepetitions'
-                  ];
-                  return (
-                    <label key={set.id}>
-                      Série {set.setNumber} de {exercise.name}
-                      <span className="field-hint">Meta: {planned ?? 'série adicional'}</span>
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Treino principal</p>
+            <h2 id="sessions-heading">
+              {runnerSessionId ? 'Treino em execução' : 'Sessões de hoje'}
+            </h2>
+          </div>
+          {runnerSessionId && (
+            <button type="button" onClick={() => setRunnerSessionId(null)}>
+              Voltar ao resumo
+            </button>
+          )}
+        </div>
+        {sessions.length === 0 && (
+          <EmptyState
+            title="Hoje está livre"
+            action={
+              onPlan ? (
+                <button className="primary" type="button" onClick={onPlan}>
+                  Planejar treino
+                </button>
+              ) : undefined
+            }
+          >
+            Planeje sua próxima sessão ou aproveite o descanso previsto.
+          </EmptyState>
+        )}
+        {sessions
+          .filter((session) => runnerSessionId === null || runnerSessionId === session.entityId)
+          .map((session) => (
+            <article className="today-session" key={session.entityId}>
+              <div className="session-title">
+                <div>
+                  <h3>{stringValue(session.data, 'templateNameSnapshot', 'Sessão')}</h3>
+                  <p>
+                    {stringValue(session.data, 'type', 'other')} ·{' '}
+                    {stringValue(session.data, 'status', 'planned')}
+                  </p>
+                </div>
+                <StatusBadge tone={session.syncStatus === 'synced' ? 'success' : 'warning'}>
+                  {session.syncStatus === 'synced' ? 'Sincronizado' : 'Salvo localmente'}
+                </StatusBadge>
+              </div>
+              {runnerSessionId === null ? (
+                <button
+                  className="primary start-workout"
+                  type="button"
+                  onClick={() => setRunnerSessionId(session.entityId)}
+                >
+                  Iniciar {stringValue(session.data, 'templateNameSnapshot', 'sessão')}
+                </button>
+              ) : (
+                <>
+                  <ProgressBar
+                    label="Progresso do treino"
+                    value={workoutProgress(executionOf(session))}
+                  />
+                  <label>
+                    Observações da sessão
+                    <textarea
+                      defaultValue={stringValue(session.data, 'notes')}
+                      onBlur={(event) =>
+                        void queueLocalMutation(database, {
+                          entityId: session.entityId,
+                          entityType: 'workout_session',
+                          operation: 'update',
+                          payload: { notes: event.target.value || null },
+                        }).then(refresh)
+                      }
+                    />
+                  </label>
+                  {namedExercises(session).map((exercise) => (
+                    <fieldset key={exercise.id}>
+                      <legend>{exercise.name}</legend>
+                      {exercise.sets.map((set) => {
+                        const metric = exercise.trackingMetric ?? 'repetitions';
+                        const actual =
+                          metric === 'distance'
+                            ? set.actualDistanceMeters
+                            : metric === 'duration'
+                              ? set.actualDurationSeconds
+                              : set.actualRepetitions;
+                        const planned = dataArray<ExerciseView>(session.data, 'exercises')
+                          .find((item) => item.id === exercise.id)
+                          ?.sets.find((item) => item.id === set.id)?.[
+                          metric === 'distance'
+                            ? 'plannedDistanceMeters'
+                            : metric === 'duration'
+                              ? 'plannedDurationSeconds'
+                              : 'plannedRepetitions'
+                        ];
+                        return (
+                          <label key={set.id}>
+                            Série {set.setNumber} de {exercise.name}
+                            <span className="field-hint">Meta: {planned ?? 'série adicional'}</span>
+                            <input
+                              aria-label={`Série ${set.setNumber} de ${exercise.name}`}
+                              min="0"
+                              type="number"
+                              value={actual ?? ''}
+                              onChange={(event) =>
+                                void saveSet(
+                                  session,
+                                  exercise.id,
+                                  set.id,
+                                  metric,
+                                  event.target.value,
+                                )
+                              }
+                            />
+                          </label>
+                        );
+                      })}
+                      <div className="button-row">
+                        <button type="button" onClick={() => void addSet(session, exercise.id)}>
+                          Adicionar série em {exercise.name}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void saveExecution(session, (execution) => {
+                              const item = execution.exercises.find(
+                                (candidate) => candidate.id === exercise.id,
+                              );
+                              if (item) item.status = 'skipped';
+                            })
+                          }
+                        >
+                          Ignorar {exercise.name}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void saveExecution(session, (execution) => {
+                              const item = execution.exercises.find(
+                                (candidate) => candidate.id === exercise.id,
+                              );
+                              if (item) item.status = 'stopped';
+                            })
+                          }
+                        >
+                          Interromper {exercise.name}
+                        </button>
+                      </div>
+                      <label>
+                        Observações de {exercise.name}
+                        <textarea
+                          value={exercise.notes ?? ''}
+                          onChange={(event) =>
+                            void saveExecution(session, (execution) => {
+                              const item = execution.exercises.find(
+                                (candidate) => candidate.id === exercise.id,
+                              );
+                              if (item) item.notes = event.target.value || null;
+                            })
+                          }
+                        />
+                      </label>
+                    </fieldset>
+                  ))}
+                  {session.data.type === 'walk' && (
+                    <fieldset>
+                      <legend>Detalhes da caminhada</legend>
+                      <label>
+                        Distância realizada (m)
+                        <input
+                          min="0"
+                          type="number"
+                          onChange={(event) =>
+                            void saveExecution(session, (execution) => {
+                              execution.walking = {
+                                ...execution.walking,
+                                actualDistanceMeters: Number(event.target.value),
+                                distanceSource: 'manual',
+                              };
+                            })
+                          }
+                        />
+                      </label>
+                      <label>
+                        Duração da caminhada (segundos)
+                        <input
+                          min="0"
+                          type="number"
+                          onChange={(event) =>
+                            void saveExecution(session, (execution) => {
+                              execution.walking = {
+                                ...execution.walking,
+                                distanceSource: 'manual',
+                                durationSeconds: Number(event.target.value),
+                              };
+                            })
+                          }
+                        />
+                      </label>
+                      <label>
+                        Observações da caminhada
+                        <textarea
+                          onChange={(event) =>
+                            void saveExecution(session, (execution) => {
+                              execution.walking = {
+                                ...execution.walking,
+                                distanceSource: 'manual',
+                                notes: event.target.value || null,
+                              };
+                            })
+                          }
+                        />
+                      </label>
+                    </fieldset>
+                  )}
+                  <fieldset>
+                    <legend>Dor articular</legend>
+                    <label className="inline-check">
                       <input
-                        aria-label={`Série ${set.setNumber} de ${exercise.name}`}
-                        min="0"
-                        type="number"
-                        value={actual ?? ''}
+                        checked={executionOf(session).jointPainStatus === 'none'}
+                        type="checkbox"
                         onChange={(event) =>
-                          void saveSet(session, exercise.id, set.id, metric, event.target.value)
+                          void saveExecution(session, (execution) => {
+                            execution.jointPainStatus = event.target.checked ? 'none' : 'unknown';
+                          })
                         }
                       />
+                      Confirmo que não houve dor articular
                     </label>
-                  );
-                })}
-                <div className="button-row">
-                  <button type="button" onClick={() => void addSet(session, exercise.id)}>
-                    Adicionar série em {exercise.name}
-                  </button>
+                    {executionOf(session).jointPainStatus === 'unknown' && (
+                      <p>A ausência ainda não foi confirmada e permanece desconhecida.</p>
+                    )}
+                  </fieldset>
                   <button
+                    className="primary"
                     type="button"
-                    onClick={() =>
-                      void saveExecution(session, (execution) => {
-                        const item = execution.exercises.find(
-                          (candidate) => candidate.id === exercise.id,
-                        );
-                        if (item) item.status = 'skipped';
-                      })
-                    }
+                    onClick={() => void finishSession(session)}
                   >
-                    Ignorar {exercise.name}
+                    Finalizar {stringValue(session.data, 'templateNameSnapshot', 'sessão')}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      void saveExecution(session, (execution) => {
-                        const item = execution.exercises.find(
-                          (candidate) => candidate.id === exercise.id,
-                        );
-                        if (item) item.status = 'stopped';
-                      })
-                    }
-                  >
-                    Interromper {exercise.name}
-                  </button>
-                </div>
-                <label>
-                  Observações de {exercise.name}
-                  <textarea
-                    value={exercise.notes ?? ''}
-                    onChange={(event) =>
-                      void saveExecution(session, (execution) => {
-                        const item = execution.exercises.find(
-                          (candidate) => candidate.id === exercise.id,
-                        );
-                        if (item) item.notes = event.target.value || null;
-                      })
-                    }
-                  />
-                </label>
-              </fieldset>
-            ))}
-            {session.data.type === 'walk' && (
-              <fieldset>
-                <legend>Detalhes da caminhada</legend>
-                <label>
-                  Distância realizada (m)
-                  <input
-                    min="0"
-                    type="number"
-                    onChange={(event) =>
-                      void saveExecution(session, (execution) => {
-                        execution.walking = {
-                          ...execution.walking,
-                          actualDistanceMeters: Number(event.target.value),
-                          distanceSource: 'manual',
-                        };
-                      })
-                    }
-                  />
-                </label>
-                <label>
-                  Duração da caminhada (segundos)
-                  <input
-                    min="0"
-                    type="number"
-                    onChange={(event) =>
-                      void saveExecution(session, (execution) => {
-                        execution.walking = {
-                          ...execution.walking,
-                          distanceSource: 'manual',
-                          durationSeconds: Number(event.target.value),
-                        };
-                      })
-                    }
-                  />
-                </label>
-                <label>
-                  Observações da caminhada
-                  <textarea
-                    onChange={(event) =>
-                      void saveExecution(session, (execution) => {
-                        execution.walking = {
-                          ...execution.walking,
-                          distanceSource: 'manual',
-                          notes: event.target.value || null,
-                        };
-                      })
-                    }
-                  />
-                </label>
-              </fieldset>
-            )}
-            <fieldset>
-              <legend>Dor articular</legend>
-              <label className="inline-check">
-                <input
-                  checked={executionOf(session).jointPainStatus === 'none'}
-                  type="checkbox"
-                  onChange={(event) =>
-                    void saveExecution(session, (execution) => {
-                      execution.jointPainStatus = event.target.checked ? 'none' : 'unknown';
-                    })
-                  }
-                />
-                Confirmo que não houve dor articular
-              </label>
-              {executionOf(session).jointPainStatus === 'unknown' && (
-                <p>A ausência ainda não foi confirmada e permanece desconhecida.</p>
+                  <div className="button-row" aria-label="Outras formas de encerrar o treino">
+                    <button type="button" onClick={() => void finishSession(session, 'missed')}>
+                      Marcar como perdido
+                    </button>
+                    <button
+                      className="danger"
+                      type="button"
+                      onClick={() => void finishSession(session, 'cancelled')}
+                    >
+                      Cancelar treino
+                    </button>
+                  </div>
+                </>
               )}
-            </fieldset>
-            <button
-              className="primary"
-              type="button"
-              onClick={() =>
-                void saveExecution(session, (execution) => {
-                  execution.exercises.forEach((exercise) => {
-                    if (exercise.status === 'skipped' || exercise.status === 'stopped') return;
-                    exercise.status = exercise.sets.every((set) => set.completed)
-                      ? 'completed'
-                      : 'stopped';
-                  });
-                  execution.completedAt = new Date().toISOString();
-                })
+            </article>
+          ))}
+      </section>
+
+      {runnerSessionId === null && (
+        <>
+          <section className="card today-section" aria-labelledby="habits-heading">
+            <h2 id="habits-heading">Hábitos do dia</h2>
+            {habits.length === 0 && <p>Nenhum hábito ativo.</p>}
+            {habits.map((habit) => {
+              const options = dataArray<{ id: string; label: string }>(habit.data, 'options');
+              const entry = records.find(
+                (record) =>
+                  record.entityType === 'habit_entry' &&
+                  record.data.habitDefinitionId === habit.entityId &&
+                  record.data.localDate === date,
+              );
+              const name = stringValue(habit.data, 'name', 'Hábito');
+              const type = stringValue(habit.data, 'type', 'choice');
+              if (type === 'boolean') {
+                return (
+                  <label className="inline-check" key={habit.entityId}>
+                    <input
+                      checked={entry?.data.booleanValue === true}
+                      type="checkbox"
+                      onChange={(event) =>
+                        void saveHabit(habit, { booleanValue: event.target.checked })
+                      }
+                    />
+                    {name}
+                  </label>
+                );
               }
-            >
-              Finalizar {stringValue(session.data, 'templateNameSnapshot', 'sessão')}
-            </button>
-          </article>
-        ))}
-      </section>
+              if (type === 'quantity' || type === 'scale') {
+                return (
+                  <label key={habit.entityId}>
+                    {name}
+                    <input
+                      min="0"
+                      type="number"
+                      value={
+                        typeof entry?.data.numericValue === 'number' ? entry.data.numericValue : ''
+                      }
+                      onChange={(event) =>
+                        void saveHabit(habit, { numericValue: Number(event.target.value) })
+                      }
+                    />
+                  </label>
+                );
+              }
+              return (
+                <label key={habit.entityId}>
+                  {name}
+                  <select
+                    value={stringValue(entry?.data ?? {}, 'selectedOptionId')}
+                    onChange={(event) =>
+                      void saveHabit(habit, { selectedOptionId: event.target.value })
+                    }
+                  >
+                    <option value="">Não informado</option>
+                    {options.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              );
+            })}
+          </section>
 
-      <section className="card today-section" aria-labelledby="habits-heading">
-        <h2 id="habits-heading">Hábitos do dia</h2>
-        {habits.length === 0 && <p>Nenhum hábito ativo.</p>}
-        {habits.map((habit) => {
-          const options = dataArray<{ id: string; label: string }>(habit.data, 'options');
-          const entry = records.find(
-            (record) =>
-              record.entityType === 'habit_entry' &&
-              record.data.habitDefinitionId === habit.entityId &&
-              record.data.localDate === date,
-          );
-          const name = stringValue(habit.data, 'name', 'Hábito');
-          const type = stringValue(habit.data, 'type', 'choice');
-          if (type === 'boolean') {
-            return (
-              <label className="inline-check" key={habit.entityId}>
-                <input
-                  checked={entry?.data.booleanValue === true}
-                  type="checkbox"
-                  onChange={(event) =>
-                    void saveHabit(habit, { booleanValue: event.target.checked })
-                  }
-                />
-                {name}
+          <section className="card today-section" aria-labelledby="pain-heading">
+            <h2 id="pain-heading">Dor</h2>
+            <form onSubmit={(event) => void savePain(event)}>
+              <label>
+                Tipo de dor
+                <select
+                  value={painType}
+                  onChange={(event) => setPainType(event.target.value as typeof painType)}
+                >
+                  <option value="muscular">Muscular</option>
+                  <option value="joint">Articular</option>
+                </select>
               </label>
-            );
-          }
-          if (type === 'quantity' || type === 'scale') {
-            return (
-              <label key={habit.entityId}>
-                {name}
+              <label>
+                Intensidade
+                <select
+                  value={painIntensity}
+                  onChange={(event) => setPainIntensity(event.target.value)}
+                >
+                  <option value="not_informed">Não informada</option>
+                  <option value="light">Leve</option>
+                  <option value="moderate">Moderada</option>
+                  <option value="strong">Forte</option>
+                </select>
+              </label>
+              <label>
+                Momento
+                <select value={painMoment} onChange={(event) => setPainMoment(event.target.value)}>
+                  <option value="before">Antes</option>
+                  <option value="during">Durante</option>
+                  <option value="after">Imediatamente depois</option>
+                  <option value="next_day">Dia seguinte</option>
+                </select>
+              </label>
+              <label>
+                Região
+                <select value={painRegion} onChange={(event) => setPainRegion(event.target.value)}>
+                  <option value="ankle">Tornozelo</option>
+                  <option value="foot">Pé</option>
+                  <option value="knee">Joelho</option>
+                  <option value="other">Outra</option>
+                </select>
+              </label>
+              {painRegion === 'other' && (
+                <label>
+                  Outra região
+                  <input
+                    required
+                    value={painCustomRegion}
+                    onChange={(event) => setPainCustomRegion(event.target.value)}
+                  />
+                </label>
+              )}
+              {painType === 'joint' && painMoment === 'during' && (
+                <p className="safety-note" role="alert">
+                  Considere interromper o exercício e registre o ocorrido. Isto não é diagnóstico.
+                </p>
+              )}
+              <label>
+                Observações da dor
+                <textarea
+                  value={painNotes}
+                  onChange={(event) => setPainNotes(event.target.value)}
+                />
+              </label>
+              <button type="submit">Registrar dor</button>
+            </form>
+          </section>
+
+          <section className="card today-section" aria-labelledby="measurements-heading">
+            <h2 id="measurements-heading">Peso e cintura</h2>
+            <form onSubmit={(event) => void saveMeasurement(event)}>
+              <label>
+                Peso (kg)
                 <input
-                  min="0"
+                  min="0.1"
+                  step="0.1"
                   type="number"
-                  value={
-                    typeof entry?.data.numericValue === 'number' ? entry.data.numericValue : ''
-                  }
-                  onChange={(event) =>
-                    void saveHabit(habit, { numericValue: Number(event.target.value) })
-                  }
+                  value={weight}
+                  onChange={(event) => setWeight(event.target.value)}
                 />
               </label>
-            );
-          }
-          return (
-            <label key={habit.entityId}>
-              {name}
-              <select
-                value={stringValue(entry?.data ?? {}, 'selectedOptionId')}
-                onChange={(event) =>
-                  void saveHabit(habit, { selectedOptionId: event.target.value })
-                }
-              >
-                <option value="">Não informado</option>
-                {options.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          );
-        })}
-      </section>
-
-      <section className="card today-section" aria-labelledby="pain-heading">
-        <h2 id="pain-heading">Dor</h2>
-        <form onSubmit={(event) => void savePain(event)}>
-          <label>
-            Tipo de dor
-            <select
-              value={painType}
-              onChange={(event) => setPainType(event.target.value as typeof painType)}
-            >
-              <option value="muscular">Muscular</option>
-              <option value="joint">Articular</option>
-            </select>
-          </label>
-          <label>
-            Intensidade
-            <select
-              value={painIntensity}
-              onChange={(event) => setPainIntensity(event.target.value)}
-            >
-              <option value="not_informed">Não informada</option>
-              <option value="light">Leve</option>
-              <option value="moderate">Moderada</option>
-              <option value="strong">Forte</option>
-            </select>
-          </label>
-          <label>
-            Momento
-            <select value={painMoment} onChange={(event) => setPainMoment(event.target.value)}>
-              <option value="before">Antes</option>
-              <option value="during">Durante</option>
-              <option value="after">Imediatamente depois</option>
-              <option value="next_day">Dia seguinte</option>
-            </select>
-          </label>
-          <label>
-            Região
-            <select value={painRegion} onChange={(event) => setPainRegion(event.target.value)}>
-              <option value="ankle">Tornozelo</option>
-              <option value="foot">Pé</option>
-              <option value="knee">Joelho</option>
-              <option value="other">Outra</option>
-            </select>
-          </label>
-          {painRegion === 'other' && (
-            <label>
-              Outra região
-              <input
-                required
-                value={painCustomRegion}
-                onChange={(event) => setPainCustomRegion(event.target.value)}
-              />
-            </label>
-          )}
-          {painType === 'joint' && painMoment === 'during' && (
-            <p className="safety-note" role="alert">
-              Considere interromper o exercício e registre o ocorrido. Isto não é diagnóstico.
-            </p>
-          )}
-          <label>
-            Observações da dor
-            <textarea value={painNotes} onChange={(event) => setPainNotes(event.target.value)} />
-          </label>
-          <button type="submit">Registrar dor</button>
-        </form>
-      </section>
-
-      <section className="card today-section" aria-labelledby="measurements-heading">
-        <h2 id="measurements-heading">Peso e cintura</h2>
-        <form onSubmit={(event) => void saveMeasurement(event)}>
-          <label>
-            Peso (kg)
-            <input
-              min="0.1"
-              step="0.1"
-              type="number"
-              value={weight}
-              onChange={(event) => setWeight(event.target.value)}
-            />
-          </label>
-          <label>
-            Cintura (cm)
-            <input
-              min="0.1"
-              step="0.1"
-              type="number"
-              value={waist}
-              onChange={(event) => setWaist(event.target.value)}
-            />
-          </label>
-          <button type="submit">Salvar medida</button>
-        </form>
-      </section>
+              <label>
+                Cintura (cm)
+                <input
+                  min="0.1"
+                  step="0.1"
+                  type="number"
+                  value={waist}
+                  onChange={(event) => setWaist(event.target.value)}
+                />
+              </label>
+              <button type="submit">Salvar medida</button>
+            </form>
+          </section>
+        </>
+      )}
 
       {onImportHistory && (
         <button type="button" onClick={() => void onImportHistory()}>
@@ -679,4 +801,10 @@ export function TodayScreen({
       </button>
     </main>
   );
+}
+
+function workoutProgress(execution: ExecutionView): number {
+  const sets = execution.exercises.flatMap((exercise) => exercise.sets);
+  if (sets.length === 0) return 0;
+  return Math.round((sets.filter((set) => set.completed).length / sets.length) * 100);
 }

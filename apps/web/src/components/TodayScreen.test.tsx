@@ -93,6 +93,7 @@ describe('Today mobile tracking', () => {
     );
 
     expect(screen.getByText(/14 de julho de 2026/i)).toBeVisible();
+    fireEvent.click(await screen.findByRole('button', { name: 'Iniciar Treino A' }));
     fireEvent.change(await screen.findByLabelText('Série 1 de Flexão'), {
       target: { value: '10' },
     });
@@ -111,7 +112,8 @@ describe('Today mobile tracking', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Adicionar série em Flexão' }));
     fireEvent.click(screen.getByLabelText('Confirmo que não houve dor articular'));
-    fireEvent.change(screen.getByLabelText('Café'), { target: { value: optionId } });
+    fireEvent.click(screen.getByRole('button', { name: 'Finalizar Treino A' }));
+    fireEvent.change(await screen.findByLabelText('Café'), { target: { value: optionId } });
     fireEvent.change(screen.getByLabelText('Peso (kg)'), { target: { value: '80.5' } });
     fireEvent.submit(screen.getByRole('button', { name: 'Salvar medida' }).closest('form')!);
 
@@ -125,6 +127,7 @@ describe('Today mobile tracking', () => {
         execution: {
           jointPainStatus: 'none',
         },
+        status: 'partial',
       });
     });
     expect(screen.getByRole('status')).toHaveTextContent(/salvo localmente|offline/i);
@@ -143,6 +146,7 @@ describe('Today mobile tracking', () => {
         timeZone="America/Cuiaba"
       />,
     );
+    fireEvent.click(await screen.findByRole('button', { name: 'Iniciar Treino A' }));
     fireEvent.change(await screen.findByLabelText('Série 1 de Flexão'), {
       target: { value: '11' },
     });
@@ -159,6 +163,7 @@ describe('Today mobile tracking', () => {
         timeZone="America/Cuiaba"
       />,
     );
+    fireEvent.click(await screen.findByRole('button', { name: 'Iniciar Treino A' }));
     expect(await screen.findByLabelText('Série 1 de Flexão')).toHaveValue(11);
     database.close();
   });

@@ -90,7 +90,7 @@ export function ProgressionScreen({ api, onBack }: { api: AppApi; onBack(): void
                     Regra {item.rule.code}, versão {item.rule.version}. Evidências preservadas nesta
                     avaliação.
                   </p>
-                  <pre>{JSON.stringify(item.evidence, null, 2)}</pre>
+                  <EvidenceView evidence={item.evidence} />
                 </details>
                 {item.status === 'pending' ? (
                   <div
@@ -130,4 +130,26 @@ export function ProgressionScreen({ api, onBack }: { api: AppApi; onBack(): void
       </section>
     </main>
   );
+}
+
+function EvidenceView({ evidence }: { evidence: unknown }) {
+  if (!evidence || typeof evidence !== 'object')
+    return <p>{String(evidence ?? 'Não informada')}</p>;
+  return (
+    <dl className="evidence-list">
+      {Object.entries(evidence as Record<string, unknown>).map(([key, value]) => (
+        <div key={key}>
+          <dt>{humanizeEvidenceKey(key)}</dt>
+          <dd>{typeof value === 'object' ? JSON.stringify(value) : String(value)}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function humanizeEvidenceKey(key: string): string {
+  return key
+    .replace(/([A-Z])/g, ' $1')
+    .replaceAll('_', ' ')
+    .replace(/^./, (letter) => letter.toUpperCase());
 }

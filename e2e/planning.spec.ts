@@ -68,10 +68,10 @@ test('plans offline on a mobile viewport and keeps the outbox across reload', as
   await expect(page.getByRole('status')).toContainText('salvo localmente');
 
   await page.reload();
-  await expect(page.getByText(/modo offline/i)).toBeVisible();
+  await expect(page.getByText(/Você está offline/i)).toBeVisible();
   await page.getByRole('button', { name: 'Planejamento' }).click();
   await expect(page.getByText('Plano sem rede')).toBeVisible();
-  await expect(page.getByRole('status')).toContainText('offline');
+  await expect(page.locator('.planning-layout > .sync-note')).toContainText('offline');
 
   networkAvailable = true;
   await page.getByRole('button', { name: 'Sincronizar agora' }).click();

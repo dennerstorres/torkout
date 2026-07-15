@@ -36,8 +36,8 @@ test('completes onboarding with explicit privacy consent on a mobile viewport', 
   await page.route('**/auth/get-session', (route) =>
     route.fulfill({
       json: {
-        session: { id: 'session-a', userId: 'user-a' },
-        user: { id: 'user-a', name: 'Pessoa A' },
+        session: { id: 'session-a', userId: 'aa000000-0000-4000-8000-000000000001' },
+        user: { id: 'aa000000-0000-4000-8000-000000000001', name: 'Pessoa A' },
       },
     }),
   );
@@ -79,5 +79,5 @@ test('completes onboarding with explicit privacy consent on a mobile viewport', 
   await page.getByLabel(/Li e aceito os documentos/).check();
   await page.getByLabel(/Entendo que as sugestões/).check();
   await page.getByRole('button', { name: 'Concluir configuração' }).click();
-  await expect(page.getByText(/Seu perfil está pronto/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Hoje', exact: true })).toBeVisible();
 });

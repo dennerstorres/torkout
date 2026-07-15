@@ -1,5 +1,6 @@
 .pnpm-store
 coverage
+design/stitch/*.html
 dist
 node_modules
 playwright-report

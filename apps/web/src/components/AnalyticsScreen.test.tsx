@@ -11,7 +11,7 @@ const userId = 'd9000000-0000-4000-8000-000000000001';
 const analytics: ProgressAnalyticsResponse = {
   consistency: {
     explanation:
-      'ConcluÃ­da vale 1, parcial vale 0,5 e perdida vale 0; descanso e cancelamento nÃ£o entram no denominador.',
+      'Concluída vale 1, parcial vale 0,5 e perdida vale 0; descanso e cancelamento não entram no denominador.',
     formulaVersion: 'weekly-consistency/v1',
     weeks: [
       {
@@ -27,7 +27,7 @@ const analytics: ProgressAnalyticsResponse = {
     {
       exerciseId: '00000000-0000-4000-8000-000000000001',
       metric: 'repetitions',
-      name: 'FlexÃ£o',
+      name: 'Flexão',
       points: [{ localDate: '2026-07-06', value: 22 }],
       total: 22,
     },
@@ -64,13 +64,13 @@ describe('accessible progress analytics', () => {
     );
 
     expect(await screen.findByRole('heading', { name: 'Progresso' })).toBeVisible();
-    const weightChart = await screen.findByRole('group', { name: 'EvoluÃ§Ã£o do peso' });
+    const weightChart = await screen.findByRole('group', { name: 'Evolução do peso' });
     expect(
-      within(weightChart).getByRole('table', { name: 'Dados de evoluÃ§Ã£o do peso' }),
+      within(weightChart).getByRole('table', { name: 'Dados de evolução do peso' }),
     ).toBeVisible();
-    expect(screen.getByRole('group', { name: 'EvoluÃ§Ã£o da cintura' })).toBeVisible();
-    expect(screen.getByRole('group', { name: 'ConsistÃªncia semanal' })).toBeVisible();
-    expect(screen.getByRole('group', { name: 'EvoluÃ§Ã£o de FlexÃ£o' })).toBeVisible();
+    expect(screen.getByRole('group', { name: 'Evolução da cintura' })).toBeVisible();
+    expect(screen.getByRole('group', { name: 'Consistência semanal' })).toBeVisible();
+    expect(screen.getByRole('group', { name: 'Evolução de Flexão' })).toBeVisible();
     expect(screen.getByText('weekly-consistency/v1')).toBeVisible();
     expect(screen.getByText(/17\/06\/2026 a 14\/07\/2026/)).toBeVisible();
     expect(screen.getByText('2,5 km')).toBeVisible();
@@ -91,7 +91,7 @@ describe('accessible progress analytics', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Personalizado' }));
     fireEvent.change(screen.getByLabelText('Data inicial'), { target: { value: '2026-07-01' } });
     fireEvent.change(screen.getByLabelText('Data final'), { target: { value: '2026-07-10' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Aplicar perÃ­odo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Aplicar período' }));
     await waitFor(() => expect(load).toHaveBeenCalledWith('2026-07-01', '2026-07-10'));
   });
 
@@ -105,13 +105,13 @@ describe('accessible progress analytics', () => {
         today="2026-07-14"
       />,
     );
-    expect((await screen.findAllByText('22 repetiÃ§Ãµes')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('22 repetições')).length).toBeGreaterThan(0);
     await waitFor(async () => expect(await database.analyticsCache.count()).toBe(1));
     first.unmount();
 
     render(<AnalyticsScreen database={database} onBack={vi.fn()} today="2026-07-14" />);
-    expect(await screen.findByText(/anÃ¡lise salva neste dispositivo/i)).toBeVisible();
-    expect(screen.getAllByText('22 repetiÃ§Ãµes').length).toBeGreaterThan(0);
+    expect(await screen.findByText(/análise salva neste dispositivo/i)).toBeVisible();
+    expect(screen.getAllByText('22 repetições').length).toBeGreaterThan(0);
 
     cleanup();
     database.close();
@@ -133,7 +133,7 @@ describe('accessible progress analytics', () => {
         today="2026-07-14"
       />,
     );
-    expect(await screen.findByText(/Nenhum treino registrado no perÃ­odo/i)).toBeVisible();
+    expect(await screen.findByText(/Nenhum treino registrado no período/i)).toBeVisible();
     expect(screen.getAllByText(/Dados insuficientes/i).length).toBeGreaterThan(0);
   });
 });

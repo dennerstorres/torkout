@@ -8,11 +8,18 @@ interface AnalyticsScreenProps {
   database: UserSyncDatabase;
   onBack(): void;
   onLoad?(from: string, through: string): Promise<ProgressAnalyticsResponse>;
+  onProgression?(): void;
   today?: string;
 }
 
 export function AnalyticsScreen(_props: AnalyticsScreenProps) {
-  const { database, onBack, onLoad, today = new Date().toISOString().slice(0, 10) } = _props;
+  const {
+    database,
+    onBack,
+    onLoad,
+    onProgression,
+    today = new Date().toISOString().slice(0, 10),
+  } = _props;
   const [preset, setPreset] = useState<'4' | '8' | '12' | 'custom'>('4');
   const [customFrom, setCustomFrom] = useState(today);
   const [customThrough, setCustomThrough] = useState(today);
@@ -20,7 +27,7 @@ export function AnalyticsScreen(_props: AnalyticsScreenProps) {
     null,
   );
   const [analytics, setAnalytics] = useState<ProgressAnalyticsResponse | null>(null);
-  const [message, setMessage] = useState('Carregando indicadoresâ€¦');
+  const [message, setMessage] = useState('Carregando indicadores…');
   const [loading, setLoading] = useState(true);
 
   const range = useMemo(() => {
@@ -55,8 +62,8 @@ export function AnalyticsScreen(_props: AnalyticsScreenProps) {
           setAnalytics(cached?.response ?? null);
           setMessage(
             cached
-              ? 'Exibindo a Ãºltima anÃ¡lise salva neste dispositivo.'
-              : 'Nenhuma anÃ¡lise deste perÃ­odo estÃ¡ disponÃ­vel offline.',
+              ? 'Exibindo a última análise salva neste dispositivo.'
+              : 'Nenhuma análise deste período está disponível offline.',
           );
         }
       } finally {
@@ -74,16 +81,21 @@ export function AnalyticsScreen(_props: AnalyticsScreenProps) {
         <button className="back-button" type="button" onClick={onBack}>
           Voltar
         </button>
-        <p className="eyebrow">Indicadores pessoais</p>
-        <h1>Progresso</h1>
-        <p>
-          Os indicadores resumem seus registros; eles nÃ£o substituem orientaÃ§Ã£o profissional.
-        </p>
+        <div>
+          <p className="eyebrow">Indicadores pessoais</p>
+          <h1>Progresso</h1>
+          <p>Os indicadores resumem seus registros; eles não substituem orientação profissional.</p>
+        </div>
+        {onProgression && (
+          <button className="primary" type="button" onClick={onProgression}>
+            Ver sugestões de progressão
+          </button>
+        )}
       </header>
 
       <section className="card analytics-filters" aria-labelledby="analytics-filter-title">
-        <h2 id="analytics-filter-title">PerÃ­odo</h2>
-        <div className="button-row" aria-label="PerÃ­odos rÃ¡pidos">
+        <h2 id="analytics-filter-title">Período</h2>
+        <div className="button-row" aria-label="Períodos rápidos">
           {(['4', '8', '12'] as const).map((weeks) => (
             <button
               aria-pressed={preset === weeks}
@@ -108,7 +120,7 @@ export function AnalyticsScreen(_props: AnalyticsScreenProps) {
             onSubmit={(event) => {
               event.preventDefault();
               if (customThrough < customFrom) {
-                setMessage('A data final nÃ£o pode anteceder a inicial.');
+                setMessage('A data final não pode anteceder a inicial.');
                 return;
               }
               setAppliedCustom({ from: customFrom, through: customThrough });
@@ -134,14 +146,14 @@ export function AnalyticsScreen(_props: AnalyticsScreenProps) {
               />
             </label>
             <button className="primary" type="submit">
-              Aplicar perÃ­odo
+              Aplicar período
             </button>
           </form>
         )}
       </section>
 
       <p className="sync-note" role="status" aria-live="polite">
-        {loading ? 'Carregando indicadoresâ€¦' : message}
+        {loading ? 'Carregando indicadores…' : message}
       </p>
 
       {analytics && <AnalyticsContent analytics={analytics} />}
@@ -182,15 +194,15 @@ function AnalyticsContent({ analytics }: { analytics: ProgressAnalyticsResponse 
   return (
     <div className="analytics-grid">
       <section className="card analytics-summary">
-        <h2>Resumo do perÃ­odo</h2>
+        <h2>Resumo do período</h2>
         <p>
           {dateLabel(analytics.range.from)} a {dateLabel(analytics.range.through)} (datas
           inclusivas)
         </p>
-        {noSessions && <p>Nenhum treino registrado no perÃ­odo.</p>}
+        {noSessions && <p>Nenhum treino registrado no período.</p>}
         <dl className="indicator-grid">
           <div>
-            <dt>Treinos concluÃ­dos</dt>
+            <dt>Treinos concluídos</dt>
             <dd>{analytics.sessions.completed}</dd>
           </div>
           <div>
@@ -198,50 +210,50 @@ function AnalyticsContent({ analytics }: { analytics: ProgressAnalyticsResponse 
             <dd>{analytics.sessions.partial}</dd>
           </div>
           <div>
-            <dt>Caminhadas concluÃ­das ou parciais</dt>
+            <dt>Caminhadas concluídas ou parciais</dt>
             <dd>{analytics.walks.sessions}</dd>
           </div>
           <div>
-            <dt>DistÃ¢ncia caminhada</dt>
+            <dt>Distância caminhada</dt>
             <dd>{numberLabel(analytics.walks.distanceMeters / 1000)} km</dd>
           </div>
           <div>
-            <dt>FrequÃªncia de caminhada</dt>
+            <dt>Frequência de caminhada</dt>
             <dd>{numberLabel(analytics.walks.frequencyPerWeek)} por semana</dd>
           </div>
         </dl>
         <p className="field-hint">
-          Caminhadas contam sessÃµes concluÃ­das ou parciais; a frequÃªncia Ã© o total dividido
-          pelas semanas civis tocadas pelo perÃ­odo.
+          Caminhadas contam sessões concluídas ou parciais; a frequência é o total dividido pelas
+          semanas civis tocadas pelo período.
         </p>
       </section>
 
       <AccessibleLineChart
-        name="EvoluÃ§Ã£o do peso"
+        name="Evolução do peso"
         points={weight}
-        tableName="Dados de evoluÃ§Ã£o do peso"
+        tableName="Dados de evolução do peso"
         unit="kg"
       />
       <AccessibleLineChart
-        name="EvoluÃ§Ã£o da cintura"
+        name="Evolução da cintura"
         points={waist}
-        tableName="Dados de evoluÃ§Ã£o da cintura"
+        tableName="Dados de evolução da cintura"
         unit="cm"
       />
       <AccessibleLineChart
         description={analytics.consistency.explanation}
-        name="ConsistÃªncia semanal"
+        name="Consistência semanal"
         points={consistency}
-        tableName="Dados de consistÃªncia semanal"
+        tableName="Dados de consistência semanal"
         unit="%"
       />
       <p className="analytics-formula-version">
-        VersÃ£o da fÃ³rmula: <code>{analytics.consistency.formulaVersion}</code>
+        Versão da fórmula: <code>{analytics.consistency.formulaVersion}</code>
       </p>
 
       <section className="card analytics-summary">
-        <h2>ExercÃ­cios</h2>
-        {analytics.exercises.length === 0 && <p>Dados insuficientes para totais por exercÃ­cio.</p>}
+        <h2>Exercícios</h2>
+        {analytics.exercises.length === 0 && <p>Dados insuficientes para totais por exercício.</p>}
         {analytics.exercises.map((exercise) => (
           <div className="exercise-analytics" key={`${exercise.exerciseId}:${exercise.metric}`}>
             <p>
@@ -250,12 +262,12 @@ function AnalyticsContent({ analytics }: { analytics: ProgressAnalyticsResponse 
             </p>
             <AccessibleLineChart
               embedded
-              name={`EvoluÃ§Ã£o de ${exercise.name}`}
+              name={`Evolução de ${exercise.name}`}
               points={exercise.points.map((point) => ({
                 date: point.localDate,
                 value: point.value,
               }))}
-              tableName={`Dados de evoluÃ§Ã£o de ${exercise.name}`}
+              tableName={`Dados de evolução de ${exercise.name}`}
               unit={metricUnit(exercise.metric)}
             />
           </div>
@@ -268,14 +280,14 @@ function AnalyticsContent({ analytics }: { analytics: ProgressAnalyticsResponse 
           Frequencia por tipo, intensidade e regiao, atribuida a data civil informada no relato.
         </p>
         {analytics.pain.length === 0 ? (
-          <p>Dados insuficientes: nenhum relato de dor no perÃ­odo.</p>
+          <p>Dados insuficientes: nenhum relato de dor no período.</p>
         ) : (
-          <table aria-label="FrequÃªncia de dor por tipo, intensidade e regiÃ£o">
+          <table aria-label="Frequência de dor por tipo, intensidade e região">
             <thead>
               <tr>
                 <th scope="col">Tipo</th>
                 <th scope="col">Intensidade</th>
-                <th scope="col">RegiÃ£o</th>
+                <th scope="col">Região</th>
                 <th scope="col">Relatos</th>
               </tr>
             </thead>
@@ -317,7 +329,7 @@ function AccessibleLineChart({
       <h2 id={id}>{name}</h2>
       {description && <p className="field-hint">{description}</p>}
       {points.length === 0 ? (
-        <p>Dados insuficientes para exibir este grÃ¡fico.</p>
+        <p>Dados insuficientes para exibir este gráfico.</p>
       ) : (
         <>
           <div className="chart-visual" aria-hidden="true">
@@ -357,12 +369,12 @@ function AccessibleLineChart({
 function metricUnit(metric: 'distance' | 'duration' | 'repetitions'): string {
   if (metric === 'distance') return 'metros';
   if (metric === 'duration') return 'segundos';
-  return 'repetiÃ§Ãµes';
+  return 'repetições';
 }
 
 function intensityLabel(intensity: string): string {
   return (
-    { light: 'Leve', moderate: 'Moderada', not_informed: 'NÃ£o informada', strong: 'Forte' }[
+    { light: 'Leve', moderate: 'Moderada', not_informed: 'Não informada', strong: 'Forte' }[
       intensity
     ] ?? intensity
   );
@@ -373,7 +385,7 @@ function regionLabel(region: string): string {
     {
       ankle: 'Tornozelo',
       back: 'Costas',
-      foot: 'PÃ©',
+      foot: 'Pé',
       knee: 'Joelho',
       shoulder: 'Ombro',
     }[region] ?? region

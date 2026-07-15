@@ -328,7 +328,7 @@ export class SyncCoordinator {
 }
 
 export function installSyncTriggers(coordinator: SyncCoordinator): () => void {
-  const sync = () => void coordinator.sync();
+  const sync = () => void coordinator.sync().catch(() => undefined);
   const visibility = () => {
     if (document.visibilityState === 'visible') sync();
   };

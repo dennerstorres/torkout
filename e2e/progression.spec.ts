@@ -52,7 +52,8 @@ test('reviews and explicitly accepts an explainable progression on mobile', asyn
   });
 
   await page.goto('/');
-  await page.getByRole('button', { name: 'Sugestões de progressão' }).click();
+  await page.getByRole('button', { name: 'Progresso' }).click();
+  await page.getByRole('button', { name: 'Ver sugestões de progressão' }).click();
   await expect(page.getByRole('heading', { name: 'Sugestões' })).toBeVisible();
   await expect(page.getByText(/não substitui a orientação/i)).toBeVisible();
   await page.getByText('Como esta sugestão foi calculada').click();

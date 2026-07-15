@@ -1,7 +1,8 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { type AppApi, browserApi, type PrivacyDocumentView } from './auth-client';
 import { AccountScreen } from './components/AccountScreen';
+import { AuthenticatedShell, type AuthenticatedView } from './components/AuthenticatedShell';
 import { AuthScreen } from './components/AuthScreen';
 import { OnboardingScreen } from './components/OnboardingScreen';
 import { HistoryScreen } from './components/HistoryScreen';
@@ -9,7 +10,6 @@ import { PlanningScreen } from './components/PlanningScreen';
 import { ProgressionScreen } from './components/ProgressionScreen';
 import { PwaExperience } from './components/PwaExperience';
 import { ResetPasswordScreen } from './components/ResetPasswordScreen';
-import { SyncPanel } from './components/SyncPanel';
 import { TodayScreen } from './components/TodayScreen';
 import { clearOfflineIdentity, readOfflineIdentity, recordOnlineIdentity } from './offline-auth';
 import { deleteUserSyncDatabase, entityKey, type UserSyncDatabase } from './sync/local-database';
@@ -98,7 +98,7 @@ function AppContent({ api }: { api: AppApi }) {
   const [offline, setOffline] = useState(false);
   const [timeZone, setTimeZone] = useState('America/Cuiaba');
   const [userId, setUserId] = useState<string | null>(null);
-  const sync = useSyncRuntime(api === browserApi ? userId : null);
+  const sync = useSyncRuntime(userId);
   const previousView = useRef<View>(view);
 
   useEffect(() => {
@@ -208,6 +208,30 @@ function AppContent({ api }: { api: AppApi }) {
     };
   }, [api, resetToken]);
 
+  const openToday = useCallback(async (): Promise<void> => {
+    if (sync.database && !offline) {
+      try {
+        const daily = await api.loadDaily(civilDate(new Date(), timeZone));
+        await cacheDailyData(sync.database, [
+          { entityType: 'workout_session', items: daily.sessions },
+          { entityType: 'habit_definition', items: daily.habits },
+          { entityType: 'habit_entry', items: daily.habitEntries },
+          { entityType: 'pain_report', items: daily.painReports },
+          { entityType: 'body_measurement', items: daily.measurements },
+        ]);
+      } catch {
+        // The local replica remains usable when hydration is unavailable.
+      }
+    }
+    setView('today');
+  }, [api, offline, sync.database, timeZone]);
+
+  useEffect(() => {
+    if (view !== 'home' || !sync.database) return;
+    const timer = window.setTimeout(() => void openToday(), 0);
+    return () => window.clearTimeout(timer);
+  }, [openToday, sync.database, view]);
+
   if (resetToken) return <ResetPasswordScreen api={api} token={resetToken} />;
 
   if (view === 'loading') {
@@ -246,8 +270,31 @@ function AppContent({ api }: { api: AppApi }) {
       />
     );
   }
-  if (view === 'account') {
+  if (view === 'home') {
+    if (offline && !sync.database) {
+      return (
+        <main className="centered-layout">
+          <section className="card">
+            <p className="eyebrow">Modo offline</p>
+            <h1>Olá, {name}</h1>
+            <p role="status">
+              Você está no modo offline. Reconecte para abrir os dados sincronizados neste
+              dispositivo.
+            </p>
+          </section>
+        </main>
+      );
+    }
     return (
+      <main className="centered-layout" aria-busy="true">
+        <p>Preparando seus dados…</p>
+      </main>
+    );
+  }
+
+  let page: ReactNode;
+  if (view === 'account') {
+    page = (
       <AccountScreen
         api={api}
         {...(sync.database ? { database: sync.database } : {})}
@@ -257,25 +304,26 @@ function AppContent({ api }: { api: AppApi }) {
           setUserId(null);
           setView('public');
         }}
-        onBack={() => setView('home')}
+        onBack={() => setView('today')}
+        onSignOut={(removeLocalData) => signOut(removeLocalData)}
       />
     );
-  }
-  if (view === 'planning' && sync.database) {
-    return (
+  } else if (view === 'planning' && sync.database) {
+    page = (
       <PlanningScreen
         database={sync.database}
-        onBack={() => setView('home')}
+        onBack={() => setView('today')}
         onSync={() => void sync.sync()}
         syncState={offline ? 'offline' : sync.snapshot.state}
       />
     );
-  }
-  if (view === 'today' && sync.database) {
-    return (
+  } else if (view === 'today' && sync.database) {
+    page = (
       <TodayScreen
         database={sync.database}
-        onBack={() => setView('home')}
+        name={name}
+        onBack={() => setView('today')}
+        onPlan={() => setView('planning')}
         {...(offline
           ? {}
           : {
@@ -296,30 +344,29 @@ function AppContent({ api }: { api: AppApi }) {
         timeZone={timeZone}
       />
     );
-  }
-  if (view === 'history' && sync.database) {
-    return (
+  } else if (view === 'history' && sync.database) {
+    page = (
       <HistoryScreen
         database={sync.database}
         initialMonth={civilDate(new Date(), timeZone).slice(0, 7)}
-        onBack={() => setView('home')}
+        onBack={() => setView('today')}
         {...(offline ? {} : { onLoadRange: loadHistoryRange })}
         today={civilDate(new Date(), timeZone)}
       />
     );
-  }
-  if (view === 'analytics' && sync.database) {
-    return (
+  } else if (view === 'analytics' && sync.database) {
+    page = (
       <Suspense
         fallback={
           <main className="centered-layout" aria-busy="true">
-            <p>Carregando indicadoresâ€¦</p>
+            <p>Carregando indicadores…</p>
           </main>
         }
       >
         <AnalyticsScreen
           database={sync.database}
-          onBack={() => setView('home')}
+          onBack={() => setView('today')}
+          onProgression={() => setView('progression')}
           {...(offline
             ? {}
             : {
@@ -329,67 +376,38 @@ function AppContent({ api }: { api: AppApi }) {
         />
       </Suspense>
     );
-  }
-  if (view === 'progression') {
-    return <ProgressionScreen api={api} onBack={() => setView('home')} />;
+  } else if (view === 'progression') {
+    page = <ProgressionScreen api={api} onBack={() => setView('analytics')} />;
+  } else {
+    return (
+      <main className="centered-layout" aria-busy="true">
+        <p>Abrindo dados locais…</p>
+      </main>
+    );
   }
 
   return (
-    <main className="centered-layout">
-      <section className="card home-card">
-        <p className="eyebrow">Acompanhamento pessoal</p>
-        <h1>Torkout</h1>
-        <p>Olá, {name}. Seu perfil está pronto.</p>
-        {offline && (
-          <p role="status">Você está no modo offline. A sincronização aguardará a conexão.</p>
-        )}
-        <SyncPanel
-          conflicts={sync.conflicts}
-          onExport={() => void sync.exportPending()}
-          onResolve={(id, choice) => void sync.resolve(id, choice)}
-          onRetry={() => void sync.retry()}
-          onSync={() => void sync.sync()}
-          pendingCount={sync.snapshot.pendingCount}
-          pendingOperations={sync.pendingOperations}
-          state={offline ? 'offline' : sync.snapshot.state}
-        />
-        <button className="primary" type="button" onClick={() => setView('planning')}>
-          Planejamento
-        </button>
-        <button className="primary" type="button" onClick={() => void openToday()}>
-          Hoje
-        </button>
-        <button className="primary" type="button" onClick={() => setView('history')}>
-          CalendÃ¡rio e histÃ³rico
-        </button>
-        <button className="primary" type="button" onClick={() => setView('analytics')}>
-          Progresso e indicadores
-        </button>
-        <button
-          className="primary"
-          disabled={offline}
-          type="button"
-          onClick={() => setView('progression')}
-        >
-          Sugestões de progressão
-        </button>
-        <button
-          className="primary"
-          disabled={offline}
-          type="button"
-          onClick={() => setView('account')}
-        >
-          Minha conta
-        </button>
-        <button type="button" onClick={() => void signOut(false)}>
-          Sair e manter dados neste dispositivo
-        </button>
-        <button type="button" onClick={() => void signOut(true)}>
-          Sair e remover dados deste dispositivo
-        </button>
-      </section>
-    </main>
+    <AuthenticatedShell
+      conflicts={sync.conflicts}
+      name={name}
+      onExport={() => void sync.exportPending()}
+      onNavigate={(destination) => void navigate(destination)}
+      onResolve={(id, choice) => void sync.resolve(id, choice)}
+      onRetry={() => void sync.retry()}
+      onSync={() => void sync.sync()}
+      pendingCount={sync.snapshot.pendingCount}
+      pendingOperations={sync.pendingOperations}
+      state={offline ? 'offline' : sync.snapshot.state}
+      view={view}
+    >
+      {page}
+    </AuthenticatedShell>
   );
+
+  async function navigate(destination: AuthenticatedView): Promise<void> {
+    if (destination === 'today') await openToday();
+    else setView(destination);
+  }
 
   async function signOut(removeLocalData: boolean): Promise<void> {
     await api.signOut();
@@ -397,23 +415,5 @@ function AppContent({ api }: { api: AppApi }) {
     clearOfflineIdentity();
     setUserId(null);
     setView('public');
-  }
-
-  async function openToday(): Promise<void> {
-    if (sync.database && !offline) {
-      try {
-        const daily = await api.loadDaily(civilDate(new Date(), timeZone));
-        await cacheDailyData(sync.database, [
-          { entityType: 'workout_session', items: daily.sessions },
-          { entityType: 'habit_definition', items: daily.habits },
-          { entityType: 'habit_entry', items: daily.habitEntries },
-          { entityType: 'pain_report', items: daily.painReports },
-          { entityType: 'body_measurement', items: daily.measurements },
-        ]);
-      } catch {
-        // The local replica remains usable when hydration is unavailable.
-      }
-    }
-    setView('today');
   }
 }

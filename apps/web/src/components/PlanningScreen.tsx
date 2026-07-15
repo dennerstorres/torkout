@@ -232,6 +232,7 @@ export function PlanningScreen({ database, onBack, onSync, syncState }: Planning
       </p>
 
       <section className="card planning-section" aria-labelledby="exercise-heading">
+        <p className="eyebrow">Catálogo</p>
         <h2 id="exercise-heading">Exercícios</h2>
         <ul className="compact-list">
           {exercises.map((exercise) => (
@@ -240,7 +241,10 @@ export function PlanningScreen({ database, onBack, onSync, syncState }: Planning
             </li>
           ))}
         </ul>
-        <form onSubmit={(event) => void addExercise(event)}>
+        <form
+          aria-label="Novo exercício personalizado"
+          onSubmit={(event) => void addExercise(event)}
+        >
           <label>
             Nome do exercício
             <input
@@ -269,7 +273,12 @@ export function PlanningScreen({ database, onBack, onSync, syncState }: Planning
       </section>
 
       <section className="card planning-section" aria-labelledby="weekly-heading">
+        <p className="eyebrow">Recorrência</p>
         <h2 id="weekly-heading">Plano semanal</h2>
+        <p className="field-hint">
+          Alterações em planos recorrentes afetam somente sessões futuras; o histórico permanece
+          intacto.
+        </p>
         {plans.length > 0 && (
           <ul className="compact-list">
             {plans.map((plan) => (
@@ -361,7 +370,8 @@ export function PlanningScreen({ database, onBack, onSync, syncState }: Planning
       </section>
 
       <section className="card planning-section" aria-labelledby="adhoc-heading">
-        <h2 id="adhoc-heading">Sessão avulsa</h2>
+        <p className="eyebrow">Agenda</p>
+        <h2 id="adhoc-heading">Sessões avulsas</h2>
         <form onSubmit={(event) => void addAdHocSession(event)}>
           <label>
             Nome da sessão avulsa
@@ -403,6 +413,17 @@ export function PlanningScreen({ database, onBack, onSync, syncState }: Planning
             >
               Cancelar sessão
             </button>
+            <div
+              className="button-row"
+              aria-label={`Ordenar ${stringField(session.data, 'templateNameSnapshot', 'sessão')}`}
+            >
+              <button type="button" onClick={() => void moveSession(session, -1)}>
+                Mover para o dia anterior
+              </button>
+              <button type="button" onClick={() => void moveSession(session, 1)}>
+                Mover para o dia seguinte
+              </button>
+            </div>
           </article>
         ))}
       </section>
@@ -412,4 +433,10 @@ export function PlanningScreen({ database, onBack, onSync, syncState }: Planning
       </button>
     </main>
   );
+
+  async function moveSession(record: LocalRecord, days: number): Promise<void> {
+    const current = new Date(`${stringField(record.data, 'plannedLocalDate')}T12:00:00Z`);
+    current.setUTCDate(current.getUTCDate() + days);
+    await updateSession(record, { plannedLocalDate: current.toISOString().slice(0, 10) });
+  }
 }

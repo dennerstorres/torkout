@@ -12,14 +12,14 @@ test('reviews accessible progress analytics and reopens the cached result offlin
     return route.fulfill({
       json: {
         session: { id: 'session-analytics', userId },
-        user: { id: userId, name: 'Pessoa AnalÃ­tica' },
+        user: { id: userId, name: 'Pessoa Analítica' },
       },
     });
   });
   await page.route('**/api/v1/profile', (route) => {
     if (!networkAvailable) return route.abort('internetdisconnected');
     return route.fulfill({
-      json: { displayName: 'Pessoa AnalÃ­tica', timeZone: 'America/Cuiaba' },
+      json: { displayName: 'Pessoa Analítica', timeZone: 'America/Cuiaba' },
     });
   });
   await page.route('**/api/v1/progress?**', (route) => {
@@ -32,7 +32,7 @@ test('reviews accessible progress analytics and reopens the cached result offlin
       json: {
         consistency: {
           explanation:
-            'ConcluÃ­da vale 1, parcial vale 0,5 e perdida vale 0; descanso e cancelamento nÃ£o entram.',
+            'Concluída vale 1, parcial vale 0,5 e perdida vale 0; descanso e cancelamento não entram.',
           formulaVersion: 'weekly-consistency/v1',
           weeks: [
             {
@@ -48,7 +48,7 @@ test('reviews accessible progress analytics and reopens the cached result offlin
           {
             exerciseId: '00000000-0000-4000-8000-000000000001',
             metric: 'repetitions',
-            name: 'FlexÃ£o',
+            name: 'Flexão',
             points: [{ localDate: '2026-07-06', value: 22 }],
             total: 22,
           },
@@ -80,18 +80,20 @@ test('reviews accessible progress analytics and reopens the cached result offlin
   );
 
   await page.goto('/');
-  await page.getByRole('button', { name: 'Progresso e indicadores' }).click();
+  await page.getByRole('button', { name: 'Progresso' }).click();
   await expect(page.getByRole('heading', { name: 'Progresso' })).toBeVisible();
-  await expect(page.getByRole('group', { name: 'EvoluÃ§Ã£o do peso' })).toBeVisible();
-  await expect(page.getByRole('table', { name: 'Dados de evoluÃ§Ã£o do peso' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Evolução do peso' })).toBeVisible();
+  await expect(page.getByRole('table', { name: 'Dados de evolução do peso' })).toBeVisible();
   await expect(page.getByText('weekly-consistency/v1')).toBeVisible();
-  await expect(page.getByText('22 repetiÃ§Ãµes').first()).toBeVisible();
+  await expect(page.getByText('22 repetições').first()).toBeVisible();
 
   networkAvailable = false;
   await page.reload();
-  await expect(page.getByText(/modo offline/i)).toBeVisible();
-  await page.getByRole('button', { name: 'Progresso e indicadores' }).click();
-  await expect(page.getByRole('status')).toContainText('anÃ¡lise salva neste dispositivo');
-  await expect(page.getByText('22 repetiÃ§Ãµes').first()).toBeVisible();
+  await expect(page.getByText(/Você está offline/i)).toBeVisible();
+  await page.getByRole('button', { name: 'Progresso' }).click();
+  await expect(page.locator('.analytics-layout > .sync-note')).toContainText(
+    'análise salva neste dispositivo',
+  );
+  await expect(page.getByText('22 repetições').first()).toBeVisible();
   expect(analyticsRequests).toBe(1);
 });

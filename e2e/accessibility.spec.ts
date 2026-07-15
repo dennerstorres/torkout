@@ -53,6 +53,6 @@ test('authenticated home has no automatic WCAG AA violations', async ({ page }) 
     }),
   );
   await page.goto('/');
-  await expect(page.getByText(/Olá, Pessoa Acessível/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Hoje', exact: true })).toBeVisible();
   await expectWcagAa(page);
 });

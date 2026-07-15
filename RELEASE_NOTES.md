@@ -4,6 +4,8 @@ Data candidata: 15/07/2026
 
 ## Destaques
 
+- Nova interface premium escura, mobile-first, com Hoje como entrada, navegação persistente,
+  dashboard separado do runner e sincronização global compreensível.
 - Planejamento, Hoje, histórico, hábitos, dor, medidas e indicadores em experiência mobile-first.
 - Persistência local-first particionada por conta, outbox durável, sincronização idempotente e
   resolução explícita de conflitos.

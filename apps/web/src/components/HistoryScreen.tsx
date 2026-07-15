@@ -32,12 +32,12 @@ interface DayRecords {
 const activityLabels: Record<HistoryActivityType, string> = {
   other: 'Outro',
   rest: 'Descanso',
-  strength: 'ForÃ§a',
+  strength: 'Força',
   walk: 'Caminhada',
 };
 const statusLabels: Record<HistorySessionStatus, string> = {
   cancelled: 'Cancelado',
-  completed: 'ConcluÃ­do',
+  completed: 'Concluído',
   in_progress: 'Em andamento',
   missed: 'Perdido',
   partial: 'Parcial',
@@ -45,11 +45,11 @@ const statusLabels: Record<HistorySessionStatus, string> = {
 };
 const regionLabels: Record<string, string> = {
   ankle: 'tornozelo',
-  arm: 'braÃ§o',
+  arm: 'braço',
   back: 'costas',
-  foot: 'pÃ©',
+  foot: 'pé',
   knee: 'joelho',
-  other: 'outra regiÃ£o',
+  other: 'outra região',
   shoulder: 'ombro',
   thigh: 'coxa',
 };
@@ -97,7 +97,7 @@ export function HistoryScreen({
   const [activityFilter, setActivityFilter] = useState<HistoryActivityType | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<HistorySessionStatus | 'all'>('all');
   const [painFilter, setPainFilter] = useState<'any' | 'with' | 'without'>('any');
-  const [message, setMessage] = useState('HistÃ³rico disponÃ­vel neste dispositivo.');
+  const [message, setMessage] = useState('Histórico disponível neste dispositivo.');
 
   async function refresh(): Promise<void> {
     setRecords(await database.records.filter((record) => record.deletedAt === null).toArray());
@@ -115,8 +115,8 @@ export function HistoryScreen({
           );
           setMessage(
             onLoadRange
-              ? 'HistÃ³rico atualizado e disponÃ­vel offline.'
-              : 'HistÃ³rico disponÃ­vel neste dispositivo.',
+              ? 'Histórico atualizado e disponível offline.'
+              : 'Histórico disponível neste dispositivo.',
           );
           setLoaded(true);
         }
@@ -125,7 +125,7 @@ export function HistoryScreen({
           setRecords(
             await database.records.filter((record) => record.deletedAt === null).toArray(),
           );
-          setMessage('Sem conexÃ£o. Exibindo o histÃ³rico salvo neste dispositivo.');
+          setMessage('Sem conexão. Exibindo o histórico salvo neste dispositivo.');
           setLoaded(true);
         }
       }
@@ -206,7 +206,7 @@ export function HistoryScreen({
       operation: 'update',
       payload,
     });
-    setMessage('AlteraÃ§Ã£o histÃ³rica salva localmente e pendente de sincronizaÃ§Ã£o.');
+    setMessage('Alteração histórica salva localmente e pendente de sincronização.');
     await refresh();
   }
 
@@ -214,7 +214,7 @@ export function HistoryScreen({
     <main className="history-layout">
       <header className="planning-header history-header">
         <div>
-          <p className="eyebrow">CalendÃ¡rio e histÃ³rico</p>
+          <p className="eyebrow">Calendário e histórico</p>
           <h1>
             {dateLabel(`${month}-01`, {
               day: undefined,
@@ -232,21 +232,21 @@ export function HistoryScreen({
         {message}
       </p>
 
-      <section className="card history-calendar" aria-label="CalendÃ¡rio mensal">
+      <section className="card history-calendar" aria-label="Calendário mensal">
         <div className="calendar-actions">
           <button
             type="button"
-            aria-label="MÃªs anterior"
+            aria-label="Mês anterior"
             onClick={() => setMonth(moveMonth(month, -1))}
           >
-            â€¹
+            ‹
           </button>
           <button
             type="button"
-            aria-label="PrÃ³ximo mÃªs"
+            aria-label="Próximo mês"
             onClick={() => setMonth(moveMonth(month, 1))}
           >
-            â€º
+            ›
           </button>
         </div>
         <div className="history-filters">
@@ -291,11 +291,11 @@ export function HistoryScreen({
           </label>
         </div>
         <div className="calendar-weekdays" aria-hidden="true">
-          {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'SÃ¡b', 'Dom'].map((day) => (
+          {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map((day) => (
             <span key={day}>{day}</span>
           ))}
         </div>
-        {!loaded && <p aria-live="polite">Carregando histÃ³ricoâ€¦</p>}
+        {!loaded && <p aria-live="polite">Carregando histórico…</p>}
         {loaded && (
           <div className="calendar-grid">
             {calendarDays.map((calendarDay) => {
@@ -362,13 +362,13 @@ export function HistoryScreen({
           selected.painReports.length === 0 && <p>Nenhum registro para esta data.</p>}
 
         {selected.sessions.map((session) => {
-          const name = stringField(session, 'templateNameSnapshot', 'SessÃ£o');
+          const name = stringField(session, 'templateNameSnapshot', 'Sessão');
           const summary = sessionSummary(session);
           return (
             <article className="history-record" key={session.entityId}>
               <h3>{name}</h3>
               <p>
-                Tipo: {activityLabels[summary.type]} Â· Estado: {statusLabels[summary.status]}
+                Tipo: {activityLabels[summary.type]} · Estado: {statusLabels[summary.status]}
                 {summary.derived ? ' (derivado)' : ''}
               </p>
               {summary.derived && (
@@ -393,7 +393,7 @@ export function HistoryScreen({
                 </select>
               </label>
               <label>
-                ObservaÃ§Ãµes de {name}
+                Observações de {name}
                 <textarea
                   defaultValue={stringField(session, 'notes')}
                   onBlur={(event) =>
@@ -405,13 +405,13 @@ export function HistoryScreen({
           );
         })}
 
-        {selected.habitEntries.length > 0 && <h3>HÃ¡bitos</h3>}
+        {selected.habitEntries.length > 0 && <h3>Hábitos</h3>}
         {selected.habitEntries.map((entry) => {
           const definition = habits.find(
             (habit) => habit.entityId === stringField(entry, 'habitDefinitionId'),
           );
           if (!definition) return null;
-          const name = stringField(definition, 'name', 'HÃ¡bito');
+          const name = stringField(definition, 'name', 'Hábito');
           const type = stringField(definition, 'type', 'quantity');
           const options = Array.isArray(definition.data.options)
             ? (definition.data.options as Array<{ id: string; label: string }>)
@@ -528,14 +528,14 @@ export function HistoryScreen({
                   defaultValue={stringField(pain, 'intensity', 'not_informed')}
                   onChange={(event) => void updateRecord(pain, { intensity: event.target.value })}
                 >
-                  <option value="not_informed">NÃ£o informada</option>
+                  <option value="not_informed">Não informada</option>
                   <option value="light">Leve</option>
                   <option value="moderate">Moderada</option>
                   <option value="strong">Forte</option>
                 </select>
               </label>
               <label>
-                ObservaÃ§Ãµes da dor em {region}
+                Observações da dor em {region}
                 <textarea
                   defaultValue={stringField(pain, 'notes')}
                   onBlur={(event) => void updateRecord(pain, { notes: event.target.value || null })}

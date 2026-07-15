@@ -25,8 +25,14 @@ export function useSyncRuntime(userId: string | null) {
   useEffect(() => {
     if (!runtime) return;
     const refreshDetails = () => {
-      void runtime.coordinator.listConflicts().then(setConflicts);
-      void runtime.database.outbox.toArray().then(setPendingOperations);
+      void runtime.coordinator
+        .listConflicts()
+        .then(setConflicts)
+        .catch(() => undefined);
+      void runtime.database.outbox
+        .toArray()
+        .then(setPendingOperations)
+        .catch(() => undefined);
     };
     const unsubscribe = runtime.coordinator.subscribe((next) => {
       setSnapshot(next);

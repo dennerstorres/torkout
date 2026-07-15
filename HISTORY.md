@@ -1015,3 +1015,45 @@ merge` e o teste no container confirmaram CSP e HSTS.
 - Obter e registrar as evidências físicas e externas no checklist. Qualquer achado deve receber
   teste de regressão antes da correção; depois, repetir os gates no SHA final, encerrar a Fase 13,
   criar a tag `v1.0.0` e executar o checklist de abertura pública.
+
+## 2026-07-15 — Fase 14: refactor UI/UX premium
+
+**Status:** implementada e validada localmente — checklist físico de AC-09 permanece bloqueador do lançamento
+
+**Commit esperado:** `feat(web): deliver premium UI UX refactor`
+
+### Escopo executado
+
+- A interface autenticada passou a abrir diretamente em Hoje e ganhou navegação persistente: barra
+  inferior no mobile e sidebar no desktop, sem alterar a navegação por estado ou os contratos.
+- Criados tokens semânticos, SVGs locais e os primitivos acessíveis `Button`, `Card`, `EmptyState`,
+  `Field`, `Icon`, `MetricCard`, `PageHeader`, `ProgressBar`, `StatusBadge` e `VisuallyHidden`.
+- O painel de sincronização virou indicador global expansível, mantendo pending, retry, exportação,
+  inspeção da outbox e resolução explícita de conflitos.
+- Hoje foi separado em dashboard e runner focado; métricas de repetição, duração e distância, dor
+  articular, séries adicionais e persistência IndexedDB continuam usando as regras existentes.
+- Planejamento recebeu catálogo/editor/agenda, aviso de recorrência futura e ordenação por botões;
+  Histórico manteve master/detail; Progresso manteve gráficos com tabelas; evidências de progressão
+  deixaram o `pre`; Conta foi organizada em perfil, dados, sessões e zona de risco.
+- Textos web e E2E foram normalizados para UTF-8. Não há dependência runtime de Tailwind CDN,
+  Google Fonts ou Material Symbols.
+
+### Evidências TDD e validação
+
+- O baseline anterior revelou pacotes internos `dist` desatualizados, cinco exports aparentemente
+  ausentes e dois testes falhos; `pnpm build:packages` confirmou que não era regressão funcional.
+- Foram adicionados testes dos primitivos e das variantes offline, error, conflict e pending do shell.
+- Playwright passou com 17/17 jornadas, incluindo axe WCAG AA e screenshots determinísticos em
+  390 × 844 e 1440 × 900.
+- O gate raiz `pnpm check` passou com 35 arquivos e 144 testes, verificadores das Fases 1–14,
+  scanner de segredos, formatação, lint, tipagem e builds finais; a análise permaneceu lazy.
+- A inspeção visual local encontrou excesso de altura no Auth mobile, superfícies PWA claras e ações
+  sticky cobrindo conteúdo; os estilos foram corrigidos e as referências visuais regeneradas.
+- O verificador `verify-phase-14.ps1` exige os artefatos, tokens, fallbacks de acessibilidade, ausência
+  de dependências visuais remotas e ausência de marcadores comuns de mojibake.
+
+### Limite da evidência
+
+- Viewports, axe, teclado, reduced motion, forced colors e safe areas têm cobertura automatizada/CSS,
+  mas isso não substitui o checklist em aparelhos físicos. AC-09 continua pendente como gate de
+  lançamento, assim como os bloqueadores externos já registrados na Fase 13.

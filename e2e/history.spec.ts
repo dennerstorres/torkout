@@ -10,14 +10,14 @@ test('browses and edits cached history offline on mobile', async ({ page }) => {
     return route.fulfill({
       json: {
         session: { id: 'session-history', userId },
-        user: { id: userId, name: 'Pessoa HistÃ³rica' },
+        user: { id: userId, name: 'Pessoa Histórica' },
       },
     });
   });
   await page.route('**/api/v1/profile', (route) => {
     if (!networkAvailable) return route.abort('internetdisconnected');
     return route.fulfill({
-      json: { displayName: 'Pessoa HistÃ³rica', timeZone: 'America/Cuiaba' },
+      json: { displayName: 'Pessoa Histórica', timeZone: 'America/Cuiaba' },
     });
   });
   await page.route('**/api/v1/history?**', (route) => {
@@ -61,7 +61,7 @@ test('browses and edits cached history offline on mobile', async ({ page }) => {
                 notes: null,
                 plannedLocalDate: '2026-07-13',
                 status: 'partial',
-                templateNameSnapshot: 'ForÃ§a A',
+                templateNameSnapshot: 'Força A',
                 type: 'strength',
                 version: 1,
               },
@@ -98,23 +98,23 @@ test('browses and edits cached history offline on mobile', async ({ page }) => {
   });
 
   await page.goto('/');
-  await page.getByRole('button', { name: 'CalendÃ¡rio e histÃ³rico' }).click();
+  await page.getByRole('button', { name: 'Histórico', exact: true }).click();
   const day13 = page.getByRole('button', { name: '13 de julho de 2026' });
-  await expect(day13).toContainText('ForÃ§a');
+  await expect(day13).toContainText('Força');
   await expect(day13).toContainText('Caminhada');
   await day13.click();
   networkAvailable = false;
-  await page.getByLabel('ObservaÃ§Ãµes de ForÃ§a A').fill('Ajustado offline');
-  await page.getByLabel('ObservaÃ§Ãµes de ForÃ§a A').blur();
+  await page.getByLabel('Observações de Força A').fill('Ajustado offline');
+  await page.getByLabel('Observações de Força A').blur();
   await expect(page.getByRole('status')).toContainText('pendente');
 
   await page.reload();
-  await expect(page.getByText(/modo offline/i)).toBeVisible();
-  await page.getByRole('button', { name: 'CalendÃ¡rio e histÃ³rico' }).click();
-  await expect(day13).toContainText('ForÃ§a');
-  await page.getByRole('button', { name: 'MÃªs anterior' }).click();
+  await expect(page.getByText(/Você está offline/i)).toBeVisible();
+  await page.getByRole('button', { name: 'Histórico', exact: true }).click();
+  await expect(day13).toContainText('Força');
+  await page.getByRole('button', { name: 'Mês anterior' }).click();
   await expect(page.getByRole('heading', { name: /junho de 2026/i })).toBeVisible();
-  await page.getByRole('button', { name: 'PrÃ³ximo mÃªs' }).click();
+  await page.getByRole('button', { name: 'Próximo mês' }).click();
   await expect(page.getByRole('heading', { name: /julho de 2026/i })).toBeVisible();
   expect(historyRequests).toBe(1);
 });
