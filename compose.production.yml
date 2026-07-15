@@ -80,6 +80,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-torkout}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?configure in Coolify secrets}
       POSTGRES_USER: ${POSTGRES_USER:-torkout_owner}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?configure in Coolify secrets}
     networks: [backend]
     restart: 'no'
 
