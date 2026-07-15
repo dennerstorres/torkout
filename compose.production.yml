@@ -15,7 +15,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-    networks: [backend]
     volumes:
       - postgres-data:/var/lib/postgresql
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -51,7 +50,6 @@ services:
       timeout: 3s
       retries: 5
       start_period: 20s
-    networks: [backend]
 
   bootstrap-db:
     image: postgres:18.4-alpine3.24
@@ -81,7 +79,6 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?configure in Coolify secrets}
       POSTGRES_USER: ${POSTGRES_USER:-torkout_owner}
       PGPASSWORD: ${POSTGRES_PASSWORD:?configure in Coolify secrets}
-    networks: [backend]
     restart: 'no'
 
   migrate:
@@ -94,7 +91,6 @@ services:
         condition: service_completed_successfully
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-torkout_owner}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-torkout}
-    networks: [backend]
     restart: 'no'
 
   web:
@@ -105,15 +101,13 @@ services:
     depends_on:
       api:
         condition: service_healthy
-    ports:
-      - '127.0.0.1:${WEB_PORT:-18080}:8080'
+    expose: ['8080']
     healthcheck:
       test: [CMD, wget, -q, -O, '-', 'http://127.0.0.1:8080/health/live']
       interval: 15s
       timeout: 3s
       retries: 5
       start_period: 10s
-    networks: [backend, edge]
 
   backup:
     profiles: [backup]
@@ -131,12 +125,6 @@ services:
       PGHOST: postgres
       PGPASSWORD: ${POSTGRES_PASSWORD}
       PGUSER: ${POSTGRES_USER:-torkout_owner}
-    networks: [backend]
-
-networks:
-  backend:
-    internal: true
-  edge:
 
 volumes:
   postgres-data:
