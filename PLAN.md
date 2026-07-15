@@ -6,7 +6,7 @@
 
 **Unidade de entrega:** fase completa com commit de encerramento
 
-**Status geral:** Fases 0–14 implementadas e validadas localmente; lançamento público aguarda validações físicas e externas
+**Status geral:** Fases 0–14 implementadas localmente; Fase 15 planejada após reprovação do aceite visual premium; lançamento público aguarda a recuperação visual e as validações físicas e externas
 
 ## 1. Regras de execução
 
@@ -765,10 +765,321 @@ como trabalho posterior, não implementadas implicitamente durante o refactor.
 - Interface coerente com o Stitch sem scripts ou markup do Stitch no bundle.
 - Testes unitários, E2E, typecheck, lint, formatação e build verdes.
 
+**Reavaliação em 15/07/2026:** a auditoria visual no ambiente de homologação, em desktop e
+mobile, reprovou o aceite de qualidade premium desta fase. A implementação funcional e seus
+testes permanecem como registro histórico, mas os snapshots existentes não constituem aprovação
+de design. A recuperação, a nova direção visual e os novos gates de aceite pertencem à Fase 15.
+
+### Fase 15 — Recuperação UI/UX premium e estabilização visual
+
+**Status:** planejada — bloqueadora de lançamento
+
+**Commit esperado:** `feat(web): rebuild premium responsive experience`
+
+**Motivação:** a auditoria visual da homologação encontrou desequilíbrio estrutural no desktop,
+cards e controles sem separação adequada, excesso de superfícies aninhadas, ocupação excessiva
+do shell no mobile, inconsistência de idioma e estados assíncronos capazes de deslocar ou trocar o
+conteúdo fora da viewport. O baseline visual da Fase 14 reproduz esses defeitos e, portanto, deve
+ser substituído somente depois de aprovação humana do novo resultado.
+
+**Objetivo:** reconstruir a apresentação e a interação da aplicação como um sistema visual
+coerente, responsivo, estável e deliberadamente premium, preservando contratos, regras de negócio,
+persistência offline, sincronização, privacidade e acessibilidade existentes.
+
+#### Skill auxiliar obrigatória para execução da fase
+
+A Fase 15 deve usar a skill externa `redesign-existing-projects`, do repositório MIT
+`Leonxlnx/taste-skill`, como checklist auxiliar de auditoria e crítica visual. Não instalar nem usar
+por padrão `design-taste-frontend`, `gpt-taste` ou o pacote completo: essas variantes têm escopo e
+direção mais próximos de landing pages, portfólios e motion experimental do que de uma PWA de
+treino com formulários, dados e funcionamento offline.
+
+Antes de iniciar qualquer tarefa da Fase 15, o agente executor deve:
+
+1. Confirmar se `redesign-existing-projects` está disponível com `npx skills list` e pela lista de
+   skills exposta no próprio ambiente.
+2. Se estiver ausente, consultar a revisão atual antes de instalar:
+
+   ```powershell
+   git ls-remote https://github.com/Leonxlnx/taste-skill.git refs/heads/main
+   ```
+
+   A revisão avaliada durante a elaboração deste plano foi
+   `b17742737e796305d829b3ad39eda3add0d79060`. Se `main` apontar para outro commit, revisar o diff
+   da skill `redesign-existing-projects`, sua licença e suas instruções antes de continuar, e
+   registrar a nova revisão aprovada no `HISTORY.md`.
+
+3. Depois da verificação, instalar somente essa skill no escopo global do agente executor. Para
+   Codex, usar:
+
+   ```powershell
+   npx skills add https://github.com/Leonxlnx/taste-skill --skill redesign-existing-projects --global --agent codex --yes
+   ```
+
+4. Se o executor não for Codex, trocar apenas o valor de `--agent`, mantendo a origem e o nome da
+   skill. Não instalar para todos os agentes sem necessidade.
+5. Ler o `SKILL.md` completo já instalado antes da auditoria ou implementação e registrar no
+   `HISTORY.md` a origem, o commit efetivamente instalado, o escopo de instalação e a data de
+   leitura.
+6. Confirmar que o conteúdo instalado corresponde a `redesign-existing-projects` e que nenhuma
+   outra skill do repositório foi ativada implicitamente.
+
+A skill é consultiva. `SPEC.md`, este plano, acessibilidade, estabilidade de navegação, desempenho,
+offline-first, privacidade e decisões explícitas do titular sempre têm precedência. Recomendações
+de scroll com inércia, parallax, animação cinematográfica, grids propositalmente quebrados,
+glassmorphism, imagens placeholder remotas ou efeitos decorativos não devem ser aplicadas sem
+justificativa específica, teste em mobile, suporte a reduced motion e aceite humano.
+
+Se a instalação falhar por indisponibilidade externa, mudança do repositório ou incompatibilidade
+do CLI, registrar o impedimento e a evidência no `HISTORY.md`. A fase pode continuar usando o
+inventário, os princípios e os critérios de aceite deste plano; não se deve trocar silenciosamente
+por outra skill, usar a revisão mais recente sem reauditoria nem bloquear uma correção funcional
+urgente apenas pela ausência da ferramenta consultiva.
+
+#### Princípios obrigatórios
+
+- Hierarquia antes de decoração: superfície, borda e sombra devem comunicar agrupamento real.
+- Densidade adequada ao contexto: desktop deve aproveitar largura; mobile deve priorizar uma mão,
+  leitura rápida e controles de no mínimo 44 × 44 px.
+- Nenhuma rota ou carga assíncrona pode preservar scroll indevido, ocultar o `h1` ou exibir
+  navegação ativa incompatível com o conteúdo.
+- Estados de loading devem reservar a geometria final ou usar skeletons estáveis, sem saltos de
+  layout perceptíveis.
+- Textos de produto devem estar em português consistente; valores internos, enums e chaves de
+  contrato não podem aparecer na interface.
+- Snapshots automatizados detectam regressão depois da aprovação humana; não substituem revisão
+  visual nem tornam uma tela premium por estarem verdes.
+- Mudanças visuais não podem alterar regras de treino, fórmulas, datas civis, outbox ou resolução
+  de conflitos.
+
+#### Etapa 15.0 — Auditoria, inventário e novo contrato visual
+
+- [ ] Verificar a disponibilidade de `redesign-existing-projects`; instalar a revisão documentada
+      apenas se estiver ausente e registrar a evidência no `HISTORY.md`.
+- [ ] Ler a skill completa e produzir uma lista explícita de recomendações aplicáveis, rejeitadas e
+      pendentes de aceite para o contexto do Torkout.
+- [ ] Registrar no `HISTORY.md` a reprovação do aceite visual da Fase 14 e suas evidências.
+- [ ] Capturar todas as telas e estados relevantes em 390 × 844, 768 × 1024, 1440 × 900 e
+      1920 × 1080, incluindo loading, vazio, erro, offline, pending e conflito.
+- [ ] Inventariar componentes, seletores duplicados, regras sobrescritas e CSS sem consumidor.
+- [ ] Mapear cards aninhados, grids implícitos, larguras máximas, elementos sticky/fixed e pontos de
+      quebra atuais.
+- [ ] Catalogar textos com enums, termos em inglês, mensagens técnicas ou codificação incorreta.
+- [ ] Definir wireframes aprováveis para Hoje, Planejamento, Histórico, Progresso e Conta antes do
+      polimento de alta fidelidade.
+- [ ] Definir matriz de densidade, hierarquia, espaçamento e comportamento responsivo por tela.
+- [ ] Definir orçamento de layout shift, overflow, tamanho de alvo e contraste.
+- [ ] Marcar os snapshots atuais como baseline legado reprovado, sem apagá-los antes da nova
+      aprovação.
+
+**Critério de saída:** inventário completo, wireframes revisados e contrato visual documentado com
+comparativo objetivo entre estado atual e estado alvo.
+
+#### Etapa 15.1 — Arquitetura CSS e design system
+
+- [ ] Separar `styles.css` em tokens, base, layout, componentes e estilos por feature, preservando
+      uma ordem de cascata explícita.
+- [ ] Eliminar definições duplicadas de `.card`, layouts, PWA, navegação e componentes globais.
+- [ ] Consolidar tokens de espaçamento, largura de conteúdo, raio, borda, sombra, tipografia,
+      movimento e elevação.
+- [ ] Criar primitivas distintas para `Surface`, `Section`, `Panel`, `Metric`, `EmptyState` e
+      `FormGroup`, evitando que todo agrupamento seja um `Card`.
+- [ ] Definir variantes compacta, padrão e destacada sem combinações arbitrárias de padding.
+- [ ] Corrigir `MetricCard` para separar rótulo e valor, controlar quebra de linha e manter ritmo
+      vertical em todos os viewports.
+- [ ] Padronizar campos, selects, checkboxes, botões e grupos de ações com estados hover, focus,
+      active, disabled, loading, success e danger.
+- [ ] Criar testes de componente para variantes, nomes acessíveis e contratos de classe/estrutura.
+- [ ] Impedir overflow horizontal em 320 px, 360 px, 390 px, 430 px e zoom de 200%.
+
+**Critério de saída:** nenhuma regra global importante possui redefinição concorrente; primitivas
+têm responsabilidades claras e uma página-laboratório demonstra todos os estados suportados.
+
+#### Etapa 15.2 — Shell, navegação e estabilidade assíncrona
+
+- [ ] Redesenhar o shell desktop com sidebar proporcional, cabeçalho compacto e largura de
+      conteúdo adequada a cada feature.
+- [ ] Redesenhar o shell mobile para reduzir a área anterior ao conteúdo e respeitar safe areas.
+- [ ] Tornar a experiência de instalação PWA contextual, recolhível e dispensável; ela não pode
+      ocupar permanentemente o topo do produto.
+- [ ] Garantir que a barra inferior não encubra ações, campos, mensagens ou o fim do conteúdo.
+- [ ] Resetar ou restaurar scroll de forma intencional em toda navegação, inclusive após cargas
+      assíncronas e retorno de detalhes.
+- [ ] Reservar espaço para calendários, indicadores e gráficos durante loading para impedir scroll
+      anchoring e layout shift.
+- [ ] Sincronizar destino ativo, `h1`, conteúdo e foco como uma transação visual única.
+- [ ] Evitar flashes da tela anterior, áreas vazias extensas e estados intermediários incoerentes.
+- [ ] Preservar skip link, teclado, retorno de foco, reduced motion e forced colors.
+- [ ] Criar testes E2E que naveguem a partir de posições de scroll profundas e validem o topo da
+      nova tela antes e depois do carregamento.
+
+**Critério de saída:** todas as trocas de área exibem o destino correto sem salto perceptível,
+sem `h1` fora da viewport e sem sobreposição da navegação fixa.
+
+#### Etapa 15.3 — Hoje e treino em execução
+
+- [ ] Projetar a tela Hoje por áreas explícitas, eliminando o grid genérico que iguala alturas e
+      cria vazios entre resumo, treino e registros.
+- [ ] Criar resumo responsivo com rótulos e valores claramente separados, sem composição 2 + 1
+      arbitrária no mobile.
+- [ ] Dar prioridade visual ao próximo treino e reduzir o peso de status e informações auxiliares.
+- [ ] Simplificar o estado de descanso sem card dentro de card e com uma única ação principal.
+- [ ] Agrupar hábitos, dor e medidas por frequência e contexto de uso, evitando formulários longos
+      competindo simultaneamente.
+- [ ] Avaliar progressive disclosure para dor e medidas sem esconder informação obrigatória.
+- [ ] Refinar o runner para leitura rápida, progresso evidente e ações alcançáveis com uma mão.
+- [ ] Validar todos os estados de sessão, dor, hábitos, medidas, offline e sincronização.
+- [ ] Preservar mutações no IndexedDB e outbox antes de qualquer feedback de sincronização.
+
+**Critério de saída:** Hoje comunica prioridade em até cinco segundos, não possui vazios causados
+por grid e permite concluir as tarefas principais sem disputar atenção com formulários secundários.
+
+#### Etapa 15.4 — Planejamento
+
+- [ ] Separar visualmente catálogo, criação de exercício, plano recorrente e sessão avulsa.
+- [ ] No desktop, usar navegação mestre/detalhe ou etapas claras em vez de duas colunas longas e
+      independentes.
+- [ ] No mobile, substituir a sequência de formulários completos por fluxo progressivo, sheet ou
+      página de edição dedicada.
+- [ ] Transformar listas de exercícios em itens escaneáveis, com métrica traduzida e ações claras.
+- [ ] Revisar largura, agrupamento e ordem dos campos de plano semanal.
+- [ ] Dar tratamento visual consistente a dias da semana, recorrência, horário e vigência.
+- [ ] Simplificar sessões avulsas e controles de reagendamento/ordenação.
+- [ ] Preservar edição por teclado, alternativa ao drag-and-drop e comportamento offline.
+
+**Critério de saída:** criar ou alterar um planejamento apresenta uma decisão por etapa, sem
+formulários concorrentes, e continua totalmente operável por teclado e offline.
+
+#### Etapa 15.5 — Histórico
+
+- [ ] Redesenhar cabeçalho do mês e controles anterior/próximo como um conjunto reconhecível.
+- [ ] Reorganizar filtros com rótulos, densidade e comportamento responsivo consistentes.
+- [ ] Reservar a geometria do calendário durante loading para impedir deslocamento da viewport.
+- [ ] Melhorar contraste e legibilidade de dia atual, dia selecionado, dias externos e badges.
+- [ ] Limitar badges no calendário e mover detalhes excedentes para legenda ou painel de detalhe.
+- [ ] Manter painel de detalhes proporcional no desktop e fluxo sequencial no mobile.
+- [ ] Criar estados vazios informativos para dias sem registro, sem transformar o painel em uma
+      caixa visualmente dominante.
+- [ ] Validar meses de quatro, cinco e seis semanas, textos longos e múltiplos registros no mesmo dia.
+
+**Critério de saída:** o calendário não muda a posição da página ao carregar, filtros não
+competem com a navegação mensal e o detalhe selecionado permanece inequívoco.
+
+#### Etapa 15.6 — Progresso e progressão
+
+- [ ] Integrar seletor de período ao cabeçalho ou toolbar, reduzindo a superfície vazia inicial.
+- [ ] Redesenhar KPIs com hierarquia numérica, unidades consistentes e rótulos escaneáveis.
+- [ ] Agrupar gráficos por narrativa e prioridade, evitando uma pilha indiferenciada de cards.
+- [ ] Definir alturas estáveis para loading, gráfico, tabela acessível e dados insuficientes.
+- [ ] Corrigir todo texto corrompido, sem acento, em inglês ou derivado diretamente de enum.
+- [ ] Traduzir tipo, métrica, região, status e evidência por uma camada de apresentação testada.
+- [ ] Melhorar leitura de dor registrada sem sugerir diagnóstico ou causalidade.
+- [ ] Refinar sugestões de progressão, evidências e ações de aceitar, adiar e recusar.
+- [ ] Preservar tabelas acessíveis sem duplicá-las visualmente quando não forem necessárias.
+
+**Critério de saída:** o usuário identifica tendência, período e principal resultado sem
+percorrer toda a página; nenhum valor interno ou texto corrompido é exibido.
+
+#### Etapa 15.7 — Conta, autenticação e experiência PWA
+
+- [ ] Remover o padrão de card principal contendo cards secundários em Conta.
+- [ ] Organizar Perfil, Dados, Sessões e Zona de risco como seções com hierarquia e separação
+      apropriadas, sem borda em todos os níveis.
+- [ ] Limitar largura de leitura dos textos explicativos sem estreitar desnecessariamente a página
+      inteira no desktop.
+- [ ] Diferenciar ações primárias, secundárias e destrutivas por posição, cor e confirmação.
+- [ ] Harmonizar autenticação, onboarding, redefinição de senha e bloqueio offline com o novo shell.
+- [ ] Mostrar instalação PWA como convite contextual e manter instruções completas sob demanda.
+- [ ] Preservar exportação, revogação, logout com/sem dados e exclusão de conta.
+- [ ] Testar mensagens longas, erros de sessão, reautenticação e confirmações destrutivas.
+
+**Critério de saída:** Conta apresenta hierarquia clara sem nested-card visual, a zona de risco
+não domina a página e a instalação PWA não reduz permanentemente a área útil.
+
+#### Etapa 15.8 — Conteúdo, microinterações e acabamento
+
+- [ ] Criar dicionário de apresentação para enums e unidades vindos de contratos e IndexedDB.
+- [ ] Revisar toda microcópia para clareza, consistência de tom e linguagem não diagnóstica.
+- [ ] Padronizar formatos de data, hora, número, distância, repetição e percentuais.
+- [ ] Definir feedbacks de salvar, sincronizar, falhar, ficar offline e resolver conflito sem expor
+      estados internos como `synced`.
+- [ ] Adicionar transições discretas somente quando comunicarem mudança de estado.
+- [ ] Garantir equivalência funcional com `prefers-reduced-motion`.
+- [ ] Revisar ícones, alinhamento óptico, truncamento, quebra de linha e estados de foco.
+- [ ] Validar conteúdo com nomes longos, traduções extensas e valores extremos.
+
+**Critério de saída:** toda informação exibida pertence à linguagem do produto, feedbacks são
+compreensíveis e o acabamento permanece estável com conteúdo realista.
+
+#### Etapa 15.9 — Validação visual, acessibilidade e performance
+
+- [ ] Criar testes de regressão para scroll, layout shift, overflow e sobreposição de elementos
+      fixed/sticky.
+- [ ] Validar componentes e jornadas com axe, teclado, leitor de tela, zoom de 200%, reduced motion,
+      forced colors e alto contraste.
+- [ ] Medir CLS das telas com carga assíncrona e manter o valor dentro do orçamento definido na
+      Etapa 15.0.
+- [ ] Validar 320, 360, 390 e 430 px; tablet retrato/paisagem; 1366, 1440 e 1920 px.
+- [ ] Validar iPhone com safe area, Android/Chrome e desktop em dispositivos físicos.
+- [ ] Executar jornadas completas online, offline, reconexão, conflito e reload com outbox pendente.
+- [ ] Revisar cada tela lado a lado com o contrato visual e registrar aceite humano explícito.
+- [ ] Substituir snapshots legados somente depois do aceite humano de cada viewport.
+- [ ] Ampliar regressão visual para shell, Hoje, Planejamento, Histórico, Progresso e Conta, nos
+      estados representativos definidos na auditoria.
+- [ ] Executar `pnpm check`, integração PostgreSQL, E2E, build, auditoria de bundle e verificações
+      de release.
+- [ ] Atualizar `HISTORY.md`, screenshots, evidências e checklist AC-09.
+
+**Critério de saída:** aceite humano registrado para desktop e mobile; zero overflow ou
+sobreposição bloqueante; navegação e loading sem saltos; WCAG 2.2 AA; dispositivos físicos
+validados; snapshots e gates completos verdes.
+
+#### Testes primeiro
+
+- [ ] Criar teste falhando que reproduza o salto de scroll após Histórico e Progresso carregarem.
+- [ ] Criar teste falhando para destino ativo incompatível com `h1` e conteúdo durante navegação.
+- [ ] Criar teste falhando para rótulo e valor sem separação no `MetricCard`.
+- [ ] Criar teste falhando para sobreposição da barra inferior e para shell excessivo no mobile.
+- [ ] Criar teste falhando para enums/termos internos exibidos ao usuário.
+- [ ] Criar teste falhando para overflow em viewports e zoom suportados.
+- [ ] Criar testes de layout por invariantes geométricas; evitar coordenadas frágeis quando uma
+      relação semântica ou de bounding box for suficiente.
+- [ ] Manter testes funcionais existentes verdes durante cada corte da reconstrução.
+
+#### Sequência de entregas
+
+1. Preparação da skill auxiliar, auditoria, wireframes, contrato visual e novos testes Red.
+2. Arquitetura CSS, tokens e primitivas.
+3. Shell, PWA, navegação, foco, scroll e loading estável.
+4. Hoje e treino em execução.
+5. Planejamento.
+6. Histórico.
+7. Progresso e progressão.
+8. Conta, autenticação e conteúdo transversal.
+9. Polimento, dispositivos físicos, aceite humano e novos snapshots.
+
+Cada corte deve ser revisável isoladamente, manter regras e dados intactos e encerrar com evidência
+visual em desktop e mobile. Nenhum snapshot novo deve ser aceito apenas para tornar a CI verde.
+
+#### Critérios de saída da fase
+
+- Auditoria e aceite humano documentados para todas as telas principais.
+- Shell compacto e responsivo, sem instalação PWA permanentemente dominante.
+- Navegação sem salto de scroll, flash da tela anterior ou destino/conteúdo incompatíveis.
+- Grids específicos por tela, sem vazios estruturais nem alturas acidentalmente compartilhadas.
+- Rótulos, valores, unidades e ações visualmente separados e linguisticamente consistentes.
+- Redução comprovada de cards aninhados, bordas e superfícies sem função hierárquica.
+- Hoje, Planejamento, Histórico, Progresso e Conta aprovados em desktop e mobile.
+- Loading, vazio, erro, offline, pending e conflito estáveis e visualmente coerentes.
+- Sem overflow horizontal, controles encobertos ou perda de conteúdo nos viewports suportados.
+- Funcionalidade online/offline, acessibilidade, privacidade e segurança sem regressão.
+- Snapshots visuais aprovados por pessoa e cobertura ampliada para as telas principais.
+- `pnpm check`, integração, E2E, build e verificações de release verdes.
+
 ## 5. Dependências entre fases
 
 ```text
-0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14
+0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15
 ```
 
 Trabalhos internos de uma mesma fase podem ser paralelos somente quando não compartilham arquivos ou contratos instáveis. O encerramento continua único.
