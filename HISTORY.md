@@ -824,3 +824,56 @@ Este arquivo é o diário técnico, cronológico e append-only do projeto. Ele r
 ### Próximo passo
 
 - Iniciar a Fase 11 com manifesto, app shell offline, atualização segura, instalação multiplataforma e auditoria WCAG 2.2 AA.
+
+## 2026-07-14 — Fase 11: PWA, iOS e acessibilidade
+
+**Status:** concluída por autorização do titular — testes físicos diferidos para a Fase 13
+
+**Commit de encerramento:** `feat(phase-11): harden pwa and mobile experience`
+
+### Escopo executado até aqui
+
+- Configurado `vite-plugin-pwa` com manifesto `pt-BR`, identidade, escopo, modo standalone, cores e ícones reproduzíveis em 192, 512, maskable e Apple touch icon.
+- O app shell e os assets de build usam precache versionado; navegações usam Network First, imagens Cache First, fontes Stale While Revalidate e `/api`/`/auth` permanecem Network Only para nunca usar Cache Storage como banco de dados autenticado.
+- O service worker é registrado sem `skipWaiting` automático. Uma versão em espera apenas anuncia a atualização e só recebe `SKIP_WAITING` depois da ação explícita do usuário.
+- Adicionado fluxo acessível de instalação com prompt nativo quando disponível, instrução específica para Safari/iOS e orientação para Android e desktop, além da versão e do estado standalone instalados.
+- Aplicados safe areas, unidades `dvh`, proteção contra zoom involuntário do teclado iOS, alvos mínimos de 44 px, redução de movimento, contraste aumentado e forced colors.
+- Adicionados link para pular conteúdo e transferência de foco ao título nas navegações internas.
+- Criado checklist separado para iPhone, Android e desktop físicos, sem transformar emulação em evidência de aparelho real.
+
+### Evidências TDD e validação
+
+- RED estrutural — `scripts/verify-phase-11.ps1` enumerou 17 ausências de manifesto, assets, integração PWA, testes e gate antes da configuração.
+- RED de componente — os três cenários de instalação, prompt nativo e atualização segura falharam após um módulo mínimo tornar a falha comportamental observável.
+- RED de foco — a navegação para a conta manteve foco no `body`; depois da correção o título de destino recebe foco programático.
+- RED de regressão E2E — o service worker passou a interceptar uma requisição mockada da jornada analítica; os contextos de UI agora bloqueiam workers e apenas a suíte PWA os habilita, eliminando a corrida sem enfraquecer o teste offline.
+- RED de asset maskable — a inspeção visual encontrou cantos brancos fora da área arredondada; o teste de pixel falhou com branco e passou após a geração usar fundo verde full-bleed no ícone maskable.
+- RED de data E2E — no dia seguinte à criação da fixture, a jornada Hoje deixou de encontrar a sessão fixa de 14/07/2026; o relógio do navegador passou a ser controlado explicitamente para eliminar dependência da data de execução.
+- GREEN automatizado — `pnpm check` passou com 30 arquivos e 91 testes, todos os verificadores até a Fase 11, lint, tipagem, formatação e builds.
+- GREEN PostgreSQL — `pnpm test:integration` passou com 11 arquivos e 46 testes contra o serviço efêmero real.
+- GREEN E2E — `pnpm test:e2e` passou com 14 jornadas no viewport Pixel 7, incluindo app shell offline, manifesto/service worker, navegação por teclado e duas auditorias Axe sem violação WCAG AA automática.
+- `pnpm audit --prod --audit-level moderate` não encontrou vulnerabilidades conhecidas.
+
+### Alterações técnicas
+
+- Nova dependência de build `vite-plugin-pwa@1.3.0` (MIT) e nova dependência de teste `@axe-core/playwright@4.12.1` (MPL-2.0).
+- Versão web intermediária `0.11.0`, exposta na experiência instalada e nos nomes de cache.
+- Assets PNG são derivados deterministicamente de `torkout-source.svg` por `scripts/generate-pwa-icons.mjs`.
+- Migrações PostgreSQL e endpoints: nenhum.
+
+### Segurança, privacidade e dados
+
+- Respostas de API/autenticação usam exclusivamente rede e não são persistidas em Cache Storage.
+- Dados de saúde e outbox continuam apenas na réplica IndexedDB particionada; o ciclo do worker não altera nem limpa a réplica.
+- O update não recarrega a página sozinho, preservando formulário em andamento e operações pendentes até o usuário decidir atualizar.
+
+### Pendências e riscos conhecidos
+
+- Faltam execuções manuais documentadas em iPhone, Android e desktop físicos, incluindo instalação, standalone, safe areas, teclado, leitor de tela, retomada, Hoje offline e atualização.
+- A estação atual não possui `adb`, ferramenta iOS nem aparelho portátil conectado, portanto não há caminho local honesto para produzir essa evidência física.
+- O critério obrigatório “Jornada Hoje funciona offline em iPhone físico” ainda não possui evidência e permanece bloqueador de lançamento na Fase 13.
+- Em 15/07/2026, o titular autorizou explicitamente encerrar e commitar a Fase 11 para prosseguir à Fase 12, pois não consegue executar o checklist agora. A autorização foi registrada como desvio e não equivale a teste físico aprovado.
+
+### Próximo passo
+
+- Criar o commit de encerramento da Fase 11 e iniciar a Fase 12. Executar e preencher `docs/testing/phase-11-device-checklist.md` antes do lançamento na Fase 13; qualquer achado deve ganhar teste de regressão antes da correção.

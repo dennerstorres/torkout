@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 
 import { type AppApi, browserApi, type PrivacyDocumentView } from './auth-client';
 import { AccountScreen } from './components/AccountScreen';
@@ -7,6 +7,7 @@ import { OnboardingScreen } from './components/OnboardingScreen';
 import { HistoryScreen } from './components/HistoryScreen';
 import { PlanningScreen } from './components/PlanningScreen';
 import { ProgressionScreen } from './components/ProgressionScreen';
+import { PwaExperience } from './components/PwaExperience';
 import { ResetPasswordScreen } from './components/ResetPasswordScreen';
 import { SyncPanel } from './components/SyncPanel';
 import { TodayScreen } from './components/TodayScreen';
@@ -73,6 +74,20 @@ async function cacheDailyData(
 }
 
 export function App({ api = browserApi }: { api?: AppApi }) {
+  return (
+    <>
+      <a className="skip-link" href="#main-content">
+        Pular para o conteúdo principal
+      </a>
+      <PwaExperience />
+      <div id="main-content" tabIndex={-1}>
+        <AppContent api={api} />
+      </div>
+    </>
+  );
+}
+
+function AppContent({ api }: { api: AppApi }) {
   const resetToken =
     window.location.pathname === '/reset-password'
       ? new URLSearchParams(window.location.search).get('token')
@@ -84,6 +99,17 @@ export function App({ api = browserApi }: { api?: AppApi }) {
   const [timeZone, setTimeZone] = useState('America/Cuiaba');
   const [userId, setUserId] = useState<string | null>(null);
   const sync = useSyncRuntime(api === browserApi ? userId : null);
+  const previousView = useRef<View>(view);
+
+  useEffect(() => {
+    const from = previousView.current;
+    previousView.current = view;
+    if (from === 'loading') return;
+    const heading = document.querySelector<HTMLElement>('#main-content main h1');
+    if (!heading) return;
+    heading.tabIndex = -1;
+    heading.focus();
+  }, [view]);
   const loadHistoryRange = useCallback(
     async (from: string, through: string) => {
       if (!sync.database) return;

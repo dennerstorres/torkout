@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title description">
+  <title id="title">Torkout</title>
+  <desc id="description">Marca geométrica em forma de T e halter.</desc>
+  <rect width="512" height="512" rx="112" fill="#16281f"/>
+  <circle cx="256" cy="256" r="164" fill="#eef2ed"/>
+  <path d="M154 164h204v64H288v144h-64V228h-70z" fill="#245b3c"/>
+  <path d="M126 180h28v32h-28zm232 0h28v32h-28z" fill="#a9681f"/>
+</svg>

@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test';
 test('tracks Today offline on mobile, survives reload and imports authenticated history', async ({
   page,
 }) => {
+  await page.clock.setFixedTime(new Date('2026-07-14T20:00:00Z'));
   const userId = 'b6000000-0000-4000-8000-000000000001';
   const sessionId = 'b6100000-0000-4000-8000-000000000001';
   const exerciseId = 'b6100000-0000-4000-8000-000000000002';

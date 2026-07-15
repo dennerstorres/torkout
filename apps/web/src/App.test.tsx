@@ -119,6 +119,19 @@ describe('public authentication journey', () => {
 });
 
 describe('authenticated account journey', () => {
+  it('moves focus to the destination heading after in-app navigation', async () => {
+    const api = createApi({
+      getProfile: vi.fn(async () => ({ displayName: 'Pessoa A' })),
+      getSession: vi.fn(async () => ({
+        user: { id: '62000000-0000-4000-8000-000000000003', name: 'Pessoa A' },
+      })),
+    });
+    render(<App api={api} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Minha conta' }));
+    expect(await screen.findByRole('heading', { name: 'Sessões e conta' })).toHaveFocus();
+  });
+
   it('offers progress analytics from the authenticated home', async () => {
     const api = createApi({
       getProfile: vi.fn(async () => ({ displayName: 'Pessoa A' })),

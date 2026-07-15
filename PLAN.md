@@ -6,7 +6,7 @@
 
 **Unidade de entrega:** fase completa com commit de encerramento
 
-**Status geral:** Fases 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 e 10 concluídas; Fase 11 ainda não iniciada
+**Status geral:** Fases 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 e 11 concluídas; Fase 12 ainda não iniciada
 
 ## 1. Regras de execução
 
@@ -447,37 +447,42 @@ O hash não é escrito no próprio `HISTORY.md`, evitando o ciclo em que alterar
 
 ### Fase 11 — PWA, iOS e acessibilidade
 
-**Status:** pendente
+**Status:** concluída por autorização do titular — validação física diferida para a Fase 13
 
 **Commit esperado:** `feat(phase-11): harden pwa and mobile experience`
 
 #### Tarefas
 
-- [ ] Manifesto completo e ícones.
-- [ ] App shell e cache versionado.
-- [ ] Estratégias de cache por classe de recurso.
-- [ ] Atualização segura do service worker.
-- [ ] Fluxo de instalação para iOS, Android e desktop.
-- [ ] Safe areas e teclado móvel.
-- [ ] Estado standalone e retomada.
-- [ ] Auditoria WCAG 2.2 AA.
-- [ ] Navegação por teclado, foco e leitores de tela.
-- [ ] Contraste, movimento reduzido e alvos de toque.
-- [ ] Teste em iPhone e Android físicos.
+- [x] Manifesto completo e ícones.
+- [x] App shell e cache versionado.
+- [x] Estratégias de cache por classe de recurso.
+- [x] Atualização segura do service worker.
+- [x] Fluxo de instalação para iOS, Android e desktop.
+- [x] Safe areas e teclado móvel.
+- [x] Estado standalone e retomada.
+- [ ] Auditoria WCAG 2.2 AA (automática verde; verificação manual diferida para a Fase 13).
+- [ ] Navegação por teclado, foco e leitores de tela (automática verde; leitores físicos diferidos para a Fase 13).
+- [x] Contraste, movimento reduzido e alvos de toque.
+- [ ] Teste em iPhone e Android físicos (diferido para o gate de lançamento da Fase 13 por autorização explícita do titular em 15/07/2026).
 
 #### Testes primeiro
 
-- [ ] Manifesto e service worker falham auditoria antes da configuração.
-- [ ] App shell carrega offline.
-- [ ] Atualização não perde formulário/outbox.
-- [ ] Testes automatizados de acessibilidade nas jornadas.
-- [ ] Checklists manuais com aparelho, versão e evidência.
+- [x] Manifesto e service worker falham auditoria antes da configuração.
+- [x] App shell carrega offline.
+- [x] Atualização não perde formulário/outbox.
+- [x] Testes automatizados de acessibilidade nas jornadas.
+- [ ] Checklists manuais com aparelho, versão e evidência (diferidos para a Fase 13).
 
 #### Critérios de saída
 
 - Instalável nos três grupos de plataforma.
 - Jornada Hoje funciona offline em iPhone físico.
 - Sem violação automática crítica de acessibilidade.
+
+**Desvio autorizado:** em 15/07/2026, o titular solicitou o commit da fase e a continuidade
+para a Fase 12 por não poder executar os testes físicos agora. Os itens manuais permanecem
+abertos e voltam a ser bloqueadores obrigatórios na Fase 13; este desvio não vale como evidência
+de compatibilidade física nem autoriza lançamento público sem o checklist.
 
 ### Fase 12 — Segurança, observabilidade e operação
 
