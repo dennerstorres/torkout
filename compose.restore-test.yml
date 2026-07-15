@@ -1,0 +1,30 @@
+name: torkout-restore-test
+
+services:
+  source:
+    image: postgres:18.4-alpine3.24
+    environment:
+      POSTGRES_DB: torkout_restore_source
+      POSTGRES_PASSWORD: restore_test
+      POSTGRES_USER: restore_test
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U restore_test -d torkout_restore_source']
+      interval: 2s
+      timeout: 3s
+      retries: 15
+    ports: ['55433:5432']
+    tmpfs: [/var/lib/postgresql]
+
+  target:
+    image: postgres:18.4-alpine3.24
+    environment:
+      POSTGRES_DB: torkout_restore_target
+      POSTGRES_PASSWORD: restore_test
+      POSTGRES_USER: restore_test
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U restore_test -d torkout_restore_target']
+      interval: 2s
+      timeout: 3s
+      retries: 15
+    ports: ['55434:5432']
+    tmpfs: [/var/lib/postgresql]

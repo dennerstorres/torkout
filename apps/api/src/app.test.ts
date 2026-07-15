@@ -15,6 +15,53 @@ describe('API smoke test', () => {
     await app.close();
   });
 
+  it('applies production security headers without exposing implementation details', async () => {
+    const app = buildApp(undefined, { production: true });
+
+    const response = await app.inject({ method: 'GET', url: '/health/live' });
+
+    expect(response.headers['content-security-policy']).toContain("default-src 'self'");
+    expect(response.headers['strict-transport-security']).toBe(
+      'max-age=31536000; includeSubDomains',
+    );
+    expect(response.headers['x-content-type-options']).toBe('nosniff');
+    expect(response.headers['referrer-policy']).toBe('no-referrer');
+    await app.close();
+  });
+
+  it('reports readiness only while the essential database dependency is available', async () => {
+    const ready = buildApp(undefined, { readiness: async () => undefined });
+    expect((await ready.inject({ method: 'GET', url: '/health/ready' })).json()).toEqual({
+      status: 'ready',
+    });
+    await ready.close();
+
+    const unavailable = buildApp(undefined, {
+      readiness: async () => {
+        throw new Error('connection details must remain private');
+      },
+    });
+    const response = await unavailable.inject({ method: 'GET', url: '/health/ready' });
+    expect(response.statusCode).toBe(503);
+    expect(response.json()).toEqual({ status: 'unavailable' });
+    expect(response.body).not.toContain('connection details');
+    await unavailable.close();
+  });
+
+  it('publishes aggregate Prometheus metrics without request content', async () => {
+    const app = buildApp();
+    await app.inject({ method: 'GET', url: '/health/live' });
+
+    const response = await app.inject({ method: 'GET', url: '/metrics' });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['content-type']).toContain('text/plain');
+    expect(response.body).toContain('torkout_http_requests_total');
+    expect(response.body).not.toContain('authorization');
+    expect(response.body).not.toContain('cookie');
+    await app.close();
+  });
+
   it('adapts Fastify requests and responses to the Better Auth fetch handler', async () => {
     let receivedRequest: Request | undefined;
     const app = buildApp({
@@ -66,6 +113,7 @@ describe('environment validation', () => {
         SMTP_PORT: '587',
         SMTP_SECURE: 'false',
         SMTP_USER: 'smtp-test-user',
+        TRUST_PROXY: '127.0.0.1,10.0.0.0/8',
         TRUSTED_ORIGINS: 'https://torkout.example.test',
       }),
     ).toEqual({
@@ -82,6 +130,7 @@ describe('environment validation', () => {
       SMTP_PORT: 587,
       SMTP_SECURE: false,
       SMTP_USER: 'smtp-test-user',
+      TRUST_PROXY: ['127.0.0.1', '10.0.0.0/8'],
       TRUSTED_ORIGINS: ['https://torkout.example.test'],
     });
   });

@@ -79,9 +79,9 @@ describe('account, privacy and profile API', () => {
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({
       documents: [
-        { type: 'privacy_notice', version: '2026-07-14' },
-        { type: 'terms', version: '2026-07-14' },
-        { type: 'health_data_consent', version: '2026-07-14' },
+        { type: 'privacy_notice', version: '2026-07-15' },
+        { type: 'terms', version: '2026-07-15' },
+        { type: 'health_data_consent', version: '2026-07-15' },
       ],
     });
   });
@@ -119,9 +119,9 @@ describe('account, privacy and profile API', () => {
       method: 'POST',
       payload: {
         documentVersions: {
-          health_data_consent: '2026-07-14',
-          privacy_notice: '2026-07-14',
-          terms: '2026-07-14',
+          health_data_consent: '2026-07-15',
+          privacy_notice: '2026-07-15',
+          terms: '2026-07-15',
         },
       },
       url: '/api/v1/privacy/acceptances',

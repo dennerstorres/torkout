@@ -78,6 +78,41 @@ describe('initial PostgreSQL schema', () => {
     expect(catalog.rows.map(({ name }) => name)).toEqual(['Agachamento livre', 'Flexão']);
   });
 
+  it('publishes the Phase 12 legal documents and retires their superseded versions', async () => {
+    const documents = await pool.query<{
+      content_hash: string;
+      retired_at: Date | null;
+      type: string;
+      version: string;
+    }>(
+      `select type, version, content_hash, retired_at
+       from privacy_documents
+       order by type, version`,
+    );
+
+    expect(documents.rows.filter(({ retired_at }) => retired_at === null)).toEqual([
+      {
+        content_hash: '10b5e573bc4d49a1a7c0c0aa0e143d7acad995effaba08b7a985ac618e0bdb18',
+        retired_at: null,
+        type: 'privacy_notice',
+        version: '2026-07-15',
+      },
+      {
+        content_hash: 'b79d96d66f87f86782188d4e9a2ed0849959d3c14b4a0e1d92bb2ce09466482d',
+        retired_at: null,
+        type: 'terms',
+        version: '2026-07-15',
+      },
+      {
+        content_hash: '751dc1147e43ce1caf6a1eaf1077918bb2c28dd009ea948951c52758976a5269',
+        retired_at: null,
+        type: 'health_data_consent',
+        version: '2026-07-15',
+      },
+    ]);
+    expect(documents.rows.filter(({ retired_at }) => retired_at !== null)).toHaveLength(3);
+  });
+
   it('rejects invalid measurements and habit entries at database level', async () => {
     const userId = await createUser('constraints@example.invalid');
 

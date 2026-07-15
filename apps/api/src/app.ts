@@ -1,5 +1,6 @@
 import cors from '@fastify/cors';
 import Fastify, { type FastifyInstance } from 'fastify';
+import type { FastifyServerOptions } from 'fastify';
 
 import { registerAccountRoutes } from './account-routes.js';
 import { registerAnalyticsRoutes } from './analytics-routes.js';
@@ -13,13 +14,47 @@ import { registerProgressionRoutes } from './progression-routes.js';
 import { registerPlanningRoutes } from './planning-routes.js';
 import { registerPortabilityRoutes } from './portability-routes.js';
 import { registerSyncRoutes } from './sync-routes.js';
+import { OperationalMetrics, securityHeaders } from './operational.js';
 
-export function buildApp(dependencies?: ApiDependencies): FastifyInstance {
+export interface BuildAppOptions {
+  logger?: FastifyServerOptions['logger'];
+  production?: boolean;
+  readiness?: () => Promise<void>;
+  trustProxy?: FastifyServerOptions['trustProxy'];
+}
+
+export function buildApp(
+  dependencies?: ApiDependencies,
+  options: BuildAppOptions = {},
+): FastifyInstance {
+  const metrics = new OperationalMetrics();
   const app = Fastify({
-    logger: false,
+    logger: options.logger ?? false,
+    requestIdHeader: 'x-request-id',
+    trustProxy: options.trustProxy ?? false,
+  });
+
+  app.addHook('onRequest', async (request) => metrics.start(request));
+  app.addHook('onResponse', async (request, reply) => metrics.finish(request, reply.statusCode));
+  app.addHook('onSend', async (_request, reply) => {
+    for (const [name, value] of Object.entries(securityHeaders(options.production ?? false))) {
+      reply.header(name, value);
+    }
   });
 
   app.get('/health/live', async () => ({ status: 'ok' as const }));
+  app.get('/health/ready', async (_request, reply) => {
+    try {
+      if (!options.readiness) throw new Error('Readiness dependency is not configured.');
+      await options.readiness();
+      return { status: 'ready' as const };
+    } catch {
+      return reply.status(503).send({ status: 'unavailable' as const });
+    }
+  });
+  app.get('/metrics', async (_request, reply) =>
+    reply.type('text/plain; version=0.0.4; charset=utf-8').send(metrics.render()),
+  );
 
   if (dependencies) {
     void app.register(cors, {
@@ -41,7 +76,7 @@ export function buildApp(dependencies?: ApiDependencies): FastifyInstance {
     registerSyncRoutes(app, dependencies);
   }
 
-  app.setErrorHandler((error, _request, reply) => {
+  app.setErrorHandler((error, request, reply) => {
     if (error instanceof ApiHttpError) {
       return reply.status(error.statusCode).send({
         code: error.code,
@@ -49,6 +84,10 @@ export function buildApp(dependencies?: ApiDependencies): FastifyInstance {
         status: error.statusCode,
       });
     }
+    request.log.error(
+      { errorType: error instanceof Error ? error.name : 'UnknownError', requestId: request.id },
+      'request_failed',
+    );
     return reply.status(500).send({
       code: 'INTERNAL_ERROR',
       message: 'Não foi possível concluir a solicitação.',

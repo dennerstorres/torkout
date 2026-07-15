@@ -1,0 +1,111 @@
+name: torkout
+
+services:
+  postgres:
+    image: postgres:18.4-alpine3.24
+    restart: unless-stopped
+    environment:
+      APP_DATABASE_PASSWORD: ${APP_DATABASE_PASSWORD:?configure in Coolify secrets}
+      APP_DATABASE_USER: ${APP_DATABASE_USER:-torkout_app}
+      POSTGRES_DB: ${POSTGRES_DB:-torkout}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?configure in Coolify secrets}
+      POSTGRES_USER: ${POSTGRES_USER:-torkout_owner}
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [backend]
+    volumes:
+      - postgres-data:/var/lib/postgresql
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      AUTH_BASE_URL: ${AUTH_BASE_URL:?configure the public HTTPS URL}
+      AUTH_SECRET: ${AUTH_SECRET:?configure in Coolify secrets}
+      DATABASE_URL: postgresql://${APP_DATABASE_USER:-torkout_app}:${APP_DATABASE_PASSWORD}@postgres:5432/${POSTGRES_DB:-torkout}
+      HOST: 0.0.0.0
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      NODE_ENV: production
+      PORT: 3000
+      SMTP_FROM: ${SMTP_FROM:?configure a verified sender}
+      SMTP_HOST: ${SMTP_HOST:?configure SMTP}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:?configure in Coolify secrets}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:?configure SMTP}
+      TRUSTED_ORIGINS: ${TRUSTED_ORIGINS:?configure the public HTTPS origin}
+      TRUST_PROXY: ${TRUST_PROXY:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
+    expose: ['3000']
+    healthcheck:
+      test: [CMD, wget, -q, -O, '-', 'http://127.0.0.1:3000/health/ready']
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+    networks: [backend]
+
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    command: ['node', 'node_modules/@torkout/database/dist/migrate-cli.js']
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-torkout_owner}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-torkout}
+    networks: [backend]
+    restart: 'no'
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - '${WEB_PORT:-8080}:8080'
+    healthcheck:
+      test: [CMD, wget, -q, -O, '-', 'http://127.0.0.1:8080/health/live']
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks: [backend, edge]
+
+  backup:
+    profiles: [backup]
+    build:
+      context: .
+      dockerfile: infra/backup/Dockerfile
+    environment:
+      AWS_ACCESS_KEY_ID: ${BACKUP_ACCESS_KEY_ID:?configure restricted backup credentials}
+      AWS_DEFAULT_REGION: ${BACKUP_REGION:-us-east-1}
+      AWS_ENDPOINT_URL: ${BACKUP_ENDPOINT_URL:?configure S3-compatible endpoint}
+      AWS_SECRET_ACCESS_KEY: ${BACKUP_SECRET_ACCESS_KEY:?configure in Coolify secrets}
+      BACKUP_BUCKET: ${BACKUP_BUCKET:?configure external bucket}
+      BACKUP_PREFIX: ${BACKUP_PREFIX:-torkout/production}
+      PGDATABASE: ${POSTGRES_DB:-torkout}
+      PGHOST: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGUSER: ${POSTGRES_USER:-torkout_owner}
+    networks: [backend]
+
+networks:
+  backend:
+    internal: true
+  edge:
+
+volumes:
+  postgres-data:

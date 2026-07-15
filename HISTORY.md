@@ -877,3 +877,72 @@ Este arquivo é o diário técnico, cronológico e append-only do projeto. Ele r
 ### Próximo passo
 
 - Criar o commit de encerramento da Fase 11 e iniciar a Fase 12. Executar e preencher `docs/testing/phase-11-device-checklist.md` antes do lançamento na Fase 13; qualquer achado deve ganhar teste de regressão antes da correção.
+
+## 2026-07-15 — Fase 12: segurança, observabilidade e operação
+
+**Status:** concluída por autorização do titular — validação externa diferida para a Fase 13
+
+**Commit de encerramento:** `chore(phase-12): productionize security and operations`
+
+### Escopo executado até aqui
+
+- Criados threat model, auditoria default-deny dos 42 endpoints protegidos, headers/CSP/HSTS,
+  proxy confiável, logs redigidos, métricas Prometheus sem conteúdo pessoal e probes de liveness
+  e readiness dependente do PostgreSQL.
+- Criadas imagens API/web não root, composição de produção com redes privadas, usuário PostgreSQL
+  mínimo e migração one-shot, job de backup S3, composição isolada de restauração e workflow de
+  scans de segredo, dependência e imagem.
+- Publicados documentos legais versionados em 15/07/2026, com hashes SHA-256 persistidos pela
+  migração `0007_phase_12_legal_documents.sql`, além dos runbooks de deploy, rollback, incidente,
+  observabilidade, backup, domínio/DNS e SMTP.
+
+### Evidências TDD e validação
+
+- RED estrutural — `verify-phase-12.ps1` enumerou 27 artefatos/controles ausentes antes da
+  implementação; o self-test do scanner comprovou detecção de uma credencial controlada.
+- RED operacional — headers, readiness e métricas falharam nos testes antes dos hooks e endpoints;
+  a auditoria anônima passou depois que os 42 recursos foram enumerados explicitamente.
+- RED legal — o teste público rejeitou as versões antigas e a integração PostgreSQL detectou a
+  ordem real do enum antes de validar as três versões/hashes ativos e as três versões aposentadas.
+- RED de runtime — a imagem web encerrava quando `api` ainda não estava resolvível; o resolver
+  Docker passou a ser dinâmico. A primeira resposta raiz perdeu headers herdados; `add_header_inherit
+merge` e o teste no container confirmaram CSP e HSTS.
+- RED de imagem — o Trivy encontrou 25 vulnerabilidades altas e 2 críticas corrigíveis na
+  base web; `apk upgrade` zerou os achados. Na API, npm global e o binário esbuild sem uso em runtime
+  expunham 15 altas e 1 crítica; a imagem mínima removeu somente essas ferramentas e zerou o scan.
+- GREEN raiz — `pnpm check` passou com 33 arquivos e 138 testes, governança, verificadores das
+  Fases 1–12, segredo, formatação, lint, tipagem e builds.
+- GREEN PostgreSQL — `pnpm test:integration` passou com 11 arquivos e 47 testes. A primeira chamada
+  sem `TEST_DATABASE_URL` foi recusada antes de tocar no banco; a reexecução usou explicitamente o
+  banco efêmero terminado em `_test`.
+- GREEN E2E — `pnpm test:e2e` passou com 14 jornadas móveis, online/offline e acessibilidade.
+- GREEN restauração — 32 tabelas restauradas, RPO aproximado de 0,0003 hora e RTO de 9,99 segundos;
+  containers, volume e archive foram removidos ao final.
+- GREEN composição — PostgreSQL, migração, API e web ficaram saudáveis localmente; as portas da API
+  e do banco não foram publicadas e `torkout_app` foi confirmado sem superuser/createdb/createrole.
+- O serviço externo de `pnpm audit` não foi consultado nesta execução porque a política do ambiente
+  bloqueou a exportação dos metadados do workspace. Nenhuma dependência npm foi adicionada e o
+  Trivy 0.70.0 examinou os pacotes presentes nos artefatos finais sem achar HIGH/CRITICAL
+  corrigível. O workflow foi atualizado para a release oficial assinada 0.72.0.
+
+### Pendências e riscos conhecidos
+
+- Falta importar a composição em uma instância Coolify real, configurar domínio/DNS/SMTP, emitir
+  certificado, validar HTTPS/cookies/proxy e guardar a evidência do painel.
+- Falta provisionar bucket externo e credencial restrita, aplicar lifecycle 7 diários/5 semanais/12
+  mensais e executar uma restauração a partir de um backup realmente enviado.
+- Esses itens exigem acessos/valores externos que não existem no workspace. A validação local não
+  é apresentada como evidência de produção, e a Fase 12 permanece sem commit de encerramento.
+- A confirmação local adicional com Trivy 0.72.0 concluiu a leitura da API sem listar achados, mas
+  o Docker Desktop tornou seu banco interno `meta.db` somente-leitura ao encerrar o container e não
+  iniciou o scan web. O container/cache temporário ficou preso no daemon e deverá ser removido após
+  reiniciar o Docker; o job CI 0.72.0 precisa ficar verde antes do lançamento.
+- Em 15/07/2026, o titular autorizou explicitamente commitar a fase e diferir Coolify/HTTPS e o
+  backup externo para a Fase 13. A autorização permite continuidade, mas não transforma validação
+  local em evidência de produção nem remove esses bloqueadores do lançamento.
+
+### Próximo passo seguro
+
+- Criar `chore(phase-12): productionize security and operations` e iniciar a Fase 13. Antes do
+  lançamento, concluir Coolify/HTTPS, bucket/lifecycle/restauração externa, remover o cache Trivy
+  preso após reiniciar o Docker e obter todas as evidências físicas diferidas da Fase 11.

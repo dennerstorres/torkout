@@ -6,7 +6,7 @@
 
 **Unidade de entrega:** fase completa com commit de encerramento
 
-**Status geral:** Fases 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 e 11 concluídas; Fase 12 ainda não iniciada
+**Status geral:** Fases 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 e 11 concluídas; Fase 12 em andamento
 
 ## 1. Regras de execução
 
@@ -486,42 +486,51 @@ de compatibilidade física nem autoriza lançamento público sem o checklist.
 
 ### Fase 12 — Segurança, observabilidade e operação
 
-**Status:** pendente
+**Status:** concluída por autorização do titular — validação externa diferida para a Fase 13
 
 **Commit esperado:** `chore(phase-12): productionize security and operations`
 
 #### Tarefas
 
-- [ ] Produzir threat model.
-- [ ] Revisar autorização de todos os endpoints.
-- [ ] Configurar CSP, headers e proxy confiável.
-- [ ] Redigir dados sensíveis dos logs.
-- [ ] Criar métricas e alertas sem conteúdo pessoal.
-- [ ] Implementar liveness/readiness.
-- [ ] Configurar scans de dependência, imagem e segredo.
-- [ ] Criar Dockerfiles de produção com usuário não root.
-- [ ] Configurar serviços no Coolify.
-- [ ] Configurar PostgreSQL privado e usuário mínimo.
-- [ ] Configurar backup externo e retenção.
-- [ ] Executar e documentar restauração.
-- [ ] Criar runbooks de deploy, rollback, incidente e recuperação.
-- [ ] Publicar aviso de privacidade e termos aplicáveis.
-- [ ] Preparar SMTP, domínio e DNS de produção.
+- [x] Produzir threat model.
+- [x] Revisar autorização de todos os endpoints.
+- [x] Configurar CSP, headers e proxy confiável.
+- [x] Redigir dados sensíveis dos logs.
+- [x] Criar métricas e alertas sem conteúdo pessoal.
+- [x] Implementar liveness/readiness.
+- [x] Configurar scans de dependência, imagem e segredo.
+- [x] Criar Dockerfiles de produção com usuário não root.
+- [ ] Configurar serviços no Coolify — composição validada localmente; falta instância real.
+- [x] Configurar PostgreSQL privado e usuário mínimo.
+- [ ] Configurar backup externo e retenção — job/política prontos; falta bucket e lifecycle reais.
+- [x] Executar e documentar restauração.
+- [x] Criar runbooks de deploy, rollback, incidente e recuperação.
+- [x] Publicar aviso de privacidade e termos aplicáveis.
+- [x] Preparar SMTP, domínio e DNS de produção.
 
 #### Testes primeiro
 
-- [ ] Testes negativos de autorização para todos os recursos.
-- [ ] Verificação de headers e cookies.
-- [ ] Scanner detecta fixture insegura antes da correção.
-- [ ] Readiness falha quando dependência essencial está indisponível.
-- [ ] Teste de carga nominal e abuso de autenticação.
-- [ ] Exercício de restauração mede RPO/RTO.
+- [x] Testes negativos de autorização para todos os recursos.
+- [x] Verificação de headers e cookies.
+- [x] Scanner detecta fixture insegura antes da correção.
+- [x] Readiness falha quando dependência essencial está indisponível.
+- [x] Teste de carga nominal e abuso de autenticação.
+- [x] Exercício de restauração mede RPO/RTO.
 
 #### Critérios de saída
 
 - Nenhum achado crítico/alto sem mitigação aprovada.
 - Backup restaurado em ambiente isolado.
 - Coolify executa containers saudáveis sob HTTPS.
+
+**Impedimento externo:** o repositório não contém — corretamente — acesso à instância Coolify,
+domínio, DNS, SMTP nem credenciais/bucket de backup. A composição completa ficou saudável em
+ambiente local, mas isso não substitui certificado, rota externa, lifecycle do bucket e evidência
+do painel de produção.
+
+**Desvio autorizado:** em 15/07/2026, o titular autorizou explicitamente diferir Coolify/HTTPS e
+backup externo para a Fase 13 e commitar a Fase 12. Os dois itens continuam abertos e são
+bloqueadores obrigatórios do lançamento; a autorização não vale como deploy nem backup aprovado.
 
 ### Fase 13 — Validação integral e lançamento
 

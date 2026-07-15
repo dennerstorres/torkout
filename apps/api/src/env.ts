@@ -19,6 +19,11 @@ const environmentSchema = z
     SMTP_PORT: z.coerce.number().int().min(1).max(65_535),
     SMTP_SECURE: z.enum(['true', 'false']).transform((value) => value === 'true'),
     SMTP_USER: z.string().min(1),
+    TRUST_PROXY: z
+      .string()
+      .default('127.0.0.1,::1')
+      .transform((value) => value.split(',').map((entry) => entry.trim()))
+      .pipe(z.array(z.string().min(1)).min(1)),
     TRUSTED_ORIGINS: z
       .string()
       .transform((value) => value.split(',').map((origin) => origin.trim()))
@@ -49,6 +54,7 @@ export function parseEnvironment(
     SMTP_PORT: input.SMTP_PORT,
     SMTP_SECURE: input.SMTP_SECURE,
     SMTP_USER: input.SMTP_USER,
+    TRUST_PROXY: input.TRUST_PROXY,
     TRUSTED_ORIGINS: input.TRUSTED_ORIGINS,
   });
 }

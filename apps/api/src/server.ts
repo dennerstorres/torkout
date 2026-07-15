@@ -5,6 +5,7 @@ import { createAuth } from './auth.js';
 import type { AuthRuntime } from './auth-routes.js';
 import { createSmtpEmailSender } from './email.js';
 import { parseEnvironment } from './env.js';
+import { createLoggerOptions } from './operational.js';
 
 const environment = parseEnvironment();
 const { db, pool } = createDatabaseClient(environment.DATABASE_URL);
@@ -23,11 +24,21 @@ const auth = createAuth({
   secret: environment.AUTH_SECRET,
   trustedOrigins: environment.TRUSTED_ORIGINS,
 });
-const app = buildApp({
-  auth: auth as unknown as AuthRuntime,
-  database: db,
-  trustedOrigins: environment.TRUSTED_ORIGINS,
-});
+const app = buildApp(
+  {
+    auth: auth as unknown as AuthRuntime,
+    database: db,
+    trustedOrigins: environment.TRUSTED_ORIGINS,
+  },
+  {
+    logger: createLoggerOptions(environment.LOG_LEVEL),
+    production: environment.NODE_ENV === 'production',
+    readiness: async () => {
+      await pool.query('select 1');
+    },
+    trustProxy: environment.TRUST_PROXY,
+  },
+);
 
 await app.listen({ host: environment.HOST, port: environment.PORT });
 
