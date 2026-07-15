@@ -53,14 +53,31 @@ services:
       start_period: 20s
     networks: [backend]
 
+  bootstrap-db:
+    image: postgres:18.4-alpine3.24
+    command: ['sh', '/bootstrap/001-create-app-user.sh']
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      APP_DATABASE_PASSWORD: ${APP_DATABASE_PASSWORD:?configure in Coolify secrets}
+      APP_DATABASE_USER: ${APP_DATABASE_USER:-torkout_app}
+      POSTGRES_DB: ${POSTGRES_DB:-torkout}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?configure in Coolify secrets}
+      POSTGRES_USER: ${POSTGRES_USER:-torkout_owner}
+    networks: [backend]
+    restart: 'no'
+    volumes:
+      - ./infra/postgres/init:/bootstrap:ro
+
   migrate:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
     command: ['node', 'node_modules/@torkout/database/dist/migrate-cli.js']
     depends_on:
-      postgres:
-        condition: service_healthy
+      bootstrap-db:
+        condition: service_completed_successfully
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-torkout_owner}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-torkout}
     networks: [backend]
