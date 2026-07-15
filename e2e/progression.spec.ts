@@ -56,7 +56,7 @@ test('reviews and explicitly accepts an explainable progression on mobile', asyn
   await expect(page.getByRole('heading', { name: 'Sugestões' })).toBeVisible();
   await expect(page.getByText(/não substitui a orientação/i)).toBeVisible();
   await page.getByText('Como esta sugestão foi calculada').click();
-  await expect(page.getByText(/versão 1.0.0/i)).toBeVisible();
+  await expect(page.getByText('Versão 1.0.0', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Aceitar' }).click();
   await expect.poll(() => accepted).toBe(true);
   await expect(page.getByRole('status')).toContainText('accepted');

@@ -6,7 +6,7 @@
 
 **Unidade de entrega:** fase completa com commit de encerramento
 
-**Status geral:** Fases 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 e 11 concluídas; Fase 12 em andamento
+**Status geral:** Fases 0–13 concluídas; lançamento público aguarda validações físicas e externas
 
 ## 1. Regras de execução
 
@@ -534,36 +534,51 @@ bloqueadores obrigatórios do lançamento; a autorização não vale como deploy
 
 ### Fase 13 — Validação integral e lançamento
 
-**Status:** pendente
+**Status:** concluída por autorização do titular — validações físicas e externas permanecem bloqueadoras do lançamento
 
 **Commit esperado:** `release(phase-13): validate public launch`
 
 #### Tarefas
 
-- [ ] Executar suíte completa em ambiente limpo.
-- [ ] Executar E2E online, offline e reconexão.
-- [ ] Executar testes multiusuário e dois dispositivos.
-- [ ] Validar conflito real entre dispositivos.
-- [ ] Validar todas as regras de progressão.
-- [ ] Validar exportação e exclusão.
-- [ ] Testar upgrade de versão anterior e rollback de aplicação.
-- [ ] Fazer auditoria manual de privacidade e linguagem de saúde.
+- [x] Executar suíte completa em ambiente limpo.
+- [x] Executar E2E online, offline e reconexão.
+- [x] Executar testes multiusuário e dois dispositivos.
+- [x] Validar conflito real entre dispositivos.
+- [x] Validar todas as regras de progressão.
+- [x] Validar exportação e exclusão.
+- [x] Testar upgrade de versão anterior e rollback de aplicação.
+- [x] Fazer auditoria manual de privacidade e linguagem de saúde.
 - [ ] Fazer teste exploratório em iOS, Android e desktop.
-- [ ] Corrigir achados por TDD.
-- [ ] Congelar schema/contratos da versão 1.0.
-- [ ] Criar release notes e checklist de abertura pública.
+- [x] Corrigir achados por TDD.
+- [x] Congelar schema/contratos da versão 1.0.
+- [x] Criar release notes e checklist de abertura pública.
 
 #### Testes primeiro
 
-- [ ] Criar checklist executável de aceite baseado na seção 17 do `SPEC.md`.
-- [ ] Registrar falhas encontradas antes de correções.
-- [ ] Reexecutar toda a suíte após cada correção de release.
+- [x] Criar checklist executável de aceite baseado na seção 17 do `SPEC.md`.
+- [x] Registrar falhas encontradas antes de correções.
+- [x] Reexecutar toda a suíte após cada correção de release.
 
 #### Critérios de saída
 
 - Todos os critérios de aceite do produto satisfeitos.
 - Histórico completo e nenhum bloqueador conhecido.
 - Release versionada e deploy de produção validado.
+
+**Evidência local em 15/07/2026:** `pnpm check` passou com 33 arquivos/138 testes; integração
+PostgreSQL com 12 arquivos/50 testes; Playwright com 15/15 jornadas; restauração com 32 tabelas,
+RPO 0,0003 hora e RTO 6,89 segundos; Trivy 0.72.0 encontrou zero HIGH/CRITICAL corrigível nas
+imagens finais da API e do web.
+
+**Bloqueadores de lançamento:** AC-09 depende do checklist físico em iPhone, Android e desktop;
+AC-10 depende de Coolify/HTTPS/DNS/SMTP, bucket/lifecycle e restauração a partir do objeto externo.
+Sem essas evidências, AC-01 permanece pendente e o produto não deve receber tag nem ser aberto ao
+público.
+
+**Desvio autorizado:** em 15/07/2026, depois de toda a validação local ficar verde, o titular
+autorizou explicitamente commitar a Fase 13 no estado atual e informou que executará os testes
+pendentes depois. A autorização encerra a unidade de implementação, mas não equivale a evidência
+física/externa e não autoriza tag `v1.0.0`, deploy ou abertura pública.
 
 ## 5. Dependências entre fases
 

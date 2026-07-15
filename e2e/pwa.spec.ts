@@ -26,7 +26,7 @@ test('publishes a complete installable manifest and versioned service worker', a
 
   const workerResponse = await request.get('/sw.js');
   expect(workerResponse.ok()).toBe(true);
-  expect(await workerResponse.text()).toContain('torkout-0.11.0');
+  expect(await workerResponse.text()).toContain('torkout-1.0.0');
 
   await page.goto('/icons/torkout-maskable-512.png');
   const pixels = await page.evaluate(() => {

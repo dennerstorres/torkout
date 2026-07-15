@@ -932,11 +932,11 @@ merge` e o teste no container confirmaram CSP e HSTS.
 - Falta provisionar bucket externo e credencial restrita, aplicar lifecycle 7 diários/5 semanais/12
   mensais e executar uma restauração a partir de um backup realmente enviado.
 - Esses itens exigem acessos/valores externos que não existem no workspace. A validação local não
-  é apresentada como evidência de produção, e a Fase 12 permanece sem commit de encerramento.
-- A confirmação local adicional com Trivy 0.72.0 concluiu a leitura da API sem listar achados, mas
-  o Docker Desktop tornou seu banco interno `meta.db` somente-leitura ao encerrar o container e não
-  iniciou o scan web. O container/cache temporário ficou preso no daemon e deverá ser removido após
-  reiniciar o Docker; o job CI 0.72.0 precisa ficar verde antes do lançamento.
+  é apresentada como evidência de produção; por autorização explícita, foram transferidos para o
+  gate de lançamento da Fase 13 e a Fase 12 foi encerrada no commit `53c638e`.
+- A primeira confirmação local adicional com Trivy 0.72.0 concluiu a leitura da API sem listar
+  achados, mas o Docker Desktop tornou seu banco interno `meta.db` somente-leitura e não iniciou o
+  scan web. A recuperação e a reexecução completa ficaram registradas na Fase 13.
 - Em 15/07/2026, o titular autorizou explicitamente commitar a fase e diferir Coolify/HTTPS e o
   backup externo para a Fase 13. A autorização permite continuidade, mas não transforma validação
   local em evidência de produção nem remove esses bloqueadores do lançamento.
@@ -946,3 +946,72 @@ merge` e o teste no container confirmaram CSP e HSTS.
 - Criar `chore(phase-12): productionize security and operations` e iniciar a Fase 13. Antes do
   lançamento, concluir Coolify/HTTPS, bucket/lifecycle/restauração externa, remover o cache Trivy
   preso após reiniciar o Docker e obter todas as evidências físicas diferidas da Fase 11.
+
+## 2026-07-15 — Fase 13: validação integral e lançamento
+
+**Status:** concluída por autorização do titular — validações físicas e externas permanecem bloqueadoras do lançamento
+
+**Commit esperado:** `release(phase-13): validate public launch`
+
+### Escopo executado até aqui
+
+- Versão do monorepo, API, web e pacotes públicos elevada para 1.0.0; cache PWA e teste de manifesto
+  passaram a exigir a mesma versão.
+- Criados checklist AC-01..AC-12, auditoria da candidata, release notes, checklist de abertura,
+  verificador estrutural da fase, freeze SHA-256 de schema/contratos e verificador de rollback.
+- A migração aditiva `0008_release_rollback_compatibility.sql` mantém ativas as versões legais
+  2026-07-14 e 2026-07-15, permitindo rollback da aplicação 0.11 sem reverter o banco.
+- Adicionados testes PostgreSQL de dois dispositivos, conflito real, isolamento entre titulares e
+  compatibilidade legal; adicionado E2E de resposta perdida com repetição idempotente e outbox limpa.
+- O gate raiz ganhou build explícito dos pacotes internos antes do typecheck, eliminando dependência
+  acidental de diretórios `dist` deixados por execuções anteriores.
+
+### Evidências TDD e validação
+
+- RED estrutural — `verify-phase-13.ps1` encontrou nove artefatos ausentes, versões pré-1.0 e a fase
+  fora do gate raiz antes da implementação.
+- RED de rollback — a imagem anterior não conseguia registrar novos aceites porque a migração 0007
+  aposentava as versões legais conhecidas pelo cliente 0.11; a migração 0008 e a integração real
+  provaram a correção sem operação destrutiva.
+- RED de ambiente limpo — após remover builds gerados durante a falta de espaço, o typecheck não
+  resolvia os pacotes internos; o novo `build:packages` tornou `pnpm check` reproduzível.
+- RED E2E — o seletor genérico de versão encontrou o selo e o texto explicativo; a asserção passou
+  a apontar exatamente para o selo, e a suíte inteira foi repetida.
+- GREEN raiz — `pnpm check` passou com 33 arquivos e 138 testes, Fases 1–13, segredo, formatação,
+  lint, build dos pacotes, tipagem e builds finais.
+- GREEN PostgreSQL — `pnpm test:integration` passou com 12 arquivos e 50 testes no banco efêmero
+  terminado em `_test`.
+- GREEN E2E — `pnpm test:e2e` passou com 15/15 jornadas, inclusive reconexão após resposta perdida,
+  operação offline e app shell/cache PWA 1.0.0.
+- GREEN restauração — 32 tabelas restauradas, RPO 0,0003 hora e RTO 6,89 segundos; o ambiente foi
+  removido ao final.
+- GREEN segurança — as imagens finais API/web foram exportadas e examinadas sem socket Docker pelo
+  Trivy oficial 0.72.0; ambas tiveram zero HIGH/CRITICAL corrigível.
+
+### Incidente local e recuperação
+
+- O primeiro Trivy 0.72 coincidiu com esgotamento da unidade C: e deixou o metadata store do Docker
+  somente-leitura. A suíte também registrou `ENOSPC`, sem evidência de falha funcional.
+- Depois que o titular liberou espaço e autorizou a recuperação, apenas processos/WSL do Docker
+  foram reiniciados. Somente o volume/cache Trivy, tarballs e imagens `torkout-*` criados por esta
+  validação foram removidos; não houve prune global nem remoção de recursos de outros projetos.
+- Com 39 GB livres, todas as suítes e os dois scans foram repetidos com sucesso.
+
+### Pendências e bloqueadores conhecidos
+
+- AC-09 continua bloqueado: faltam instalação, standalone, safe areas, teclado, leitor de tela,
+  retomada, Hoje offline e atualização em iPhone, Android e desktop físicos.
+- AC-10 continua bloqueado: faltam Coolify/HTTPS/DNS/SMTP reais, bucket externo com lifecycle
+  7 diários/5 semanais/12 mensais e restauração a partir do objeto remoto.
+- AC-12 passou localmente com Trivy 0.72.0, mas o workflow CI ainda deve ficar verde no SHA candidato.
+- Enquanto AC-09/AC-10 estiverem bloqueados, AC-01 permanece pendente; não criar tag `v1.0.0`,
+  deploy público ou anúncio de abertura.
+- Em 15/07/2026, o titular autorizou explicitamente commitar a fase no estado local validado e
+  informou que executará os testes pendentes depois. Esse desvio permite o commit de encerramento,
+  mas não transforma pendências em aprovação nem autoriza lançamento.
+
+### Próximo passo seguro
+
+- Obter e registrar as evidências físicas e externas no checklist. Qualquer achado deve receber
+  teste de regressão antes da correção; depois, repetir os gates no SHA final, encerrar a Fase 13,
+  criar a tag `v1.0.0` e executar o checklist de abertura pública.
