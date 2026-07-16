@@ -31,6 +31,8 @@ export interface SyncTransport {
 
 type Listener = (snapshot: SyncSnapshot) => void;
 
+const MAX_PUSH_BATCH_SIZE = 50;
+
 function statusOf(error: unknown): number | undefined {
   return typeof error === 'object' && error !== null && 'status' in error
     ? Number((error as { status: unknown }).status)
@@ -108,20 +110,21 @@ export class SyncCoordinator {
       .where('state')
       .equals('pending')
       .sortBy('clientOccurredAt');
-    if (pending.length > 0) {
+    for (let offset = 0; offset < pending.length; offset += MAX_PUSH_BATCH_SIZE) {
+      const batch = pending.slice(offset, offset + MAX_PUSH_BATCH_SIZE);
       await this.database.outbox.bulkUpdate(
-        pending.map((item) => ({ key: item.operationId, changes: { state: 'sending' } })),
+        batch.map((item) => ({ key: item.operationId, changes: { state: 'sending' } })),
       );
       let response: SyncPushResponse;
       try {
         response = await this.transport.push({
-          operations: pending.map(operationForTransport),
+          operations: batch.map(operationForTransport),
         });
       } catch (error) {
-        await this.restoreAfterTransportFailure(pending, error);
+        await this.restoreAfterTransportFailure(batch, error);
         return;
       }
-      await this.applyPushResults(pending, response);
+      await this.applyPushResults(batch, response);
     }
 
     try {

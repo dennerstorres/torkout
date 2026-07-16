@@ -222,6 +222,45 @@ describe('local-first replica', () => {
     expect(await database.outbox.count()).toBe(0);
   });
 
+  it('pushes more than 50 pending operations in API-sized batches', async () => {
+    const database = await databaseFor(users.first);
+    for (let index = 1; index <= 51; index += 1) {
+      await queueLocalMutation(database, {
+        entityId: `70000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+        entityType: 'body_measurement',
+        operation: 'create',
+        payload: {
+          localDate: '2026-07-14',
+          measuredAt: '2026-07-14T15:00:00.000Z',
+          weightKg: 70,
+        },
+      });
+    }
+    const batchSizes: number[] = [];
+    const transport: SyncTransport = {
+      async pull() {
+        return { changes: [], cursor: null, hasMore: false, serverTime: new Date().toISOString() };
+      },
+      async push(input) {
+        batchSizes.push(input.operations.length);
+        return {
+          results: input.operations.map((item) => ({
+            operationId: item.operationId,
+            record: { ...item.payload, id: item.entityId, version: 1 },
+            status: 'applied' as const,
+          })),
+        };
+      },
+    };
+
+    const coordinator = new SyncCoordinator(database, transport, { isOnline: () => true });
+    await coordinator.sync();
+
+    expect(batchSizes).toEqual([50, 1]);
+    expect(coordinator.snapshot()).toMatchObject({ pendingCount: 0, state: 'synced' });
+    expect(await database.outbox.count()).toBe(0);
+  });
+
   it('does not resurrect a newer local tombstone when an older pull arrives', async () => {
     const database = await databaseFor(users.first);
     const key = 'body_measurement:70000000-0000-4000-8000-000000000004';
