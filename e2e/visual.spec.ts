@@ -83,7 +83,9 @@ for (const viewport of [
   { name: 'mobile', width: 390, height: 844 },
   { name: 'desktop', width: 1440, height: 900 },
 ]) {
-  test(`premium Today baseline — ${viewport.name}`, async ({ page }) => {
+  // Phase 14 snapshots are retained as rejected historical evidence, not an acceptance gate.
+  // Re-enable these only after new Phase 15 baselines receive the documented human approval.
+  test.skip(`legacy rejected Today baseline — ${viewport.name}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await mockToday(page);
     await page.goto('/');

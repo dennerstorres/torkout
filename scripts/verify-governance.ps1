@@ -43,7 +43,11 @@ if (-not (Test-Path -LiteralPath (Get-ProjectPath '.git') -PathType Container)) 
 }
 else {
     $branch = git -C $root branch --show-current
-    if ($LASTEXITCODE -ne 0 -or $branch -ne 'main') {
+    $isPullRequestCheckout =
+        $env:GITHUB_ACTIONS -eq 'true' -and
+        $env:GITHUB_EVENT_NAME -eq 'pull_request' -and
+        -not [string]::IsNullOrWhiteSpace($env:GITHUB_HEAD_REF)
+    if ($LASTEXITCODE -ne 0 -or ($branch -ne 'main' -and -not $isPullRequestCheckout)) {
         Add-Failure "Expected current branch 'main', received '$branch'."
     }
 }
