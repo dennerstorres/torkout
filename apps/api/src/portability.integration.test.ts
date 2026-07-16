@@ -191,6 +191,23 @@ describe('data portability and erasure API', () => {
     );
   });
 
+  it('delivers an AI-readable Markdown evolution report with the requested filename', async () => {
+    const response = await app.inject({
+      headers: headers(userIds.first),
+      method: 'POST',
+      payload: { format: 'markdown', pendingChanges: [] },
+      url: '/api/v1/exports',
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers['content-type']).toContain('text/markdown');
+    expect(response.headers['content-disposition']).toContain('RELATORIO_EVOLUCAO.md');
+    expect(response.body).toContain('# Relatório de evolução física e rotina de treino');
+    expect(response.body).toContain('- Período coberto: 2026-07-14 a 2026-07-14');
+    expect(response.body).toContain('70 kg em 2026-07-14; tendência: não registrado');
+    expect(response.body).not.toContain('dado privado da segunda pessoa');
+  });
+
   it('deletes active account data, discloses backup retention and revokes access', async () => {
     const response = await app.inject({
       headers: headers(userIds.first),

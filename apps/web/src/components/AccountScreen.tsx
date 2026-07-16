@@ -47,7 +47,7 @@ export function AccountScreen({
     setSessions((current) => current.filter((session) => session.token !== token));
   }
 
-  async function exportData(format: 'csv_zip' | 'json'): Promise<void> {
+  async function exportData(format: 'csv_zip' | 'json' | 'markdown'): Promise<void> {
     setExporting(true);
     setMessage('');
     try {
@@ -116,6 +116,13 @@ export function AccountScreen({
               </button>
               <button disabled={exporting} type="button" onClick={() => void exportData('csv_zip')}>
                 Exportar CSV (ZIP)
+              </button>
+              <button
+                disabled={exporting}
+                type="button"
+                onClick={() => void exportData('markdown')}
+              >
+                Exportar relatório Markdown
               </button>
             </div>
           </div>

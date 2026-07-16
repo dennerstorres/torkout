@@ -84,6 +84,10 @@ describe('data portability contracts', () => {
     expect(
       dataExportRequestSchema.parse({ format: 'csv_zip', pendingChanges: [pendingChange] }),
     ).toMatchObject({ format: 'csv_zip' });
+    expect(dataExportRequestSchema.parse({ format: 'markdown' })).toEqual({
+      format: 'markdown',
+      pendingChanges: [],
+    });
   });
 
   it('documents immediate active-data erasure and finite backup retention', () => {

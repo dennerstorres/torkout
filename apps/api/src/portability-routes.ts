@@ -35,6 +35,7 @@ import type { FastifyInstance } from 'fastify';
 
 import { type ApiDependencies, ApiHttpError, requireAuthenticatedUser } from './auth-routes.js';
 import { buildCsvZip } from './export-package.js';
+import { buildEvolutionReport } from './evolution-report.js';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -222,6 +223,12 @@ export function registerPortabilityRoutes(
       return reply
         .header('content-disposition', `attachment; filename="torkout-export-${date}.json"`)
         .send(data);
+    }
+    if (parsed.data.format === 'markdown') {
+      return reply
+        .type('text/markdown; charset=utf-8')
+        .header('content-disposition', 'attachment; filename="RELATORIO_EVOLUCAO.md"')
+        .send(buildEvolutionReport(data));
     }
     return reply
       .type('application/zip')

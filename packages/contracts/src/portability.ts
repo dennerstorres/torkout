@@ -33,7 +33,7 @@ export const pendingExportChangeSchema = z
   });
 
 export const dataExportRequestSchema = z.strictObject({
-  format: z.enum(['json', 'csv_zip']),
+  format: z.enum(['json', 'csv_zip', 'markdown']),
   pendingChanges: z.array(pendingExportChangeSchema).max(5_000).default([]),
 });
 

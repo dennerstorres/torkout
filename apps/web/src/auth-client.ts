@@ -109,7 +109,11 @@ async function exportRequest(input: DataExportRequest): Promise<PortableDownload
   const fileName = /filename="?([^";]+)"?/i.exec(disposition)?.[1];
   return {
     blob: await response.blob(),
-    fileName: fileName ?? `torkout-export.${input.format === 'json' ? 'json' : 'zip'}`,
+    fileName:
+      fileName ??
+      (input.format === 'markdown'
+        ? 'RELATORIO_EVOLUCAO.md'
+        : `torkout-export.${input.format === 'json' ? 'json' : 'zip'}`),
   };
 }
 

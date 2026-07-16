@@ -61,6 +61,7 @@ describe('account portability screen', () => {
     expect(screen.getByRole('group', { name: 'Opções de exportação' })).toHaveClass(
       'account-export-actions',
     );
+    expect(screen.getByRole('button', { name: 'Exportar relatório Markdown' })).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: 'Exportar JSON' }));
 
     await waitFor(() => expect(exportData).toHaveBeenCalledOnce());
