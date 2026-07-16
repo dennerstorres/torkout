@@ -1267,3 +1267,54 @@ merge` e o teste no container confirmaram CSP e HSTS.
 ### Próximo passo
 
 - Aplicar a migração 0009 no ambiente de destino antes de publicar a versão 1.1.0.
+
+## 2026-07-15 — Fase 17: guia de uso e transcrição do calendário de referência
+
+**Status:** concluída
+
+**Commit de encerramento:** `docs(phase-17): add complete user guide`
+
+### Escopo executado
+
+- Criado `docs/GUIA_DO_USUARIO.md` em português, cobrindo primeiro acesso, navegação, instalação,
+  operação offline, sincronização, exportação e todas as áreas funcionais da aplicação.
+- A conversa de referência foi consultada em modo somente leitura com a sessão autenticada do
+  titular. Nenhuma mensagem foi enviada ou alterada.
+- O calendário do HTML foi traduzido para cadastros manuais: caminhada às segundas e sextas;
+  recuperação às quartas; descanso aos domingos; e quatro planos de força com vigências sem
+  sobreposição.
+- O guia explica como cadastrar a primeira semana retroativamente sem duplicar sessões já
+  materializadas pelos planos recorrentes.
+- Foram documentadas as diferenças entre planejamento, execução e retroativo, inclusive o limite
+  atual do runner histórico e a estratégia para metas em faixa.
+
+### Evidências e validação
+
+- A rotina, as datas, os períodos e as metas foram comparados com a prévia do HTML original e com
+  os rótulos presentes em `PlanningScreen`, `TodayScreen`, `HistoryScreen`, `OnboardingScreen` e
+  `AuthenticatedShell`.
+- A primeira revisão identificou e corrigiu uma orientação que criaria caminhadas duplicadas na
+  semana retroativa e outra que sugeria runner série a série no Histórico, recurso que não existe.
+- `prettier`, verificação de governança e consistência documental foram executados antes do
+  encerramento.
+
+### Segurança, privacidade e dados
+
+- O guia não cria seed, importador nem dado em conta alguma. Todos os exemplos exigem ação manual.
+- Informações pessoais desnecessárias da conversa não foram copiadas. Permaneceram apenas datas,
+  atividades e metas necessárias para reproduzir o calendário solicitado.
+- O documento reforça que a aplicação não diagnostica, não substitui orientação profissional e não
+  deve transformar dor articular em meta de execução.
+
+### Desvios do plano
+
+- Nenhum.
+
+### Pendências e riscos conhecidos
+
+- O guia descreve a interface da versão 1.1.0 e deve ser revisado quando rótulos ou fluxos forem
+  alterados.
+
+### Próximo passo
+
+- Publicar a versão que contém a migração 0009 e usar o guia para configurar a conta manualmente.

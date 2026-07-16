@@ -6,7 +6,7 @@
 
 **Unidade de entrega:** fase completa com commit de encerramento
 
-**Status geral:** Fases 0–16 implementadas; lançamento público ainda aguarda as validações físicas e externas
+**Status geral:** Fases 0–17 implementadas; lançamento público ainda aguarda as validações físicas e externas
 
 ## 1. Regras de execução
 
@@ -1147,10 +1147,36 @@ dados pessoais ou importadores dedicados no produto.
 - Testes, integração afetada, E2E, typecheck, lint, formatação e build verdes.
 - `HISTORY.md` atualizado e fase encerrada em commit próprio.
 
+### Fase 17 — Guia de uso e transcrição do calendário de referência
+
+**Status:** concluída
+
+**Commit esperado:** `docs(phase-17): add complete user guide`
+
+**Objetivo:** oferecer uma referência em português para o primeiro acesso, uso diário, operação
+offline e cadastro manual de um calendário equivalente ao HTML que originou a aplicação.
+
+#### Escopo
+
+- [x] Documentar cadastro, primeiro acesso, navegação, sincronização e instalação PWA.
+- [x] Documentar exercícios, planos semanais, sessões avulsas e registros retroativos.
+- [x] Documentar treino do dia, hábitos, dores, medições, histórico, progresso e exportação.
+- [x] Traduzir o HTML de referência em uma sequência concreta de cadastros por período.
+- [x] Explicar limites de alvos em faixa, progressões, medições quinzenais e calendário aberto.
+- [x] Validar consistência com a interface atual e os documentos de segurança/privacidade.
+
+#### Critérios de saída
+
+- O guia permite que uma pessoa sem contexto técnico configure e use a aplicação.
+- O plano de referência pode ser reproduzido manualmente sem seed ou importação automática.
+- Instruções distinguem planejamento, execução real e lançamento retroativo.
+- Formatação, governança documental e links internos verdes.
+- `HISTORY.md` atualizado e fase encerrada em commit próprio.
+
 ## 5. Dependências entre fases
 
 ```text
-0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16
+0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17
 ```
 
 Trabalhos internos de uma mesma fase podem ser paralelos somente quando não compartilham arquivos ou contratos instáveis. O encerramento continua único.
