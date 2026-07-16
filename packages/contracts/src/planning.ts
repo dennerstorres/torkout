@@ -2,27 +2,6 @@ import { z } from 'zod';
 
 import { workoutExecutionSchema } from './daily.js';
 
-export const SYSTEM_EXERCISES = {
-  pushUp: {
-    category: 'Força',
-    id: '00000000-0000-4000-8000-000000000001',
-    name: 'Flexão',
-    trackingMetric: 'repetitions',
-  },
-  squat: {
-    category: 'Força',
-    id: '00000000-0000-4000-8000-000000000002',
-    name: 'Agachamento livre',
-    trackingMetric: 'repetitions',
-  },
-  walk: {
-    category: 'Cardio',
-    id: '00000000-0000-4000-8000-000000000003',
-    name: 'Caminhada',
-    trackingMetric: 'distance',
-  },
-} as const;
-
 export const trackingMetricSchema = z.enum(['repetitions', 'duration', 'distance']);
 export const activityTypeSchema = z.enum(['strength', 'walk', 'rest', 'other']);
 export const planStatusSchema = z.enum(['draft', 'active', 'archived']);

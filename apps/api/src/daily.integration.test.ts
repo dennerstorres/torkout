@@ -1,4 +1,3 @@
-import { SYSTEM_EXERCISES } from '@torkout/contracts';
 import { createDatabaseClient, migrateDatabase } from '@torkout/database';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -22,6 +21,7 @@ const ids = {
   extraSet: 'a6100000-0000-4000-8000-000000000005',
   pain: 'a6200000-0000-4000-8000-000000000001',
 };
+let pushUpId = '';
 
 const fakeAuth = {
   api: {
@@ -78,6 +78,11 @@ describe('daily tracking API', () => {
        ($2, 'Segunda', 'daily-second@example.invalid', true)`,
       [users.first, users.second],
     );
+    const seeded = await pool.query<{ id: string }>(
+      "select id from exercises where user_id = $1 and name = 'Flexão'",
+      [users.first],
+    );
+    pushUpId = seeded.rows[0]!.id;
   });
 
   afterAll(async () => {
@@ -89,7 +94,7 @@ describe('daily tracking API', () => {
     const created = await request(users.first, 'POST', '/api/v1/sessions', {
       exercises: [
         {
-          exerciseId: SYSTEM_EXERCISES.pushUp.id,
+          exerciseId: pushUpId,
           id: ids.exercise,
           name: 'Flexão',
           sets: [
@@ -148,7 +153,7 @@ describe('daily tracking API', () => {
   it('records linked pain, keeps absent confirmation unknown and isolates another user', async () => {
     const pain = await request(users.first, 'POST', '/api/v1/pain-reports', {
       bodyRegion: 'ankle',
-      exerciseId: SYSTEM_EXERCISES.pushUp.id,
+      exerciseId: pushUpId,
       exerciseSetId: ids.secondSet,
       exerciseStopped: true,
       id: ids.pain,

@@ -1,5 +1,5 @@
-import { SYSTEM_EXERCISES, type SyncEntityType } from '@torkout/contracts';
-import { useEffect, useState, type FormEvent } from 'react';
+import type { SyncEntityType } from '@torkout/contracts';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 
 import { syncStateMessage, trackingMetricLabel } from '../presentation';
 import {
@@ -22,12 +22,6 @@ interface ExerciseOption {
   name: string;
   trackingMetric: 'distance' | 'duration' | 'repetitions';
 }
-
-const catalog: ExerciseOption[] = [
-  SYSTEM_EXERCISES.pushUp,
-  SYSTEM_EXERCISES.squat,
-  SYSTEM_EXERCISES.walk,
-];
 
 const weekdayOptions = [
   { label: 'Segunda-feira', value: 1 },
@@ -87,10 +81,14 @@ function draftsFromExercises(value: unknown): ExerciseDraft[] {
   });
 }
 
-function defaultDraft(type: ActivityType): ExerciseDraft {
+function defaultDraft(type: ActivityType, exercises: ExerciseOption[]): ExerciseDraft {
+  const preferred =
+    type === 'walk'
+      ? exercises.find((exercise) => exercise.trackingMetric === 'distance')
+      : exercises.find((exercise) => exercise.trackingMetric === 'repetitions');
   return type === 'walk'
-    ? { exerciseId: SYSTEM_EXERCISES.walk.id, setCount: 1, target: '5000' }
-    : { exerciseId: SYSTEM_EXERCISES.pushUp.id, setCount: 3, target: '12' };
+    ? { exerciseId: preferred?.id ?? exercises[0]?.id ?? '', setCount: 1, target: '5000' }
+    : { exerciseId: preferred?.id ?? exercises[0]?.id ?? '', setCount: 3, target: '12' };
 }
 
 function isoWeekday(date: Date): number {
@@ -185,7 +183,9 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
   const [planName, setPlanName] = useState('');
   const [templateName, setTemplateName] = useState('');
   const [activityType, setActivityType] = useState<ActivityType>('strength');
-  const [exerciseDrafts, setExerciseDrafts] = useState<ExerciseDraft[]>([defaultDraft('strength')]);
+  const [exerciseDrafts, setExerciseDrafts] = useState<ExerciseDraft[]>([
+    defaultDraft('strength', []),
+  ]);
   const [localTime, setLocalTime] = useState('18:00');
   const [validFrom, setValidFrom] = useState(new Date().toISOString().slice(0, 10));
   const [validUntil, setValidUntil] = useState('');
@@ -197,7 +197,7 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
   const [adHocDate, setAdHocDate] = useState(new Date().toISOString().slice(0, 10));
   const [adHocType, setAdHocType] = useState<ActivityType>('strength');
   const [adHocExerciseDrafts, setAdHocExerciseDrafts] = useState<ExerciseDraft[]>([
-    defaultDraft('strength'),
+    defaultDraft('strength', []),
   ]);
   const [editingAdHocId, setEditingAdHocId] = useState<string | null>(null);
 
@@ -215,18 +215,21 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
     };
   }, [database]);
 
-  const customExerciseRecords = recordsOf(records, 'exercise');
-  const customExercises = customExerciseRecords.map((record) => ({
-    active: record.data.active !== false,
-    id: record.entityId,
-    name: stringField(record.data, 'name', 'Exercício'),
-    trackingMetric: stringField(
-      record.data,
-      'trackingMetric',
-      'repetitions',
-    ) as ExerciseOption['trackingMetric'],
-  }));
-  const exercises = [...catalog, ...customExercises];
+  const exerciseRecords = useMemo(() => recordsOf(records, 'exercise'), [records]);
+  const exercises = useMemo(
+    () =>
+      exerciseRecords.map((record) => ({
+        active: record.data.active !== false,
+        id: record.entityId,
+        name: stringField(record.data, 'name', 'Exercício'),
+        trackingMetric: stringField(
+          record.data,
+          'trackingMetric',
+          'repetitions',
+        ) as ExerciseOption['trackingMetric'],
+      })),
+    [exerciseRecords],
+  );
   const plans = recordsOf(records, 'training_plan');
   const templates = recordsOf(records, 'workout_template');
   const sessions = recordsOf(records, 'workout_session');
@@ -294,7 +297,7 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
 
   function changeActivityType(type: ActivityType): void {
     setActivityType(type);
-    setExerciseDrafts(type === 'rest' ? [] : [defaultDraft(type)]);
+    setExerciseDrafts(type === 'rest' ? [] : [defaultDraft(type, exercises)]);
   }
 
   function updateDraft(index: number, patch: Partial<ExerciseDraft>): void {
@@ -305,7 +308,7 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
 
   function changeAdHocType(type: ActivityType): void {
     setAdHocType(type);
-    setAdHocExerciseDrafts(type === 'rest' ? [] : [defaultDraft(type)]);
+    setAdHocExerciseDrafts(type === 'rest' ? [] : [defaultDraft(type, exercises)]);
   }
 
   function updateAdHocDraft(index: number, patch: Partial<ExerciseDraft>): void {
@@ -314,9 +317,10 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
     );
   }
 
-  function plannedExercises(drafts: ExerciseDraft[]) {
+  function plannedExercises(drafts: ExerciseDraft[], type: ActivityType) {
     return drafts.map((draft, sortOrder) => {
-      const exercise = exercises.find((item) => item.id === draft.exerciseId)!;
+      const selectedId = draft.exerciseId || defaultDraft(type, exercises).exerciseId;
+      const exercise = exercises.find((item) => item.id === selectedId)!;
       const numericTarget = Number(draft.target);
       const targetField =
         exercise.trackingMetric === 'distance'
@@ -350,7 +354,10 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
 
   async function savePlanning(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
-    if ((activityType !== 'rest' && exerciseDrafts.length === 0) || weekdays.length === 0) {
+    if (
+      (activityType !== 'rest' && (exerciseDrafts.length === 0 || exercises.length === 0)) ||
+      weekdays.length === 0
+    ) {
       setMessage('Escolha os exercícios e ao menos um dia da semana.');
       return;
     }
@@ -393,7 +400,7 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
       },
       new Date(occurredAt.getTime() + mutationOffset++),
     );
-    const templateExercises = plannedExercises(exerciseDrafts);
+    const templateExercises = plannedExercises(exerciseDrafts, activityType);
     const rules = weekdays.map((weekday) => ({
       id: crypto.randomUUID(),
       localTime,
@@ -428,7 +435,7 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
       const rule = rules.find((candidate) => candidate.weekday === weekday);
       if (rule) {
         const sessionId = crypto.randomUUID();
-        const sessionExercises = plannedExercises(exerciseDrafts);
+        const sessionExercises = plannedExercises(exerciseDrafts, activityType);
         const sessionPayload = {
           exercises: sessionExercises,
           notes: null,
@@ -548,11 +555,11 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
   async function saveAdHocSession(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     const sessionId = editingAdHocId ?? crypto.randomUUID();
-    if (adHocType !== 'rest' && adHocExerciseDrafts.length === 0) {
+    if (adHocType !== 'rest' && (adHocExerciseDrafts.length === 0 || exercises.length === 0)) {
       setMessage('Adicione ao menos um exercício à sessão.');
       return;
     }
-    const sessionExercises = plannedExercises(adHocExerciseDrafts);
+    const sessionExercises = plannedExercises(adHocExerciseDrafts, adHocType);
     const payload = {
       exercises: sessionExercises,
       notes: null,
@@ -674,16 +681,7 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
             aria-label="Catálogo de exercícios"
             className="planning-management-list exercise-catalog-list"
           >
-            {catalog.map((exercise) => (
-              <li key={exercise.id}>
-                <div>
-                  <strong>{exercise.name}</strong>
-                  <span>{trackingMetricLabel(exercise.trackingMetric)}</span>
-                  <span>Do sistema</span>
-                </div>
-              </li>
-            ))}
-            {customExerciseRecords.map((record) => {
+            {exerciseRecords.map((record) => {
               const name = stringField(record.data, 'name', 'Exercício');
               const metric = stringField(
                 record.data,
@@ -727,9 +725,7 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
             })}
           </ul>
           <form
-            aria-label={
-              editingExerciseId ? 'Editar exercício personalizado' : 'Novo exercício personalizado'
-            }
+            aria-label={editingExerciseId ? 'Editar exercício' : 'Novo exercício'}
             onSubmit={(event) => void saveExercise(event)}
           >
             <label>
@@ -864,7 +860,7 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
                     Exercício
                     <select
                       aria-label={`Exercício ${index + 1}`}
-                      value={draft.exerciseId}
+                      value={draft.exerciseId || defaultDraft(activityType, exercises).exerciseId}
                       onChange={(event) => updateDraft(index, { exerciseId: event.target.value })}
                     >
                       {exercises.map((exercise) => (
@@ -914,7 +910,10 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
                   className="add-exercise-button"
                   type="button"
                   onClick={() =>
-                    setExerciseDrafts((current) => [...current, defaultDraft('strength')])
+                    setExerciseDrafts((current) => [
+                      ...current,
+                      defaultDraft('strength', exercises),
+                    ])
                   }
                 >
                   Adicionar exercício ao treino
@@ -1032,7 +1031,7 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
                   Exercício da sessão {index + 1}
                   <select
                     aria-label={`Exercício da sessão ${index + 1}`}
-                    value={draft.exerciseId}
+                    value={draft.exerciseId || defaultDraft(adHocType, exercises).exerciseId}
                     onChange={(event) =>
                       updateAdHocDraft(index, { exerciseId: event.target.value })
                     }
@@ -1084,7 +1083,10 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
               <button
                 type="button"
                 onClick={() =>
-                  setAdHocExerciseDrafts((current) => [...current, defaultDraft('strength')])
+                  setAdHocExerciseDrafts((current) => [
+                    ...current,
+                    defaultDraft('strength', exercises),
+                  ])
                 }
               >
                 Adicionar exercício à sessão

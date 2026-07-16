@@ -31,7 +31,7 @@ describe('initial PostgreSQL schema', () => {
     await pool.end();
   });
 
-  it('migrates an empty database with every Phase 2 entity and the initial catalog', async () => {
+  it('migrates an empty database and seeds editable exercises for each new account', async () => {
     const expectedTables = [
       'accounts',
       'audit_events',
@@ -72,14 +72,23 @@ describe('initial PostgreSQL schema', () => {
     );
     expect(tables.rows.map(({ table_name }) => table_name)).toEqual(expectedTables);
 
-    const catalog = await pool.query<{ name: string }>(
-      'select name from exercises where is_system = true order by name',
+    const userId = await createUser('initial-exercises@example.invalid');
+    const catalog = await pool.query<{ name: string; user_id: string }>(
+      'select name, user_id from exercises where user_id = $1 order by name',
+      [userId],
     );
     expect(catalog.rows.map(({ name }) => name)).toEqual([
       'Agachamento livre',
       'Caminhada',
       'Flexão',
     ]);
+    expect(catalog.rows.every(({ user_id }) => user_id === userId)).toBe(true);
+
+    const systemColumn = await pool.query(
+      `select column_name from information_schema.columns
+       where table_schema = 'public' and table_name = 'exercises' and column_name = 'is_system'`,
+    );
+    expect(systemColumn.rowCount).toBe(0);
   });
 
   it('keeps both current and rollback legal versions active for the release window', async () => {

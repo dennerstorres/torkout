@@ -1244,10 +1244,43 @@ do sistema nem apagar o histórico de treinos já executados.
 - Testes afetados, integração, E2E, typecheck, lint, formatação e build verdes.
 - `HISTORY.md` atualizado e fase encerrada em commit próprio.
 
+### Fase 20 — Exercícios iniciais pertencentes à conta
+
+**Status:** concluída
+
+**Commit esperado:** `refactor(phase-20): make initial exercises user-owned`
+
+**Objetivo:** substituir o catálogo global imutável por exercícios iniciais normais de cada conta,
+permitindo o mesmo CRUD local-first aplicado aos exercícios cadastrados posteriormente.
+
+#### Escopo
+
+- [x] Criar flexão, agachamento livre e caminhada automaticamente para cada nova conta.
+- [x] Migrar contas existentes e suas referências antes de remover os registros globais.
+- [x] Remover o marcador e as regras especiais de exercício de sistema do schema, API, sync e UI.
+- [x] Permitir editar, ativar, desativar e excluir todos os exercícios exibidos no Planejamento.
+- [x] Atualizar especificação, ADR, guia do usuário e histórico.
+
+#### Testes primeiro
+
+- [x] RED de schema para seed por conta e ausência de exercícios globais.
+- [x] RED de API/sync para isolamento e CRUD dos exercícios iniciais.
+- [x] RED de componente para exibir as ações de gestão nos exercícios iniciais.
+- [x] Regressão de Planejamento, Hoje, Histórico, integração, E2E e gates completos.
+
+#### Critérios de saída
+
+- Toda linha de `exercises` pertence a um usuário e nenhuma regra de catálogo global permanece.
+- O cadastro de conta gera os três exercícios e os publica no pull local-first.
+- Referências de contas existentes continuam apontando para exercícios da própria conta.
+- Os três exercícios iniciais oferecem editar, ativar/desativar e excluir.
+- Testes afetados, integração, E2E, typecheck, lint, formatação e build verdes.
+- `HISTORY.md` atualizado e fase encerrada em commit próprio.
+
 ## 5. Dependências entre fases
 
 ```text
-0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19
+0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20
 ```
 
 Trabalhos internos de uma mesma fase podem ser paralelos somente quando não compartilham arquivos ou contratos instáveis. O encerramento continua único.

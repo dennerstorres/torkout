@@ -25,7 +25,7 @@ import {
   workoutTemplateSets,
 } from '@torkout/database';
 import { createHash, randomUUID } from 'node:crypto';
-import { and, asc, eq, gt, gte, inArray, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, gte, inArray, isNull, sql } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 
@@ -748,7 +748,7 @@ async function applyExerciseOperation(
     void payloadId;
     const [created] = await transaction
       .insert(exercises)
-      .values({ ...payload, id: operation.entityId, isSystem: false, userId })
+      .values({ ...payload, id: operation.entityId, userId })
       .returning();
     if (!created) throw new Error('Exercise insert did not return a row.');
     return {
@@ -926,7 +926,7 @@ async function planningReferenceError(
     .where(
       and(
         inArray(exercises.id, exerciseIds),
-        or(eq(exercises.userId, userId), eq(exercises.isSystem, true)),
+        eq(exercises.userId, userId),
         eq(exercises.active, true),
         isNull(exercises.deletedAt),
       ),

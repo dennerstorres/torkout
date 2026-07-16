@@ -19,7 +19,7 @@ if (!connectionString || !new URL(connectionString).pathname.endsWith('_test')) 
 }
 const { db, pool } = createDatabaseClient(connectionString);
 const userId = '97000000-0000-4000-8000-000000000001';
-const exerciseId = '00000000-0000-4000-8000-000000000001';
+let exerciseId = '';
 const ids = {
   futureExercise: '97000000-0000-4000-8000-000000000010',
   futureSession: '97000000-0000-4000-8000-000000000011',
@@ -68,6 +68,11 @@ describe('progression API', () => {
       "insert into users (id, name, email, email_verified) values ($1, 'Progressão', 'progression@example.invalid', true)",
       [userId],
     );
+    const seeded = await pool.query<{ id: string }>(
+      "select id from exercises where user_id = $1 and name = 'Flexão'",
+      [userId],
+    );
+    exerciseId = seeded.rows[0]!.id;
     await db
       .insert(trainingPlans)
       .values({ id: ids.plan, name: 'Plano', status: 'active', userId, validFrom: '2026-07-01' });

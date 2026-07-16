@@ -77,8 +77,8 @@ describe('progress analytics API', () => {
       `insert into session_exercises
          (id, user_id, session_id, exercise_id, exercise_name_snapshot, tracking_metric_snapshot, sort_order, status)
        values
-         ('c9200000-0000-4000-8000-000000000001', $1, 'c9100000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000001', 'Flexão', 'repetitions', 0, 'completed'),
-         ('c9200000-0000-4000-8000-000000000002', $1, 'c9100000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002', 'Agachamento livre', 'repetitions', 1, 'skipped')`,
+         ('c9200000-0000-4000-8000-000000000001', $1, 'c9100000-0000-4000-8000-000000000001', (select id from exercises where user_id = $1 and name = 'Flexão'), 'Flexão', 'repetitions', 0, 'completed'),
+         ('c9200000-0000-4000-8000-000000000002', $1, 'c9100000-0000-4000-8000-000000000001', (select id from exercises where user_id = $1 and name = 'Agachamento livre'), 'Agachamento livre', 'repetitions', 1, 'skipped')`,
       [users.first],
     );
     await pool.query(

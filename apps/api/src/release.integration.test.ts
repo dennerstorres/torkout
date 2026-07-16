@@ -152,7 +152,12 @@ describe('1.0 release compatibility', () => {
       method: 'GET',
       url: '/api/v1/sync/pull?limit=100',
     });
-    expect(isolatedPull.json().changes).toEqual([]);
+    expect(isolatedPull.json().changes).toHaveLength(3);
+    expect(
+      isolatedPull
+        .json()
+        .changes.every((change: { entityType: string }) => change.entityType === 'exercise'),
+    ).toBe(true);
   });
 
   it('rejects an attempt by another user to update the first user record', async () => {

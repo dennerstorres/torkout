@@ -241,7 +241,13 @@ describe('local-first sync API', () => {
       method: 'GET',
       url: '/api/v1/sync/pull?limit=100',
     });
-    expect(isolated.json().changes).toEqual([]);
+    expect(isolated.json().changes).toHaveLength(3);
+    expect(
+      isolated.json().changes.map((change: { payload: { name: string } }) => change.payload.name),
+    ).toEqual(expect.arrayContaining(['Flexão', 'Agachamento livre', 'Caminhada']));
+    expect(
+      isolated.json().changes.some((change: { entityId: string }) => change.entityId === entityId),
+    ).toBe(false);
   });
 
   it('does not allow another user to claim an already registered device', async () => {

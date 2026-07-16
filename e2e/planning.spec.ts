@@ -20,10 +20,36 @@ test('plans offline on a mobile viewport and keeps the outbox across reload', as
   });
   await page.route('**/api/v1/sync/pull**', (route) => {
     if (!networkAvailable) return route.abort('internetdisconnected');
+    const initialPull = !new URL(route.request().url()).searchParams.has('cursor');
+    const exercises = [
+      ['b1100000-0000-4000-8000-000000000001', 'Flexão', 'força', 'repetitions'],
+      ['b1100000-0000-4000-8000-000000000002', 'Agachamento livre', 'força', 'repetitions'],
+      ['b1100000-0000-4000-8000-000000000003', 'Caminhada', 'cardio', 'distance'],
+    ];
     return route.fulfill({
       json: {
-        changes: [],
-        cursor: null,
+        changes: initialPull
+          ? exercises.map(([id, name, category, trackingMetric], index) => ({
+              changedAt: '2026-07-14T18:00:00Z',
+              deletedAt: null,
+              entityId: id,
+              entityType: 'exercise',
+              operation: 'create',
+              payload: {
+                active: true,
+                category,
+                deletedAt: null,
+                id,
+                instructions: null,
+                name,
+                trackingMetric,
+                version: 1,
+              },
+              sequence: index + 1,
+              version: 1,
+            }))
+          : [],
+        cursor: Buffer.from(JSON.stringify({ sequence: 3, version: 1 })).toString('base64url'),
         hasMore: false,
         serverTime: '2026-07-14T18:00:00Z',
       },

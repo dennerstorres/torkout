@@ -54,7 +54,6 @@ function exerciseView(row: typeof exercises.$inferSelect) {
     category: row.category,
     id: row.id,
     instructions: row.instructions,
-    isSystem: row.isSystem,
     name: row.name,
     trackingMetric: row.trackingMetric,
     version: row.version,
@@ -76,14 +75,7 @@ async function findOwnedExercise(database: DatabaseClient, userId: string, id: s
   const [row] = await database
     .select()
     .from(exercises)
-    .where(
-      and(
-        eq(exercises.id, id),
-        eq(exercises.userId, userId),
-        eq(exercises.isSystem, false),
-        isNull(exercises.deletedAt),
-      ),
-    )
+    .where(and(eq(exercises.id, id), eq(exercises.userId, userId), isNull(exercises.deletedAt)))
     .limit(1);
   return row;
 }
@@ -100,7 +92,7 @@ async function assertExercisesAvailable(
     .where(
       and(
         inArray(exercises.id, exerciseIds),
-        or(eq(exercises.userId, userId), eq(exercises.isSystem, true)),
+        eq(exercises.userId, userId),
         eq(exercises.active, true),
         isNull(exercises.deletedAt),
       ),
@@ -673,12 +665,7 @@ export function registerPlanningRoutes(app: FastifyInstance, dependencies: ApiDe
     const rows = await dependencies.database
       .select()
       .from(exercises)
-      .where(
-        and(
-          or(eq(exercises.isSystem, true), eq(exercises.userId, user.id)),
-          isNull(exercises.deletedAt),
-        ),
-      )
+      .where(and(eq(exercises.userId, user.id), isNull(exercises.deletedAt)))
       .orderBy(asc(exercises.name));
     return { items: rows.map(exerciseView) };
   });
@@ -688,7 +675,7 @@ export function registerPlanningRoutes(app: FastifyInstance, dependencies: ApiDe
     const input = parse(exerciseCreateSchema, request.body);
     const [created] = await dependencies.database
       .insert(exercises)
-      .values({ ...input, id: input.id ?? randomUUID(), isSystem: false, userId: user.id })
+      .values({ ...input, id: input.id ?? randomUUID(), userId: user.id })
       .returning();
     if (!created) throw new Error('Exercise insert did not return a row.');
     return reply.status(201).send(exerciseView(created));

@@ -47,11 +47,12 @@ export const exercises = pgTable(
   'exercises',
   {
     ...syncableColumns(),
-    userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     category: text('category').notNull(),
     trackingMetric: trackingMetricEnum('tracking_metric').notNull(),
-    isSystem: boolean('is_system').default(false).notNull(),
     instructions: text('instructions'),
     active: boolean('active').default(true).notNull(),
   },
@@ -59,14 +60,7 @@ export const exercises = pgTable(
     index('exercises_user_id_idx').on(table.userId),
     uniqueIndex('exercises_user_name_unique')
       .on(table.userId, sql`lower(${table.name})`)
-      .where(sql`${table.userId} is not null and ${table.deletedAt} is null`),
-    uniqueIndex('exercises_system_name_unique')
-      .on(sql`lower(${table.name})`)
-      .where(sql`${table.isSystem} = true and ${table.deletedAt} is null`),
-    check(
-      'exercises_ownership_check',
-      sql`(${table.isSystem} = true and ${table.userId} is null) or (${table.isSystem} = false and ${table.userId} is not null)`,
-    ),
+      .where(sql`${table.deletedAt} is null`),
   ],
 );
 

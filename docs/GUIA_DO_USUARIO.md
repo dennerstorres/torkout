@@ -50,7 +50,8 @@ alterações estão seguras neste dispositivo e ainda aguardam envio ao servidor
 
 ## 4. Criar exercícios
 
-Flexão, agachamento livre e caminhada já fazem parte do catálogo de sistema.
+Flexão, agachamento livre e caminhada são criados automaticamente na sua conta. Eles são
+exercícios normais: você pode editar nome e métrica, desativar, reativar ou excluir cada um.
 
 Para adicionar outro exercício:
 
@@ -72,9 +73,9 @@ Para reproduzir a alternativa do HTML, cadastre:
 
 Cadastrar um exercício não cria sessões no calendário. Ele apenas o disponibiliza nos editores.
 
-Os exercícios personalizados aparecem com as ações **Editar**, **Ativar/Desativar** e **Excluir**.
-O catálogo do sistema permanece somente leitura. Desativar ou excluir um exercício não apaga os
-treinos já registrados; a alteração apenas impede seu uso em novos planejamentos.
+Todos os exercícios aparecem com as ações **Editar**, **Ativar/Desativar** e **Excluir**, inclusive
+os três criados inicialmente. Desativar ou excluir um exercício não apaga os treinos já
+registrados; a alteração apenas impede seu uso em novos planejamentos.
 
 ## 5. Criar um plano semanal
 

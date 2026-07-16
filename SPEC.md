@@ -174,7 +174,7 @@ O projeto será um monorepo gerenciado por `pnpm`. A estrutura poderá ser simpl
 
 ### 7.3 Exercícios
 
-**EXERCISE-001:** disponibilizar catálogo inicial com flexão e agachamento livre.
+**EXERCISE-001:** criar flexão, agachamento livre e caminhada como exercícios iniciais pertencentes a cada nova conta.
 
 **EXERCISE-002:** permitir exercícios personalizados.
 
@@ -183,6 +183,8 @@ O projeto será um monorepo gerenciado por `pnpm`. A estrutura poderá ser simpl
 **EXERCISE-004:** desativar exercício sem remover o histórico.
 
 **EXERCISE-005:** armazenar instrução curta opcional, sem apresentá-la como orientação clínica.
+
+**EXERCISE-006:** permitir editar, ativar, desativar e excluir qualquer exercício da conta, inclusive os criados pelo seed inicial, preservando snapshots históricos.
 
 ### 7.4 Planejamento
 
@@ -507,7 +509,7 @@ Todas as tabelas de domínio incluem `id uuid`, `user_id uuid` quando aplicável
 
 ### 8.2 Catálogo e planejamento
 
-- `exercises`: nome, categoria, métrica, sistema/customizado e estado.
+- `exercises`: titular, nome, categoria, métrica e estado.
 - `training_plans`: nome, vigência e estado.
 - `workout_templates`: plano, nome e tipo.
 - `workout_template_exercises`: exercício, ordem e observação.
@@ -724,8 +726,10 @@ Cobertura é indicador, não objetivo isolado. Regras de progressão, autorizaç
 
 ## 15. Dados iniciais
 
-O catálogo terá apenas exercícios genéricos do sistema. Contas novas começam sem plano, sessões,
-medidas ou histórico pessoal. A aplicação não inclui importação dedicada a uma pessoa ou data.
+Cada conta recebe flexão, agachamento livre e caminhada como exercícios iniciais normais. Eles
+pertencem à conta e podem ser editados, desativados ou excluídos. Contas novas começam sem plano,
+sessões, medidas ou histórico pessoal. A aplicação não inclui importação dedicada a uma pessoa
+ou data.
 
 Todo plano e todo lançamento retroativo são criados explicitamente pelo usuário pelos mesmos
 formulários disponíveis às demais contas.

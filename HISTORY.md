@@ -1487,3 +1487,56 @@ merge` e o teste no container confirmaram CSP e HSTS.
 - Os formulários de edição também agrupam salvar e cancelar no mesmo padrão de Hábitos.
 - A correção foi verificada no localhost com dados reais do navegador, além dos testes de componente
   e do contrato visual responsivo.
+
+## Fase 20 — Exercícios iniciais pertencentes à conta
+
+**Status:** concluída
+
+**Commit de encerramento:** `refactor(phase-20): make initial exercises user-owned`
+
+### Escopo planejado
+
+- Substituir o catálogo global somente leitura por três exercícios iniciais pertencentes a cada conta.
+- Migrar referências existentes e unificar CRUD, autorização e sync de exercícios.
+- Remover os exercícios fixos do frontend e o marcador `is_system` do banco.
+
+### Decisão
+
+- O ADR-0004 registra o seed por titular e a remoção da compatibilidade de catálogo global,
+  autorizada enquanto a aplicação ainda não possui uso em produção.
+
+### Evidências TDD
+
+- RED de componente — ao inserir a Flexão da conta na réplica, o Planejamento exibiu duas linhas
+  porque ainda acrescentava o catálogo fixo do frontend.
+- RED de schema — o teste passou a exigir seed por titular e ausência de `is_system`; antes da
+  migração o ambiente ainda expunha a coluna e linhas globais.
+- GREEN direcionado — os 9 testes do Planejamento passaram com CRUD da Flexão inicial, sem
+  duplicação; schema, Planejamento e Hoje passaram contra PostgreSQL real.
+- GREEN de integração — 12 arquivos e 50 testes passaram, incluindo seed, change log, isolamento,
+  API, sync, snapshots, analytics e progressão com IDs pertencentes à conta.
+- Regressão — `pnpm check` passou com 38 arquivos e 168 testes, incluindo governança, scan,
+  formatação, lint, freeze 2.0.0, tipagem e builds.
+- E2E — 30 jornadas passaram; as duas baselines visuais legadas permaneceram intencionalmente
+  ignoradas. As fixtures de Planejamento e reconexão agora reproduzem o pull do seed por conta.
+
+### Alterações técnicas
+
+- A migração `0010_phase_20_user_owned_exercises.sql` cria os três exercícios para contas
+  existentes, troca referências de templates, sessões, avaliações de progressão e relatos de dor,
+  registra as criações no change log e remove as linhas globais e `is_system`.
+- Um trigger transacional em `users` cria Flexão, Agachamento livre e Caminhada para novas contas e
+  publica os três registros no pull local-first.
+- REST e sync consultam somente exercícios do titular autenticado. A resposta REST não expõe mais
+  `isSystem`, e `SYSTEM_EXERCISES` foi removido dos contratos.
+- O Planejamento monta catálogo e seletores exclusivamente a partir da réplica local. Todos os itens
+  reutilizam a listagem harmonizada e oferecem editar, ativar/desativar e excluir.
+- O freeze de schema e contratos foi promovido para 2.0.0 por remover superfície pública anterior.
+- A migração foi aplicada ao banco local de desenvolvimento usado pelo `localhost:5173`.
+
+### Segurança, privacidade e riscos
+
+- O seed contém somente exercícios genéricos e nenhum dado pessoal ou de saúde.
+- Titularidade obrigatória elimina o caminho global e mantém isolamento horizontal na API e no sync.
+- Snapshots históricos continuam preservados quando um exercício é editado, desativado ou excluído.
+- Permanece apenas o aviso conhecido de chunk principal acima de 500 kB, sem regressão bloqueante.

@@ -22,8 +22,28 @@ test('retries a committed batch after a lost response without duplicating local 
   await page.route('**/api/v1/sync/pull**', (route) =>
     route.fulfill({
       json: {
-        changes: [],
-        cursor: null,
+        changes: [
+          {
+            changedAt: '2026-07-15T14:00:00Z',
+            deletedAt: null,
+            entityId: 'e1100000-0000-4000-8000-000000000001',
+            entityType: 'exercise',
+            operation: 'create',
+            payload: {
+              active: true,
+              category: 'força',
+              deletedAt: null,
+              id: 'e1100000-0000-4000-8000-000000000001',
+              instructions: null,
+              name: 'Flexão',
+              trackingMetric: 'repetitions',
+              version: 1,
+            },
+            sequence: 1,
+            version: 1,
+          },
+        ],
+        cursor: Buffer.from(JSON.stringify({ sequence: 1, version: 1 })).toString('base64url'),
         hasMore: false,
         serverTime: '2026-07-15T14:00:00Z',
       },

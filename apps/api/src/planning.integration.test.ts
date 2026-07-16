@@ -1,4 +1,3 @@
-import { SYSTEM_EXERCISES } from '@torkout/contracts';
 import { createDatabaseClient, migrateDatabase } from '@torkout/database';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -23,6 +22,8 @@ const ids = {
   templateExercise: '92000000-0000-4000-8000-000000000006',
   templateSet: '92000000-0000-4000-8000-000000000007',
 };
+let pushUpId = '';
+let squatId = '';
 
 const fakeAuth = {
   api: {
@@ -83,6 +84,12 @@ describe('planning API', () => {
        ($2, 'Segunda', 'planning-second@example.invalid', true)`,
       [users.first, users.second],
     );
+    const seeded = await pool.query<{ id: string; name: string }>(
+      'select id, name from exercises where user_id = $1',
+      [users.first],
+    );
+    pushUpId = seeded.rows.find(({ name }) => name === 'Flexão')!.id;
+    squatId = seeded.rows.find(({ name }) => name === 'Agachamento livre')!.id;
   });
 
   afterAll(async () => {
@@ -90,15 +97,32 @@ describe('planning API', () => {
     await pool.end();
   });
 
-  it('lists the initial catalog and manages a custom exercise without deleting history', async () => {
+  it('lists user-owned initial exercises and manages exercises without deleting history', async () => {
     const catalog = await request(users.first, 'GET', '/api/v1/exercises');
     expect(catalog.statusCode).toBe(200);
     expect(catalog.json().items).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ id: SYSTEM_EXERCISES.pushUp.id, name: 'Flexão' }),
-        expect.objectContaining({ id: SYSTEM_EXERCISES.squat.id, name: 'Agachamento livre' }),
+        expect.objectContaining({ id: pushUpId, name: 'Flexão' }),
+        expect.objectContaining({ id: squatId, name: 'Agachamento livre' }),
       ]),
     );
+    expect(
+      catalog.json().items.every((item: Record<string, unknown>) => !('isSystem' in item)),
+    ).toBe(true);
+    const otherCatalog = await request(users.second, 'GET', '/api/v1/exercises');
+    expect(otherCatalog.json().items).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: pushUpId })]),
+    );
+
+    const renamedInitial = await request(users.first, 'PUT', `/api/v1/exercises/${pushUpId}`, {
+      name: 'Flexão inclinada',
+      version: 1,
+    });
+    expect(renamedInitial.json()).toMatchObject({ name: 'Flexão inclinada', version: 2 });
+    await request(users.first, 'PUT', `/api/v1/exercises/${pushUpId}`, {
+      name: 'Flexão',
+      version: 2,
+    });
 
     const created = await request(users.first, 'POST', '/api/v1/exercises', {
       category: 'Força',
@@ -139,7 +163,7 @@ describe('planning API', () => {
     const templatePayload = {
       exercises: [
         {
-          exerciseId: SYSTEM_EXERCISES.pushUp.id,
+          exerciseId: pushUpId,
           id: ids.templateExercise,
           name: 'Flexão',
           sets: [
@@ -262,7 +286,7 @@ describe('planning API', () => {
     const recomposed = await request(users.first, 'PUT', `/api/v1/sessions/${created.json().id}`, {
       exercises: [
         {
-          exerciseId: SYSTEM_EXERCISES.pushUp.id,
+          exerciseId: pushUpId,
           name: 'Flexão',
           sets: [{ setNumber: 1, targetRepetitions: 10 }],
           sortOrder: 0,
