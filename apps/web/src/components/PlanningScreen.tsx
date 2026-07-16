@@ -9,11 +9,11 @@ import {
   type UserSyncDatabase,
 } from '../sync/local-database';
 import type { SyncState } from '../sync/sync-coordinator';
+import { HabitManagement } from './HabitManagement';
 
 interface PlanningScreenProps {
   database: UserSyncDatabase;
   onBack(): void;
-  onSync(): void;
   syncState: SyncState;
 }
 
@@ -85,8 +85,10 @@ function stringField(data: Record<string, unknown>, key: string, fallback = ''):
   return typeof data[key] === 'string' ? data[key] : fallback;
 }
 
-export function PlanningScreen({ database, onBack, onSync, syncState }: PlanningScreenProps) {
-  const [activeArea, setActiveArea] = useState<'catalog' | 'weekly' | 'adhoc'>('catalog');
+export function PlanningScreen({ database, onBack, syncState }: PlanningScreenProps) {
+  const [activeArea, setActiveArea] = useState<'catalog' | 'weekly' | 'adhoc' | 'habits'>(
+    'catalog',
+  );
   const [records, setRecords] = useState<LocalRecord[]>([]);
   const [message, setMessage] = useState(
     'Alterações são salvas neste dispositivo antes da sincronização.',
@@ -135,6 +137,8 @@ export function PlanningScreen({ database, onBack, onSync, syncState }: Planning
   const exercises = [...catalog, ...customExercises];
   const plans = recordsOf(records, 'training_plan');
   const sessions = recordsOf(records, 'workout_session');
+  const habits = recordsOf(records, 'habit_definition');
+  const habitEntries = recordsOf(records, 'habit_entry');
 
   async function addExercise(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -420,6 +424,13 @@ export function PlanningScreen({ database, onBack, onSync, syncState }: Planning
         >
           Sessão avulsa
         </button>
+        <button
+          aria-pressed={activeArea === 'habits'}
+          type="button"
+          onClick={() => setActiveArea('habits')}
+        >
+          Hábitos
+        </button>
       </nav>
 
       {activeArea === 'catalog' && (
@@ -481,122 +492,130 @@ export function PlanningScreen({ database, onBack, onSync, syncState }: Planning
             </ul>
           )}
           <form className="weekly-plan-form" onSubmit={(event) => void savePlanning(event)}>
-            <label>
-              Nome do plano
-              <input
-                required
-                value={planName}
-                onChange={(event) => setPlanName(event.target.value)}
-              />
-            </label>
-            <label>
-              Nome do treino
-              <input
-                required
-                value={templateName}
-                onChange={(event) => setTemplateName(event.target.value)}
-              />
-            </label>
-            <label>
-              Tipo de atividade
-              <select
-                value={activityType}
-                onChange={(event) => changeActivityType(event.target.value as ActivityType)}
-              >
-                <option value="strength">Força</option>
-                <option value="walk">Caminhada</option>
-                <option value="rest">Descanso/recuperação</option>
-                <option value="other">Outra atividade</option>
-              </select>
-            </label>
-            {exerciseDrafts.map((draft, index) => (
-              <fieldset className="form-group" key={`${index}-${draft.exerciseId}`}>
-                <legend>Exercício {index + 1}</legend>
-                <label>
-                  Exercício {index + 1}
-                  <select
-                    aria-label={`Exercício ${index + 1}`}
-                    value={draft.exerciseId}
-                    onChange={(event) => updateDraft(index, { exerciseId: event.target.value })}
-                  >
-                    {exercises.map((exercise) => (
-                      <option key={exercise.id} value={exercise.id}>
-                        {exercise.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Séries do exercício {index + 1}
-                  <input
-                    aria-label={`Séries do exercício ${index + 1}`}
-                    min="1"
-                    type="number"
-                    value={draft.setCount}
-                    onChange={(event) =>
-                      updateDraft(index, { setCount: Number(event.target.value) })
-                    }
-                  />
-                </label>
-                <label>
-                  Alvo por série do exercício {index + 1}
-                  <input
-                    aria-label={`Alvo por série do exercício ${index + 1}`}
-                    min="1"
-                    type="number"
-                    value={draft.target}
-                    onChange={(event) => updateDraft(index, { target: event.target.value })}
-                  />
-                </label>
-                {exerciseDrafts.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setExerciseDrafts((current) => current.filter((_, item) => item !== index))
-                    }
-                  >
-                    Remover exercício {index + 1}
-                  </button>
-                )}
-              </fieldset>
-            ))}
-            {activityType !== 'rest' && (
-              <button
-                type="button"
-                onClick={() =>
-                  setExerciseDrafts((current) => [...current, defaultDraft('strength')])
-                }
-              >
-                Adicionar exercício ao treino
-              </button>
-            )}
-            <label>
-              Horário local
-              <input
-                required
-                type="time"
-                value={localTime}
-                onChange={(event) => setLocalTime(event.target.value)}
-              />
-            </label>
-            <label>
-              Vigência a partir de
-              <input
-                required
-                type="date"
-                value={validFrom}
-                onChange={(event) => setValidFrom(event.target.value)}
-              />
-            </label>
-            <label>
-              Vigência até
-              <input
-                min={validFrom}
-                type="date"
-                value={validUntil}
-                onChange={(event) => setValidUntil(event.target.value)}
-              />
-            </label>
+            <div className="weekly-plan-basics">
+              <label>
+                Nome do plano
+                <input
+                  required
+                  value={planName}
+                  onChange={(event) => setPlanName(event.target.value)}
+                />
+              </label>
+              <label>
+                Nome do treino
+                <input
+                  required
+                  value={templateName}
+                  onChange={(event) => setTemplateName(event.target.value)}
+                />
+              </label>
+              <label>
+                Tipo de atividade
+                <select
+                  value={activityType}
+                  onChange={(event) => changeActivityType(event.target.value as ActivityType)}
+                >
+                  <option value="strength">Força</option>
+                  <option value="walk">Caminhada</option>
+                  <option value="rest">Descanso/recuperação</option>
+                  <option value="other">Outra atividade</option>
+                </select>
+              </label>
+            </div>
+            <div className="weekly-plan-exercises">
+              {exerciseDrafts.map((draft, index) => (
+                <fieldset className="exercise-draft-card" key={`${index}-${draft.exerciseId}`}>
+                  <legend>Exercício {index + 1}</legend>
+                  <label>
+                    Exercício
+                    <select
+                      aria-label={`Exercício ${index + 1}`}
+                      value={draft.exerciseId}
+                      onChange={(event) => updateDraft(index, { exerciseId: event.target.value })}
+                    >
+                      {exercises.map((exercise) => (
+                        <option key={exercise.id} value={exercise.id}>
+                          {exercise.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Séries
+                    <input
+                      aria-label={`Séries do exercício ${index + 1}`}
+                      min="1"
+                      type="number"
+                      value={draft.setCount}
+                      onChange={(event) =>
+                        updateDraft(index, { setCount: Number(event.target.value) })
+                      }
+                    />
+                  </label>
+                  <label>
+                    Alvo por série
+                    <input
+                      aria-label={`Alvo por série do exercício ${index + 1}`}
+                      min="1"
+                      type="number"
+                      value={draft.target}
+                      onChange={(event) => updateDraft(index, { target: event.target.value })}
+                    />
+                  </label>
+                  {exerciseDrafts.length > 1 && (
+                    <button
+                      className="remove-exercise-button"
+                      type="button"
+                      onClick={() =>
+                        setExerciseDrafts((current) => current.filter((_, item) => item !== index))
+                      }
+                    >
+                      Remover exercício {index + 1}
+                    </button>
+                  )}
+                </fieldset>
+              ))}
+              {activityType !== 'rest' && (
+                <button
+                  className="add-exercise-button"
+                  type="button"
+                  onClick={() =>
+                    setExerciseDrafts((current) => [...current, defaultDraft('strength')])
+                  }
+                >
+                  Adicionar exercício ao treino
+                </button>
+              )}
+            </div>
+            <div className="weekly-plan-schedule">
+              <label>
+                Horário local
+                <input
+                  required
+                  type="time"
+                  value={localTime}
+                  onChange={(event) => setLocalTime(event.target.value)}
+                />
+              </label>
+              <label>
+                Vigência a partir de
+                <input
+                  required
+                  type="date"
+                  value={validFrom}
+                  onChange={(event) => setValidFrom(event.target.value)}
+                />
+              </label>
+              <label>
+                Vigência até
+                <input
+                  min={validFrom}
+                  type="date"
+                  value={validUntil}
+                  onChange={(event) => setValidUntil(event.target.value)}
+                />
+              </label>
+            </div>
             <fieldset className="weekday-picker">
               <legend>Dias da semana</legend>
               <div className="weekday-options">
@@ -758,9 +777,17 @@ export function PlanningScreen({ database, onBack, onSync, syncState }: Planning
         </section>
       )}
 
-      <button className="primary sticky-action" type="button" onClick={onSync}>
-        Sincronizar agora
-      </button>
+      {activeArea === 'habits' && (
+        <HabitManagement
+          database={database}
+          habitEntries={habitEntries}
+          habits={habits}
+          onChanged={async (nextMessage) => {
+            setMessage(nextMessage);
+            await refresh();
+          }}
+        />
+      )}
     </main>
   );
 

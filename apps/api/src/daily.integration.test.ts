@@ -220,6 +220,57 @@ describe('daily tracking API', () => {
     expect(measurements.json().items).toHaveLength(2);
   });
 
+  it('edits choice labels while preserving option ids referenced by historical entries', async () => {
+    const optionIds = [
+      'a6400000-0000-4000-8000-000000000001',
+      'a6400000-0000-4000-8000-000000000002',
+    ];
+    const created = await request(users.first, 'POST', '/api/v1/habits', {
+      active: true,
+      id: 'a6400000-0000-4000-8000-000000000010',
+      name: 'Sono',
+      options: [
+        { id: optionIds[0], label: 'Ruim', sortOrder: 0, stableValue: 'poor' },
+        { id: optionIds[1], label: 'Bom', sortOrder: 1, stableValue: 'good' },
+      ],
+      sortOrder: 20,
+      type: 'choice',
+    });
+    expect(created.statusCode).toBe(201);
+    await request(
+      users.first,
+      'PUT',
+      '/api/v1/habits/a6400000-0000-4000-8000-000000000010/entries/2026-07-13',
+      { selectedOptionId: optionIds[0] },
+    );
+
+    const updated = await request(
+      users.first,
+      'PUT',
+      '/api/v1/habits/a6400000-0000-4000-8000-000000000010',
+      {
+        options: [
+          { id: optionIds[0], label: 'Noite ruim', sortOrder: 0, stableValue: 'poor' },
+          { id: optionIds[1], label: 'Noite boa', sortOrder: 1, stableValue: 'good' },
+        ],
+      },
+    );
+
+    expect(updated.statusCode).toBe(200);
+    expect(updated.json().options).toEqual([
+      expect.objectContaining({ id: optionIds[0], label: 'Noite ruim' }),
+      expect.objectContaining({ id: optionIds[1], label: 'Noite boa' }),
+    ]);
+    const entries = await request(
+      users.first,
+      'GET',
+      '/api/v1/habits/entries?localDate=2026-07-13',
+    );
+    expect(entries.json().items).toEqual([
+      expect.objectContaining({ selectedOptionId: optionIds[0] }),
+    ]);
+  });
+
   it('synchronizes daily entities and execution with per-item results', async () => {
     const deviceId = 'a6300000-0000-4000-8000-000000000001';
     const session = (
@@ -303,12 +354,31 @@ describe('daily tracking API', () => {
           type: 'muscular',
         },
       },
+      {
+        baseVersion: coffee.version,
+        clientOccurredAt: '2026-07-14T20:00:03.000Z',
+        deviceId,
+        entityId: coffee.id,
+        entityType: 'habit_definition',
+        operation: 'update',
+        operationId: 'a6300000-0000-4000-8000-000000000042',
+        payload: {
+          options: coffee.options.map((option: Record<string, unknown>, index: number) => ({
+            ...option,
+            label: index === 0 ? 'Não tomei' : option.label,
+          })),
+        },
+      },
     ];
     const pushed = await request(users.first, 'POST', '/api/v1/sync/push', { operations });
     expect(pushed.statusCode).toBe(200);
     expect(pushed.json().results).toEqual(
       operations.map(() => expect.objectContaining({ status: 'applied' })),
     );
+    expect(pushed.json().results.at(-1).record.options[0]).toMatchObject({
+      id: coffee.options[0].id,
+      label: 'Não tomei',
+    });
     const pulled = await request(users.first, 'GET', '/api/v1/sync/pull?limit=100');
     expect(pulled.json().changes).toEqual(
       expect.arrayContaining([

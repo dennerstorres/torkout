@@ -1,7 +1,7 @@
 # Sistema de design do Torkout
 
 **Status:** contrato visual obrigatório
-**Versão:** 1.0 — Fase 15
+**Versão:** 1.1 — Fase 15, adendo de ritmo interno
 **Fonte executável:** `apps/web/src/styles/tokens.css` e arquivos importados por `apps/web/src/styles.css`
 
 Este documento define como o Torkout deve parecer e se comportar. Toda alteração de interface deve
@@ -16,8 +16,9 @@ alinhar ambos e validar o laboratório `/design-system`.
    Não usa gradiente azul/roxo, sombras pretas genéricas nem cartões para todo bloco de conteúdo.
 3. **Mobile first, desktop composto.** A ordem semântica é definida para 320 px; telas maiores
    reorganizam a mesma informação sem deixar cartões órfãos ou criar grandes vazios.
-4. **Ritmo explícito.** Elementos relacionados usam 8–16 px; grupos distintos usam 20–32 px. Título,
-   lista, formulário e ações nunca dependem da margem padrão do navegador.
+4. **Ritmo explícito.** Label e seu controle usam 8 px; campos irmãos e título/conteúdo usam
+   16 px; grupos distintos usam 20–32 px. Título, divisor, lista, formulário e ações nunca dependem
+   da margem padrão do navegador.
 5. **Estados honestos.** Offline, pendente, erro, vazio, carregando e sincronizado devem ser visíveis
    e descritos em português. O produto não apresenta inferências médicas como diagnóstico.
 6. **Acessibilidade é estrutural.** Teclado, leitor de tela, zoom de 200%, contraste forçado e redução
@@ -73,12 +74,21 @@ A unidade é 4 px (`0.25rem`). A escala fechada é:
 Regras de ritmo:
 
 - label → controle: 8 px;
+- campo completo → próximo campo completo: 16 px, inclusive quando cada campo é um `label`;
 - título → lista/conteúdo: 16 px;
+- título → divisor e divisor → primeiro conteúdo relacionado: 16 px;
 - opção/checkbox → grupo de botões: 16 px;
 - barra Voltar → eyebrow/cabeçalho: 24 px;
 - itens de lista: 8 px; cartões irmãos: 12–16 px;
 - seções com divisor: 24 px de padding vertical;
 - nenhum par de elementos independentes pode terminar com intervalo visual de 0 px.
+
+O ritmo de um formulário possui dois níveis independentes e obrigatórios: o espaço **interno** do
+campo (`label` → controle, `--space-2`) e o espaço **entre** campos completos (`--space-4`). O pai
+de campos repetidos deve declarar `display: grid` ou `flex` e `gap: var(--space-4)`; não se pode
+usar o fluxo de bloco ou margens padrão como separação implícita. Ícone e título que descrevem o
+mesmo estado ficam na mesma linha, centralizados verticalmente, enquanto houver espaço; somente um
+breakpoint justificado pode empilhá-los.
 
 ### 2.3 Raios, sombras e camadas
 
@@ -122,10 +132,11 @@ offline.
 - largura mínima suportada: 320 px;
 - conteúdo estreito: `44rem` (704 px);
 - conteúdo padrão: `68rem` (1088 px);
-- conteúdo amplo: `84rem` (1344 px);
+- conteúdo amplo: `--content-wide`, com `84rem` (1344 px);
 - navegação lateral desktop: `13.5rem` (216 px);
 - header: `3.75rem` (60 px); navegação mobile: `4.25rem` (68 px);
-- padding de página: 16–20 px no mobile e 24 px no desktop, respeitando `safe-area-inset-*`.
+- padding de página: 16–20 px no mobile e `clamp(16px, 2vw, 32px)` no desktop, respeitando
+  `safe-area-inset-*`.
 
 Breakpoints canônicos:
 
@@ -134,9 +145,11 @@ Breakpoints canônicos:
 - a partir de `56rem` (896 px): navegação lateral;
 - a partir de `64rem` (1024 px): composições de dashboard e painéis lado a lado.
 
-Grades devem usar `minmax(0, 1fr)` para impedir overflow. Conteúdo nunca se estende além de
-`--content-wide`. Não usar `100vh`; usar `100dvh` com fallback. Em desktop, cartões irmãos precisam
-formar um grupo deliberado: nenhum cartão deve ocupar sozinho a coluna final de uma linha.
+Grades devem usar `minmax(0, 1fr)` para impedir overflow. No desktop autenticado, o conteúdo ocupa
+toda a largura útil restante depois da sidebar; limites de leitura, como 65 caracteres para texto,
+são aplicados aos filhos e não ao container principal. Não usar `100vh`; usar `100dvh` com fallback.
+Em desktop, cartões irmãos precisam formar um grupo deliberado: nenhum cartão deve ocupar sozinho
+a coluna final de uma linha.
 
 ## 5. Componentes
 
@@ -155,7 +168,9 @@ formar um grupo deliberado: nenhum cartão deve ocupar sozinho a coluna final de
 ### 5.2 Campos e formulários
 
 - altura mínima 45,6 px; borda forte; raio pequeno; padding 11,5 × 12,8 px;
-- formulários usam grade com gap de 16 px;
+- cada `label` agrupa seu controle com gap de 8 px;
+- formulários e agrupadores de campos usam grade ou flex com gap de 16 px entre campos completos;
+- é proibido deixar labels consecutivas no fluxo normal sem gap explícito;
 - checkbox/radio tem 20 × 20 px e gap de 12 px para o texto;
 - erro aparece junto ao formulário com `role="alert"`; sucesso assíncrono usa `role="status"`;
 - o botão de envio vem depois de todos os campos e mantém 8–16 px de separação óptica.
@@ -192,7 +207,8 @@ formar um grupo deliberado: nenhum cartão deve ocupar sozinho a coluna final de
 ## 6. Contratos por área
 
 - **Hoje:** sessão e ação principal antes das métricas. Hábitos, Dor e Peso formam “Registros
-  complementares”; uma coluna no mobile e composição assimétrica de três colunas no desktop.
+  complementares”; uma coluna no mobile e três colunas equivalentes no desktop. Em estado vazio,
+  ícone e título ficam na mesma linha.
 - **Planejamento:** tabs antes do conteúdo. Título do catálogo → 16 px → lista → 16 px → formulário.
 - **Histórico:** calendário e detalhe lado a lado somente quando há largura; detalhe pode ser sticky.
 - **Progresso:** filtros e período antecedem indicadores. Sugestões explicam evidência e decisão;
@@ -234,6 +250,11 @@ Uma alteração visual está pronta somente quando:
 6. inclui teste estrutural e, quando a geometria for parte do contrato, teste E2E visual;
 7. não promove snapshots antes do aceite humano em mobile e desktop;
 8. atualiza `PLAN.md` e `HISTORY.md` quando altera o contrato da fase.
+
+Para páginas autenticadas, a regressão geométrica deve percorrer Hoje, as três áreas de
+Planejamento, Histórico, Progresso e Conta. O teste mede no layout renderizado: 8 px entre label e
+controle, 16 px entre campos empilhados e 16 px entre `h2` e seu primeiro conteúdo. Uma correção
+local não está concluída se outra rota continuar violando o mesmo contrato.
 
 Valores e padrões não previstos devem ser discutidos como evolução deste contrato, não resolvidos
 com CSS local isolado.

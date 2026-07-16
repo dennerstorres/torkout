@@ -1,7 +1,7 @@
 # Fase 15 — evidência e aceite visual
 
 Status: retorno do aceite humano implementado, validação técnica repetida e rodada final aprovada;
-snapshots novos e dispositivos físicos permanecem pendentes como evidência de lançamento.
+dispositivos físicos aprovados pelo titular; snapshots novos permanecem pendentes.
 
 ## Matriz verificada em Chrome
 
@@ -16,8 +16,8 @@ de teste, incluindo criação offline-first de sessão avulsa e abertura do runn
 | 390 × 844   | cinco áreas, planejamento, runner e laboratório visual | revisão técnica e geometria concluídas |
 | 430 × 844   | Hoje e fim do conteúdo                                 | sem overflow; barra não cobre ação     |
 | 768 × 1024  | cinco áreas                                            | sem overflow; destino ativo coerente   |
-| 1440 × 900  | cinco áreas                                            | sem overflow; largura por feature      |
-| 1920 × 1080 | cinco áreas                                            | sem overflow; shell não cresce demais  |
+| 1440 × 900  | cinco áreas                                            | sem overflow; outlet em largura total  |
+| 1920 × 1080 | cinco áreas                                            | sem overflow; outlet em largura total  |
 
 Em 15/07/2026, uma segunda rodada respondeu aos apontamentos detalhados do aceite. As medições antes
 e depois foram:
@@ -37,6 +37,23 @@ SVG oficial; dimensões, transparência, pixels de controle e área segura maska
 O teste Playwright `phase 15 layout invariants` mede as quatro larguras mobile. O teste de transição
 parte do fim da página e exige, na mesma troca, scroll no topo, foco no `h1` e `aria-current` no
 destino correspondente.
+
+Em 16/07/2026, uma terceira auditoria no Chrome tratou o ritmo interno como contrato transversal,
+e não como ajuste isolado da tela Hoje:
+
+| Área                | Antes                                         | Depois                                          |
+| ------------------- | --------------------------------------------- | ----------------------------------------------- |
+| Hoje — hábitos      | labels encostadas no controle anterior        | 8 px label/controle e 16 px campo/campo         |
+| Hoje — sessão vazia | divisor junto ao título; ícone separado       | 16 px após título/divisor; ícone na mesma linha |
+| Plano semanal       | 4 px dentro e 12 px entre campos              | 8 px dentro e 16 px entre campos                |
+| Sessão avulsa       | labels consecutivas com 0 px                  | agrupador explícito com gap de 16 px            |
+| Histórico           | filtros em 12 px e campos do registro em 8 px | campos separados por 16 px                      |
+| Progresso e Conta   | `h2` e conteúdo separados por 12 px           | `h2` e primeiro conteúdo separados por 16 px    |
+
+O teste Playwright `phase 15 preserves internal field and heading rhythm across authenticated
+pages` percorre Hoje, Catálogo, Plano semanal, Sessão avulsa, Histórico, Progresso e Conta. Ele
+mede a geometria computada e falha abaixo de 8 px entre label/controle ou 16 px entre campos e entre
+`h2`/conteúdo.
 
 ## Estados e jornadas
 
@@ -64,8 +81,9 @@ destino correspondente.
 
 O titular aprovou a rodada final das telas abertas no Chrome em mobile e desktop e autorizou o
 commit e o push em 15/07/2026. Essa aprovação encerra a implementação, mas não autoriza reutilizar
-os snapshots reprovados. O checklist AC-09 em iPhone, Android/Chrome e desktop físico continua
-necessário; emulação e extensão do Chrome não substituem essa evidência.
+os snapshots reprovados. Em 16/07/2026, o titular confirmou separadamente que executou e aprovou
+o checklist AC-09 em iPhone, Android/Chrome e desktop físicos. Modelos, versões e capturas não
+foram registrados; a evidência disponível é a declaração direta do titular.
 
 | Área           | Mobile | Desktop | Decisão humana |
 | -------------- | ------ | ------- | -------------- |

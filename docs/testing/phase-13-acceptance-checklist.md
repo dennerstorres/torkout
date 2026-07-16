@@ -14,7 +14,7 @@ deve informar data, ambiente e responsável, sem marcar emulação como aparelho
 | AC-06 | PASSOU    | Conflito explícito entre dois dispositivos: `release.integration.test.ts` e componentes de resolução.        |
 | AC-07 | PASSOU    | Progressão explicável/opcional/versionada: contratos, domínio, integração e E2E de progressão.               |
 | AC-08 | PASSOU    | JSON e CSV ZIP: contratos, serialização, isolamento, round-trip e E2E de portabilidade.                      |
-| AC-09 | BLOQUEADO | Instalação/teste físico iPhone, Android e desktop: `phase-11-device-checklist.md` permanece sem evidência.   |
+| AC-09 | PASSOU    | Instalação/teste físico em iPhone, Android e desktop confirmados pelo titular em 16/07/2026.                 |
 | AC-10 | BLOQUEADO | Backup externo/restauração real: ensaio local passou, mas bucket/lifecycle/Coolify ainda não foram providos. |
 | AC-11 | PASSOU    | Threat model, aviso de privacidade e incidente estão versionados em `docs/`.                                 |
 | AC-12 | PASSOU    | Trivy oficial 0.72.0: imagens finais API e web com zero HIGH/CRITICAL corrigível em 15/07/2026.              |

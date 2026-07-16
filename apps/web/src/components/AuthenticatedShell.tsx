@@ -30,11 +30,13 @@ interface Props {
   pendingCount: number;
   pendingOperations?: OutboxEntry[];
   state: SyncState;
+  version?: string;
   view: AuthenticatedView;
 }
 
 export function AuthenticatedShell(props: Props) {
   const unhealthy = props.state !== 'synced';
+  const version = props.version ?? import.meta.env.VITE_APP_VERSION ?? 'desenvolvimento';
   return (
     <div className="app-shell">
       <aside className="app-sidebar">
@@ -55,6 +57,7 @@ export function AuthenticatedShell(props: Props) {
             <small>Minha conta</small>
           </span>
         </button>
+        <small className="sidebar-version">Versão {version}</small>
       </aside>
       <div className="app-column">
         <header className="app-header">

@@ -84,7 +84,7 @@ export function AccountScreen({
 
   return (
     <main className="centered-layout">
-      <section className="card wide-card">
+      <section className="card wide-card account-card">
         <button className="back-button" type="button" onClick={onBack}>
           ← Voltar
         </button>
@@ -167,13 +167,6 @@ export function AccountScreen({
         <section className="account-section" aria-labelledby="account-app-title">
           <h2 id="account-app-title">Aplicativo</h2>
           <p>Versão {version}</p>
-          <details className="account-installation">
-            <summary>Ver instruções de instalação</summary>
-            <p>
-              No iPhone ou iPad, use Compartilhar no Safari e escolha “Adicionar à Tela de Início”.
-            </p>
-            <p>No Android ou computador, abra o menu do Chrome e escolha “Instalar aplicativo”.</p>
-          </details>
         </section>
         <section className="account-section danger-zone" aria-labelledby="account-danger-title">
           <h2 id="account-danger-title">Zona de risco</h2>

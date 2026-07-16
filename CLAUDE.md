@@ -174,6 +174,10 @@ Não registrar dados reais de usuário, tokens, segredos ou payloads de saúde.
 - Atualização do service worker não pode perder trabalho.
 - Tratar estados loading, vazio, offline, erro, pendente e conflito.
 - Testar em viewport móvel desde o primeiro componente.
+- Seguir `DESIGN.md`: label → controle usa 8 px; campos completos e `h2` → conteúdo usam 16 px.
+  Pais de campos repetidos declaram grid/flex e gap explícito; nunca dependem do fluxo de bloco.
+- Toda correção de ritmo interno deve auditar as demais páginas autenticadas e incluir regressão
+  geométrica para impedir que labels, controles, títulos ou divisores voltem a ficar colados.
 - Verificação final obrigatória em iPhone físico.
 
 ## 13. Dependências e simplicidade

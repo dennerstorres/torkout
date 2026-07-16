@@ -11,7 +11,13 @@ const modeTitle: Record<Mode, string> = {
   register: 'Crie sua conta',
 };
 
-export function AuthScreen({ api }: { api: AppApi }) {
+export function AuthScreen({
+  api,
+  version = import.meta.env.VITE_APP_VERSION ?? 'desenvolvimento',
+}: {
+  api: AppApi;
+  version?: string;
+}) {
   const [mode, setMode] = useState<Mode | null>(null);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
@@ -135,7 +141,7 @@ export function AuthScreen({ api }: { api: AppApi }) {
 
       <footer className="auth-footer">
         <span>Privacidade e portabilidade desde o primeiro registro.</span>
-        <span>© 2026 Torkout</span>
+        <span>© 2026 Torkout · Versão {version}</span>
       </footer>
 
       {mode && (

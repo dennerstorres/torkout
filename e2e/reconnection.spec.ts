@@ -67,10 +67,10 @@ test('retries a committed batch after a lost response without duplicating local 
   await page.getByLabel('Segunda-feira').check();
   await page.getByRole('button', { name: 'Salvar planejamento' }).click();
 
-  await page.getByRole('button', { name: 'Sincronizar agora' }).click();
-  await expect(page.getByText('Não foi possível sincronizar. Nada foi perdido.')).toBeVisible();
   await page.getByLabel('Abrir detalhes da sincronização').click();
   const syncDetails = page.getByRole('region', { name: 'Sincronização' });
+  await syncDetails.getByRole('button', { name: 'Sincronizar agora' }).click();
+  await expect(page.getByText('Não foi possível sincronizar. Nada foi perdido.')).toBeVisible();
   await expect(syncDetails.getByRole('status')).toContainText(
     `${initialBatchSize} alterações pendentes`,
   );

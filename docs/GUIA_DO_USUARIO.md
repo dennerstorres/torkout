@@ -300,8 +300,21 @@ Conversões úteis:
 
 ## 9. Hábitos do dia
 
-Os hábitos selecionados no primeiro acesso aparecem em **Hoje → Hábitos do dia**. Escolha ou
-informe o valor correspondente e aguarde a indicação de que foi salvo localmente.
+Os hábitos selecionados no primeiro acesso e os hábitos personalizados ativos aparecem em
+**Hoje → Hábitos do dia**. Escolha ou informe o valor correspondente e aguarde a indicação de
+que foi salvo localmente.
+
+### Criar e gerenciar hábitos
+
+1. Abra **Planejamento** e escolha **Hábitos**.
+2. Informe o nome e escolha o tipo: sim/não, quantidade, escala numérica ou escolha.
+3. Para quantidade ou escala, informe uma unidade opcional. Para escolha, cadastre ao menos duas
+   opções.
+4. Toque em **Adicionar hábito**. O cadastro funciona offline e fica pendente de sincronização.
+
+Na mesma área você pode editar, ativar, desativar ou excluir um hábito. Desativar remove o hábito
+da tela Hoje sem apagar registros anteriores. Para preservar a identificação do histórico, um
+hábito que já possui registros pode ser desativado, mas não excluído.
 
 Para o checklist do HTML, os hábitos mais relevantes são:
 

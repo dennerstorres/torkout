@@ -150,6 +150,27 @@ export async function queueLocalMutation(
       .equals([input.entityType, input.entityId])
       .filter((entry) => entry.state === 'pending')
       .last();
+    if (queued && input.operation === 'delete') {
+      if (queued.operation === 'create') {
+        created = queued;
+        await database.outbox.delete(queued.operationId);
+        await database.records.delete(key);
+        return;
+      }
+      created = { ...queued, operation: 'delete', payload: {} };
+      await database.outbox.put(created);
+      await database.records.put({
+        data: current?.data ?? {},
+        deletedAt: now.toISOString(),
+        entityId: input.entityId,
+        entityType: input.entityType,
+        key,
+        syncStatus: 'pending',
+        updatedAt: now.toISOString(),
+        version: queued.baseVersion ?? current?.version ?? 0,
+      });
+      return;
+    }
     if (queued && input.operation === 'update' && queued.operation !== 'delete') {
       const data = { ...current?.data, ...input.payload };
       created = {

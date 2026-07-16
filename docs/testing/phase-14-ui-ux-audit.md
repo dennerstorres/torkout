@@ -29,5 +29,6 @@ Data: 15/07/2026
 
 ## Limite da evidência
 
-Os testes automatizados validam viewports e regras CSS, mas não substituem o checklist físico de AC-09 em
-iPhone, Android e desktop. Esse gate continua bloqueando o lançamento público conforme a Fase 13.
+Os testes automatizados não substituem aparelhos reais. O checklist físico AC-09 foi posteriormente
+executado e aprovado pelo titular em iPhone, Android e desktop em 16/07/2026; modelos e versões não
+foram registrados.

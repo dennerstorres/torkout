@@ -30,7 +30,11 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 
 import { ApiHttpError, type ApiDependencies, requireAuthenticatedUser } from './auth-routes.js';
-import { insertHabitDefinition, loadHabitDefinition } from './daily-routes.js';
+import {
+  insertHabitDefinition,
+  loadHabitDefinition,
+  reconcileHabitOptions,
+} from './daily-routes.js';
 import {
   applySessionExecution,
   insertSessionAggregate,
@@ -531,26 +535,7 @@ async function applyHabitDefinitionOperation(
     .set(changes)
     .where(and(eq(habitDefinitions.id, operation.entityId), eq(habitDefinitions.userId, userId)));
   if (options) {
-    await transaction
-      .update(habitOptions)
-      .set({ deletedAt: new Date() })
-      .where(
-        and(
-          eq(habitOptions.habitDefinitionId, operation.entityId),
-          eq(habitOptions.userId, userId),
-        ),
-      );
-    if (options.length > 0)
-      await transaction.insert(habitOptions).values(
-        options.map((option) => ({
-          habitDefinitionId: operation.entityId,
-          id: option.id ?? randomUUID(),
-          label: option.label,
-          sortOrder: option.sortOrder,
-          stableValue: option.stableValue,
-          userId,
-        })),
-      );
+    await reconcileHabitOptions(database, userId, operation.entityId, options);
   }
   const updated = await loadHabitDefinition(database, userId, operation.entityId);
   if (!updated) throw new Error('Habit definition update did not return an aggregate.');

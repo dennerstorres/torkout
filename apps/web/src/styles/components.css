@@ -218,6 +218,7 @@
 
 .sync-note {
   width: 100%;
+  max-width: none;
   margin: 0;
   border-left: 2px solid var(--color-success);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
@@ -273,6 +274,12 @@
 .empty-state h2,
 .empty-state p {
   margin: 0;
+}
+
+.empty-state__heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
 }
 
 .empty-state__icon {
@@ -454,6 +461,12 @@
   color: var(--color-text-muted);
 }
 
+.sidebar-version {
+  margin: var(--space-3) var(--space-2) 0;
+  color: var(--color-text-subtle);
+  font-size: 0.7rem;
+}
+
 .avatar {
   display: grid;
   width: 2.15rem;
@@ -466,61 +479,149 @@
 }
 
 .pwa-experience {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  width: min(100%, var(--content-wide));
-  margin: 0 auto;
-  padding: max(var(--space-2), env(safe-area-inset-top)) var(--space-4) 0;
+  position: fixed;
+  z-index: var(--layer-popover);
+  right: max(var(--space-4), env(safe-area-inset-right));
+  bottom: max(var(--space-4), env(safe-area-inset-bottom));
 }
 
-body:has(.app-shell) .pwa-experience--quiet {
-  display: none;
-}
-
-body:has(.auth-layout) .pwa-experience--quiet {
-  display: none;
-}
-
-.pwa-version,
-.pwa-installation summary small {
+.pwa-version {
   margin: 0;
   color: var(--color-text-subtle);
   font-size: 0.75rem;
 }
 
 .pwa-installation {
-  background: transparent;
-  color: var(--color-text-muted);
-  font-size: 0.78rem;
+  position: relative;
 }
 
 .pwa-installation summary {
   display: flex;
   align-items: center;
   min-height: 2.75rem;
-  gap: var(--space-3);
+  gap: var(--space-2);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+  background: var(--color-primary-strong);
+  box-shadow: var(--shadow-popover);
+  color: var(--color-primary-ink);
   cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 750;
+  padding: var(--space-2) var(--space-4);
+  list-style: none;
 }
 
-.pwa-installation[open] {
-  flex-basis: 100%;
+.pwa-installation summary::-webkit-details-marker {
+  display: none;
+}
+
+.pwa-installation__panel {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + var(--space-3));
+  display: grid;
+  width: min(28rem, calc(100vw - var(--space-8)));
   max-height: min(70dvh, 36rem);
   overflow: auto;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface-raised);
+  box-shadow: var(--shadow-popover);
+  gap: var(--space-4);
   padding: var(--space-4);
+}
+
+.pwa-attention {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--color-warning);
+  box-shadow: 0 0 0 2px rgb(16 22 0 / 18%);
 }
 
 .pwa-update {
   display: grid;
   gap: var(--space-2);
-  width: 100%;
   border-left: 2px solid var(--color-primary);
-  background: var(--color-surface-raised);
+  background: var(--color-canvas-soft);
   padding: var(--space-3);
+}
+
+.pwa-installation .installation-grid {
+  grid-template-columns: 1fr;
+}
+
+.pwa-installation .installation-grid h2 {
+  margin: 0 0 var(--space-1);
+  font-size: 0.85rem;
+}
+
+.pwa-installation .installation-grid p {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+}
+
+body:has(.app-shell) .pwa-experience {
+  bottom: calc(var(--shell-mobile-nav-height) + env(safe-area-inset-bottom) + var(--space-3));
+}
+
+@media (max-width: 55.99rem) {
+  body:has(.app-shell) .pwa-experience {
+    top: max(var(--space-2), env(safe-area-inset-top));
+    right: var(--space-4);
+    bottom: auto;
+  }
+
+  body:has(.app-shell) .pwa-installation > summary {
+    min-width: 3rem;
+    justify-content: center;
+    padding-inline: var(--space-3);
+  }
+
+  body:has(.app-shell) .pwa-installation > summary::before {
+    content: 'App';
+  }
+
+  body:has(.app-shell) .pwa-installation > summary > span:first-child {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  body:has(.app-shell) .pwa-installation__panel {
+    top: calc(100% + var(--space-3));
+    bottom: auto;
+  }
+
+  body:has(.app-shell) .app-header {
+    padding-right: 4.75rem;
+  }
+}
+
+@media (max-width: 22.49rem) {
+  body:has(.app-shell) .sync-popover > summary {
+    width: 2.75rem;
+    justify-content: center;
+    padding-inline: var(--space-2);
+  }
+
+  body:has(.app-shell) .sync-popover > summary > span:not(.sync-dot),
+  body:has(.app-shell) .sync-popover > summary > .icon {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  body:has(.app-shell) .app-header {
+    padding-right: 4.5rem;
+  }
 }
 
 .installation-grid,
@@ -535,5 +636,22 @@ body:has(.auth-layout) .pwa-experience--quiet {
 @media (min-width: 48rem) {
   .installation-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 56rem) {
+  body:has(.app-shell) .pwa-experience {
+    top: max(var(--space-2), env(safe-area-inset-top));
+    right: var(--space-5);
+    bottom: auto;
+  }
+
+  body:has(.app-shell) .pwa-installation__panel {
+    top: calc(100% + var(--space-3));
+    bottom: auto;
+  }
+
+  body:has(.app-shell) .app-header {
+    padding-right: 10rem;
   }
 }

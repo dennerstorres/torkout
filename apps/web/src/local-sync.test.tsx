@@ -128,6 +128,72 @@ describe('local-first replica', () => {
     });
   });
 
+  it('cancels a pending local creation when it is deleted before synchronization', async () => {
+    const database = await databaseFor(users.first);
+    const entityId = '70000000-0000-4000-8000-000000000011';
+    await queueLocalMutation(database, {
+      entityId,
+      entityType: 'habit_definition',
+      operation: 'create',
+      payload: { active: true, name: 'Alongamento', options: [], sortOrder: 0, type: 'boolean' },
+    });
+
+    await queueLocalMutation(database, {
+      entityId,
+      entityType: 'habit_definition',
+      operation: 'delete',
+      payload: {},
+    });
+
+    expect(await database.records.get(`habit_definition:${entityId}`)).toBeUndefined();
+    expect(await database.outbox.count()).toBe(0);
+  });
+
+  it('replaces a pending update with one delete based on the synchronized version', async () => {
+    const database = await databaseFor(users.first);
+    const entityId = '70000000-0000-4000-8000-000000000012';
+    await database.records.put({
+      data: {
+        active: true,
+        name: 'Água',
+        options: [],
+        sortOrder: 0,
+        type: 'quantity',
+        unit: 'copos',
+      },
+      deletedAt: null,
+      entityId,
+      entityType: 'habit_definition',
+      key: `habit_definition:${entityId}`,
+      syncStatus: 'synced',
+      updatedAt: '2026-07-16T12:00:00.000Z',
+      version: 3,
+    });
+    const update = await queueLocalMutation(database, {
+      entityId,
+      entityType: 'habit_definition',
+      operation: 'update',
+      payload: { name: 'Hidratação' },
+    });
+
+    const deletion = await queueLocalMutation(database, {
+      entityId,
+      entityType: 'habit_definition',
+      operation: 'delete',
+      payload: {},
+    });
+
+    expect(deletion.operationId).toBe(update.operationId);
+    expect(await database.outbox.toArray()).toEqual([
+      expect.objectContaining({ baseVersion: 3, operation: 'delete', payload: {} }),
+    ]);
+    expect(await database.records.get(`habit_definition:${entityId}`)).toMatchObject({
+      deletedAt: expect.any(String),
+      syncStatus: 'pending',
+      version: 3,
+    });
+  });
+
   it('preserves pending work after an expired session and retries after reauthentication', async () => {
     const database = await databaseFor(users.first);
     await queueLocalMutation(database, {

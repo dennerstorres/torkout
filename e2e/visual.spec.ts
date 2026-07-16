@@ -79,6 +79,82 @@ function progressPayload(from: string, through: string) {
   };
 }
 
+async function internalRhythmViolations(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const isVisible = (element: HTMLElement) => {
+      const closedDisclosure = element.closest('details:not([open])');
+      if (closedDisclosure && element !== closedDisclosure.querySelector(':scope > summary')) {
+        return false;
+      }
+      const box = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return (
+        box.width > 0 && box.height > 0 && style.display !== 'none' && style.visibility !== 'hidden'
+      );
+    };
+    const violations: string[] = [];
+    const labels = [...document.querySelectorAll<HTMLElement>('main label')].filter((label) =>
+      isVisible(label),
+    );
+
+    for (const label of labels) {
+      const control = label.querySelector<HTMLElement>('input, select, textarea');
+      if (!control) continue;
+      const gap = Number.parseFloat(getComputedStyle(label).gap || '0');
+      if (gap < 8) {
+        violations.push(`label-controle: ${label.innerText.trim().slice(0, 48)} (${gap}px)`);
+      }
+    }
+
+    const parents = new Set(labels.map((label) => label.parentElement).filter(Boolean));
+    for (const parent of parents) {
+      const siblings = [...parent!.children].filter(
+        (element): element is HTMLElement =>
+          element instanceof HTMLElement && element.matches('label') && isVisible(element),
+      );
+      for (let index = 1; index < siblings.length; index += 1) {
+        const previous = siblings[index - 1]!;
+        const current = siblings[index]!;
+        if (
+          previous.classList.contains('inline-check') ||
+          current.classList.contains('inline-check')
+        ) {
+          continue;
+        }
+        const previousBox = previous.getBoundingClientRect();
+        const currentBox = current.getBoundingClientRect();
+        const horizontalOverlap =
+          Math.min(previousBox.right, currentBox.right) -
+          Math.max(previousBox.left, currentBox.left);
+        if (horizontalOverlap <= 0 || currentBox.top < previousBox.bottom - 1) continue;
+        const gap = currentBox.top - previousBox.bottom;
+        if (gap < 16) {
+          violations.push(
+            `campo-campo: ${previous.innerText.trim().slice(0, 24)} → ${current.innerText.trim().slice(0, 24)} (${Math.round(gap)}px)`,
+          );
+        }
+      }
+    }
+
+    for (const heading of document.querySelectorAll<HTMLElement>('main h2')) {
+      if (!isVisible(heading)) continue;
+      const next = heading.nextElementSibling;
+      if (!(next instanceof HTMLElement) || !isVisible(next)) continue;
+      const headingBox = heading.getBoundingClientRect();
+      const nextBox = next.getBoundingClientRect();
+      const horizontalOverlap =
+        Math.min(headingBox.right, nextBox.right) - Math.max(headingBox.left, nextBox.left);
+      if (horizontalOverlap <= 0 || nextBox.top < headingBox.bottom - 1) continue;
+      const gap = nextBox.top - headingBox.bottom;
+      if (gap < 16) {
+        violations.push(`título-conteúdo: ${heading.innerText.trim()} (${Math.round(gap)}px)`);
+      }
+    }
+
+    return violations;
+  });
+}
+
 for (const viewport of [
   { name: 'mobile', width: 390, height: 844 },
   { name: 'desktop', width: 1440, height: 900 },
@@ -93,6 +169,30 @@ for (const viewport of [
     await expect(page).toHaveScreenshot(`today-${viewport.name}.png`, { animations: 'disabled' });
   });
 }
+
+test('phase 15 preserves internal field and heading rhythm across authenticated pages', async ({
+  page,
+}) => {
+  await page.setViewportSize({ height: 900, width: 1440 });
+  await mockToday(page);
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Hoje', exact: true })).toBeVisible();
+  expect(await internalRhythmViolations(page)).toEqual([]);
+
+  await page.getByRole('button', { name: 'Planejamento', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Planejamento', exact: true })).toBeVisible();
+  expect(await internalRhythmViolations(page)).toEqual([]);
+  for (const area of ['Plano semanal', 'Sessão avulsa']) {
+    await page.getByRole('button', { name: area, exact: true }).click();
+    expect(await internalRhythmViolations(page)).toEqual([]);
+  }
+
+  for (const destination of ['Histórico', 'Progresso', 'Conta']) {
+    await page.getByRole('button', { name: destination, exact: true }).click();
+    await expect(page.getByRole('heading', { name: destination, exact: true })).toBeVisible();
+    expect(await internalRhythmViolations(page)).toEqual([]);
+  }
+});
 
 for (const width of [320, 360, 390, 430]) {
   test(`phase 15 layout invariants — ${width}px`, async ({ page }) => {
@@ -122,7 +222,11 @@ for (const width of [320, 360, 390, 430]) {
       ].filter((element) => {
         const box = element.getBoundingClientRect();
         const style = getComputedStyle(element);
+        const closedDisclosure = element.closest('details:not([open])');
+        const isClosedDisclosureSummary =
+          closedDisclosure && element === closedDisclosure.querySelector(':scope > summary');
         return (
+          (!closedDisclosure || isClosedDisclosureSummary) &&
           box.width > 0 &&
           box.height > 0 &&
           style.display !== 'none' &&
@@ -161,11 +265,21 @@ for (const viewport of [
         'aria-current',
         'page',
       );
-      const width = await page.evaluate(() => ({
-        document: document.documentElement.scrollWidth,
-        viewport: innerWidth,
-      }));
+      const width = await page.evaluate(() => {
+        const outlet = document.querySelector('.page-outlet')?.getBoundingClientRect();
+        const main = document.querySelector('.page-outlet > main')?.getBoundingClientRect();
+        return {
+          document: document.documentElement.scrollWidth,
+          mainLeft: main?.left ?? 0,
+          mainRight: main?.right ?? 0,
+          outletLeft: outlet?.left ?? 0,
+          outletRight: outlet?.right ?? 0,
+          viewport: innerWidth,
+        };
+      });
       expect(width.document).toBeLessThanOrEqual(width.viewport);
+      expect(Math.abs(width.mainLeft - width.outletLeft)).toBeLessThanOrEqual(1);
+      expect(Math.abs(width.mainRight - width.outletRight)).toBeLessThanOrEqual(1);
       if (destination === 'Hoje' && viewport.width >= 1024) {
         const complementary = await page.evaluate(() =>
           [...document.querySelectorAll('.today-complementary-grid > *')].map((element) => {

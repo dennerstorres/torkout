@@ -25,8 +25,8 @@
 
 ## Dispositivos e abertura
 
-- [ ] Checklist físico da Fase 11 completo em iPhone, Android e desktop.
-- [ ] Hoje offline aprovado em iPhone físico; instalação/retomada/update aprovados nos três alvos.
-- [ ] Leitor de tela, teclado, zoom, contraste e linguagem de saúde revisados manualmente.
+- [x] Checklist físico da Fase 11 completo em iPhone, Android e desktop.
+- [x] Hoje offline aprovado em iPhone físico; instalação/retomada/update aprovados nos três alvos.
+- [x] Leitor de tela, teclado, zoom, contraste e linguagem de saúde revisados manualmente.
 - [ ] `phase-13-acceptance-checklist.md` sem `BLOQUEADO` ou `PENDENTE`.
 - [ ] Release notes publicadas e responsável autorizou explicitamente a abertura.

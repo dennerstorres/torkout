@@ -9,9 +9,10 @@ Status: proposta aprovável. Este documento orienta implementação, mas não re
 | Overflow horizontal | zero em 320, 360, 390 e 430 px e com zoom de 200%                                       |
 | Layout shift        | CLS de rota/carga assíncrona ≤ 0,05; nenhuma troca desloca o `h1` para fora da viewport |
 | Alvo interativo     | mínimo 44 × 44 CSS px; espaçamento mínimo de 8 px entre ações concorrentes              |
+| Ritmo interno       | label → controle 8 px; campo → campo e `h2` → conteúdo/divisor 16 px; nunca 0 px        |
 | Contraste           | WCAG 2.2 AA: 4,5:1 para texto normal e 3:1 para texto grande/controles                  |
 | Largura de leitura  | texto explicativo até 65 caracteres por linha, independente do container da feature     |
-| Conteúdo            | 320 px a 90 rem, com largura específica por feature; nunca largura única global         |
+| Conteúdo            | área autenticada preenche o outlet após a sidebar; texto explicativo continua em 65ch   |
 | Camadas             | base, sticky, navigation, popover e dialog; sem valores avulsos fora dos tokens         |
 | Movimento           | 120–200 ms para feedback local; zero deslocamento não essencial com reduced motion      |
 | Navegação           | destino ativo, `h1`, conteúdo e foco mudam no mesmo commit React                        |
@@ -29,13 +30,13 @@ Status: proposta aprovável. Este documento orienta implementação, mas não re
 
 ## Matriz responsiva
 
-| Faixa        | Shell                                | Conteúdo                                                   | Formulários e ações                                          |
-| ------------ | ------------------------------------ | ---------------------------------------------------------- | ------------------------------------------------------------ |
-| 320–430 px   | header compacto + nav inferior       | uma coluna; 16 px laterais                                 | campos empilhados; ação principal alcançável com polegar     |
-| 431–767 px   | mesmo shell mobile                   | uma coluna confortável; 20 px laterais                     | pares curtos somente quando não houver truncamento           |
-| 768–1023 px  | rail/sidebar compacta após validação | mestre/detalhe quando cada painel mantiver ≥ 320 px        | ações agrupadas por seção                                    |
-| 1024–1599 px | sidebar proporcional e header baixo  | largura por feature, até 90 rem                            | toolbar horizontal e detalhe lateral quando útil             |
-| ≥ 1600 px    | shell não cresce indefinidamente     | margens externas aumentam; texto mantém largura de leitura | nenhuma linha de formulário é esticada para preencher espaço |
+| Faixa        | Shell                                | Conteúdo                                                    | Formulários e ações                                      |
+| ------------ | ------------------------------------ | ----------------------------------------------------------- | -------------------------------------------------------- |
+| 320–430 px   | header compacto + nav inferior       | uma coluna; 16 px laterais                                  | campos empilhados; ação principal alcançável com polegar |
+| 431–767 px   | mesmo shell mobile                   | uma coluna confortável; 20 px laterais                      | pares curtos somente quando não houver truncamento       |
+| 768–1023 px  | rail/sidebar compacta após validação | mestre/detalhe quando cada painel mantiver ≥ 320 px         | ações agrupadas por seção                                |
+| 1024–1599 px | sidebar proporcional e header baixo  | toda a largura útil do outlet; texto mantém largura legível | toolbar horizontal e detalhe lateral quando útil         |
+| ≥ 1600 px    | sidebar fixa e header baixo          | toda a largura útil; limites são aplicados aos filhos       | subgrades mantêm controles e leitura coerentes           |
 
 ## Wireframes aprováveis
 
@@ -50,8 +51,9 @@ Status: proposta aprovável. Este documento orienta implementação, mas não re
 [dor e medidas — recolhidos, com estado e último registro]
 ```
 
-No desktop, resumo e registros rápidos podem ocupar uma coluna auxiliar, mas o treino nunca herda
-a altura dessa coluna. No mobile, métricas fluem em uma lista de três itens ou grid 1 × 3, sem 2 + 1.
+No desktop, a sessão usa a largura do outlet e os três registros complementares formam colunas
+equivalentes; o treino nunca herda a altura desses registros. No mobile, métricas fluem em uma
+lista de três itens ou grid 1 × 3, sem 2 + 1.
 
 ### Planejamento
 
@@ -111,6 +113,8 @@ fica por último e não recebe a maior superfície da página.
 ## Gates antes do aceite
 
 - Invariantes geométricas em todos os viewports e zoom suportados.
+- Ritmo renderizado em todas as páginas autenticadas: 8 px dentro de cada campo e 16 px entre
+  campos, títulos, divisores e o conteúdo que os sucede.
 - Navegação a partir de scroll profundo, antes e depois de cargas assíncronas.
 - Axe, teclado, reduced motion, forced colors e leitor de tela.
 - Comparação lado a lado com este contrato e registro de decisão humana por tela/viewport.

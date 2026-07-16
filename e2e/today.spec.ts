@@ -122,6 +122,10 @@ test('tracks Today offline on mobile and survives reload', async ({ page }) => {
 
   networkAvailable = true;
   await page.evaluate(() => window.dispatchEvent(new Event('online')));
-  await page.getByRole('button', { name: 'Sincronizar agora' }).click();
+  await page.getByLabel('Abrir detalhes da sincronização').click();
+  await page
+    .getByRole('region', { name: 'Sincronização' })
+    .getByRole('button', { name: 'Sincronizar agora' })
+    .click();
   await expect.poll(() => pushedExecution).toBe(true);
 });

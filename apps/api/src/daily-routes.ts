@@ -155,6 +155,87 @@ export async function insertHabitDefinition(
   });
 }
 
+export async function reconcileHabitOptions(
+  database: DatabaseClient,
+  userId: string,
+  habitDefinitionId: string,
+  options: HabitDefinitionCreate['options'],
+): Promise<void> {
+  const existing = await database
+    .select()
+    .from(habitOptions)
+    .where(
+      and(eq(habitOptions.habitDefinitionId, habitDefinitionId), eq(habitOptions.userId, userId)),
+    );
+  const referenced = new Set(
+    (
+      await database
+        .select({ selectedOptionId: habitEntries.selectedOptionId })
+        .from(habitEntries)
+        .where(
+          and(
+            eq(habitEntries.habitDefinitionId, habitDefinitionId),
+            eq(habitEntries.userId, userId),
+          ),
+        )
+    )
+      .map((entry) => entry.selectedOptionId)
+      .filter((id): id is string => id !== null),
+  );
+  const retainedIds = new Set<string>();
+  for (const option of options) {
+    const matched = option.id
+      ? existing.find((candidate) => candidate.id === option.id)
+      : existing.find((candidate) => candidate.stableValue === option.stableValue);
+    if (option.id && !matched) {
+      throw new ApiHttpError(400, 'INVALID_HABIT_OPTION', 'Opção de hábito inválida.');
+    }
+    if (matched) {
+      retainedIds.add(matched.id);
+      await database
+        .update(habitOptions)
+        .set({
+          deletedAt: null,
+          label: option.label,
+          sortOrder: option.sortOrder,
+          stableValue: option.stableValue,
+        })
+        .where(
+          and(
+            eq(habitOptions.id, matched.id),
+            eq(habitOptions.userId, userId),
+            eq(habitOptions.habitDefinitionId, habitDefinitionId),
+          ),
+        );
+    } else {
+      const id = randomUUID();
+      retainedIds.add(id);
+      await database.insert(habitOptions).values({
+        habitDefinitionId,
+        id,
+        label: option.label,
+        sortOrder: option.sortOrder,
+        stableValue: option.stableValue,
+        userId,
+      });
+    }
+  }
+  for (const option of existing) {
+    if (!retainedIds.has(option.id) && !referenced.has(option.id)) {
+      await database
+        .update(habitOptions)
+        .set({ deletedAt: new Date() })
+        .where(
+          and(
+            eq(habitOptions.id, option.id),
+            eq(habitOptions.userId, userId),
+            eq(habitOptions.habitDefinitionId, habitDefinitionId),
+          ),
+        );
+    }
+  }
+}
+
 async function validatePainLinks(
   database: DatabaseClient,
   userId: string,
@@ -301,30 +382,17 @@ export function registerDailyRoutes(app: FastifyInstance, dependencies: ApiDepen
     const { id } = parse(idParamsSchema, request.params);
     const input = parse(habitDefinitionUpdateSchema, request.body);
     const { options, ...changes } = input;
-    const [updated] = await dependencies.database
-      .update(habitDefinitions)
-      .set(changes)
-      .where(and(eq(habitDefinitions.id, id), eq(habitDefinitions.userId, user.id)))
-      .returning();
-    if (!updated) throw new ApiHttpError(404, 'HABIT_NOT_FOUND', 'Hábito não encontrado.');
-    if (options) {
-      await dependencies.database
-        .update(habitOptions)
-        .set({ deletedAt: new Date() })
-        .where(and(eq(habitOptions.habitDefinitionId, id), eq(habitOptions.userId, user.id)));
-      if (options.length > 0) {
-        await dependencies.database.insert(habitOptions).values(
-          options.map((option) => ({
-            habitDefinitionId: id,
-            id: option.id ?? randomUUID(),
-            label: option.label,
-            sortOrder: option.sortOrder,
-            stableValue: option.stableValue,
-            userId: user.id,
-          })),
-        );
+    await dependencies.database.transaction(async (transaction) => {
+      const [updated] = await transaction
+        .update(habitDefinitions)
+        .set(changes)
+        .where(and(eq(habitDefinitions.id, id), eq(habitDefinitions.userId, user.id)))
+        .returning();
+      if (!updated) throw new ApiHttpError(404, 'HABIT_NOT_FOUND', 'Hábito não encontrado.');
+      if (options) {
+        await reconcileHabitOptions(transaction as unknown as DatabaseClient, user.id, id, options);
       }
-    }
+    });
     return loadHabitDefinition(dependencies.database, user.id, id);
   });
 

@@ -19,6 +19,7 @@ describe('authenticated application shell', () => {
           onSync={vi.fn()}
           pendingCount={state === 'pending' ? 2 : 0}
           state={state}
+          version="1.2.3"
           view="today"
         >
           <main>
@@ -27,6 +28,7 @@ describe('authenticated application shell', () => {
         </AuthenticatedShell>,
       );
       expect(screen.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible();
+      expect(screen.getByText('Versão 1.2.3')).toBeInTheDocument();
       expect(screen.getAllByRole('status').length).toBeGreaterThan(0);
       fireEvent.click(screen.getByRole('button', { name: 'Planejamento' }));
       expect(onNavigate).toHaveBeenCalledWith('planning');

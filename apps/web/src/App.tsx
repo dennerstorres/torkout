@@ -316,7 +316,6 @@ function AppContent({ api }: { api: AppApi }) {
       <PlanningScreen
         database={sync.database}
         onBack={() => setView('today')}
-        onSync={() => void sync.sync()}
         syncState={offline ? 'offline' : sync.snapshot.state}
       />
     );
@@ -327,7 +326,6 @@ function AppContent({ api }: { api: AppApi }) {
         name={name}
         onBack={() => setView('today')}
         onPlan={() => setView('planning')}
-        onSync={() => void sync.sync()}
         syncState={offline ? 'offline' : sync.snapshot.state}
         timeZone={timeZone}
       />

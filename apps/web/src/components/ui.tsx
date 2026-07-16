@@ -212,10 +212,12 @@ export function EmptyState({
 }) {
   return (
     <div className="empty-state">
-      <span className="empty-state__icon">
-        <Icon name="sparkles" size={24} />
-      </span>
-      <h2>{title}</h2>
+      <div className="empty-state__heading">
+        <span className="empty-state__icon">
+          <Icon name="sparkles" size={24} />
+        </span>
+        <h2>{title}</h2>
+      </div>
       <p>{children}</p>
       {action}
     </div>

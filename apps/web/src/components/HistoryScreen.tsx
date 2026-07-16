@@ -144,7 +144,7 @@ export function HistoryScreen({
   const habits = useMemo(
     () =>
       records.filter(
-        (record) => record.entityType === 'habit_definition' && record.data.active !== false,
+        (record) => record.entityType === 'habit_definition' && record.deletedAt === null,
       ),
     [records],
   );

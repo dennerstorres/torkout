@@ -96,6 +96,27 @@ async function seed() {
 describe('calendar and historical editing', () => {
   afterEach(async () => deleteUserSyncDatabase(userId));
 
+  it('keeps entries identified after their habit is deactivated', async () => {
+    const database = await seed();
+    const definition = await database.records.get(entityKey('habit_definition', habitId));
+    await database.records.put({
+      ...definition!,
+      data: { ...definition!.data, active: false },
+    });
+    render(
+      <HistoryScreen
+        database={database}
+        initialMonth="2026-07"
+        onBack={vi.fn()}
+        today="2026-07-14"
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /13 de julho/i }));
+    expect(screen.getByLabelText('Proteína')).toHaveValue(2);
+    database.close();
+  });
+
   it('shows walk and strength badges separately, sync state, and never marks rest as missed', async () => {
     const database = await seed();
     render(

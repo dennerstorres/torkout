@@ -84,6 +84,10 @@ test('plans offline on a mobile viewport and keeps the outbox across reload', as
   );
 
   networkAvailable = true;
-  await page.getByRole('button', { name: 'Sincronizar agora' }).click();
+  await page.getByLabel('Abrir detalhes da sincronização').click();
+  await page
+    .getByRole('region', { name: 'Sincronização' })
+    .getByRole('button', { name: 'Sincronizar agora' })
+    .click();
   await expect.poll(() => pushedOperations).toBeGreaterThanOrEqual(2);
 });

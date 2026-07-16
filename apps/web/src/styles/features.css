@@ -3,21 +3,15 @@
 .history-layout,
 .analytics-layout {
   display: grid;
-  gap: var(--space-4);
+  width: 100%;
+  max-width: none;
+  gap: var(--space-5);
   align-content: start;
-}
-
-.today-layout {
-  max-width: var(--content-standard);
-}
-
-.planning-layout {
-  max-width: var(--content-standard);
 }
 
 .planning-tabs {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space-2);
   padding: var(--space-1);
   border: 1px solid var(--color-border);
@@ -37,11 +31,6 @@
   color: var(--color-primary-strong);
 }
 
-.history-layout,
-.analytics-layout {
-  max-width: var(--content-wide);
-}
-
 .today-greeting {
   margin-bottom: 0;
 }
@@ -49,13 +38,24 @@
 .today-summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-3);
+  width: 100%;
+  gap: var(--space-4);
 }
 
 .today-complementary-grid {
   display: grid;
   min-width: 0;
   gap: var(--space-4);
+}
+
+.today-habits {
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+}
+
+.sessions-section > .empty-state {
+  margin-top: var(--space-4);
 }
 
 .today-section,
@@ -73,10 +73,10 @@
 .secondary-disclosure > summary {
   display: flex;
   align-items: center;
-  min-height: 4.25rem;
+  min-height: 5.5rem;
   cursor: pointer;
   list-style: none;
-  padding: var(--space-4);
+  padding: var(--space-6);
 }
 
 .secondary-disclosure > summary::-webkit-details-marker {
@@ -106,7 +106,7 @@
 
 .secondary-disclosure > .today-section {
   border-top: 1px solid var(--color-border);
-  padding: var(--space-4);
+  padding: var(--space-6);
 }
 
 .secondary-disclosure > .today-section h2 {
@@ -166,23 +166,105 @@
   width: 100%;
 }
 
-.sticky-action {
-  width: fit-content;
-  justify-self: end;
-}
-
 .planning-section form {
   margin-top: var(--space-4);
+}
+
+.planning-section > h2,
+.history-detail > h2 {
+  margin-bottom: var(--space-4);
 }
 
 .exercise-catalog-list {
   margin-top: var(--space-4);
 }
 
-.weekly-plan-form,
+.habit-management-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.habit-management-list > li {
+  display: grid;
+  gap: var(--space-3);
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-3);
+}
+
+.habit-management-list > li > div:first-child {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.habit-management-list span {
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+}
+
+.habit-options-editor,
+.habit-option-row {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.habit-options-editor {
+  margin: 0;
+}
+
+@media (max-width: 34rem) {
+  .planning-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.weekly-plan-basics,
+.weekly-plan-exercises,
+.weekly-plan-schedule {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.weekly-plan-form {
+  display: grid;
+  gap: var(--space-6);
+}
+
 .weekday-options {
   display: grid;
   gap: var(--space-3);
+}
+
+.weekly-plan-exercises {
+  align-items: start;
+}
+
+.exercise-draft-card {
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+  background: var(--color-canvas-soft);
+}
+
+.exercise-draft-card label {
+  gap: var(--space-2);
+}
+
+.exercise-draft {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.remove-exercise-button {
+  width: fit-content;
+}
+
+.add-exercise-button {
+  width: 100%;
 }
 
 .weekday-picker {
@@ -235,7 +317,11 @@
 
 .history-filters,
 .history-fields,
-.analytics-custom-range,
+.analytics-custom-range {
+  display: grid;
+  gap: var(--space-4);
+}
+
 .indicator-grid,
 .analytics-grid {
   display: grid;
@@ -251,7 +337,7 @@
 
 .history-filter-toggle {
   width: 100%;
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-4);
   border-style: dashed;
   background: transparent;
   color: var(--color-text-muted);
@@ -378,7 +464,13 @@
   margin-top: var(--space-3);
 }
 
+.history-record > label + label {
+  margin-top: var(--space-2);
+}
+
 .analytics-filters {
+  display: grid;
+  gap: var(--space-4);
   border: 0;
   background: transparent;
   padding: 0;
@@ -452,7 +544,7 @@
 
 .accessible-chart h2,
 .analytics-summary h2 {
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .chart-visual {
@@ -506,7 +598,8 @@
 }
 
 .progression-card {
-  width: min(100%, 54rem) !important;
+  width: 100% !important;
+  max-width: none;
 }
 
 .progression-toolbar {
@@ -518,6 +611,19 @@
 .progression-item {
   display: grid;
   gap: var(--space-3);
+}
+
+.progression-list {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 28rem), 1fr));
+  gap: var(--space-5);
+}
+
+.progression-item {
+  align-content: start;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-canvas-soft);
+  padding: var(--space-5);
 }
 
 .progression-heading {
@@ -564,7 +670,7 @@
 }
 
 .account-section h2 {
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .account-section > p,
@@ -576,6 +682,12 @@
   display: grid;
   gap: var(--space-4);
   margin-top: var(--space-4);
+}
+
+.account-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
 }
 
 .auth-header,
@@ -835,18 +947,6 @@ body:has(.auth-dialog-backdrop) {
   color: var(--color-primary-strong);
 }
 
-.account-installation {
-  border-radius: var(--radius-sm);
-  background: var(--color-canvas-soft);
-  padding: var(--space-3);
-}
-
-.account-installation summary {
-  min-height: 2.75rem;
-  cursor: pointer;
-  font-weight: 650;
-}
-
 .danger-zone {
   border-color: rgb(255 123 115 / 35%);
 }
@@ -917,21 +1017,22 @@ body:has(.auth-dialog-backdrop) {
     grid-template-columns: minmax(0, 1.2fr) minmax(19rem, 0.8fr);
   }
 
-  .today-summary {
-    max-width: 42rem;
-  }
-
   .planning-section {
     padding: var(--space-6);
   }
 
-  .weekly-plan-form {
+  .weekly-plan-basics,
+  .weekly-plan-exercises {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .weekly-plan-form .weekday-picker,
-  .weekly-plan-form > button {
+  .weekly-plan-basics > label:last-child,
+  .weekly-plan-exercises > .add-exercise-button {
     grid-column: 1 / -1;
+  }
+
+  .weekly-plan-schedule {
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
   }
 
   .history-filters {
@@ -972,26 +1073,16 @@ body:has(.auth-dialog-backdrop) {
 }
 
 @media (min-width: 64rem) {
-  .today-layout {
-    grid-template-columns: minmax(0, 1.35fr) minmax(18rem, 0.65fr);
+  .weekly-plan-basics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .today-layout > .planning-header,
-  .today-layout > .sync-note,
-  .today-layout > .sessions-section,
-  .today-layout > .today-summary,
-  .today-layout > .today-complementary-grid,
-  .today-layout > .sticky-action,
-  .today-layout > button:not(.sticky-action) {
-    grid-column: 1 / -1;
+  .weekly-plan-basics > label:last-child {
+    grid-column: auto;
   }
 
   .today-complementary-grid {
-    grid-template-columns: minmax(0, 1.2fr) repeat(2, minmax(14rem, 0.9fr));
-  }
-
-  .history-layout {
-    grid-template-columns: minmax(32rem, 1.35fr) minmax(21rem, 0.65fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .history-detail {
@@ -1007,6 +1098,37 @@ body:has(.auth-dialog-backdrop) {
 
   .analytics-summary:first-child {
     grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 64rem) {
+  .account-card {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--space-6);
+  }
+
+  .account-card > :is(.back-button, .eyebrow, h1, [role='status']) {
+    grid-column: 1 / -1;
+  }
+
+  .account-card > .account-section:nth-of-type(1),
+  .account-card > .account-section:nth-of-type(4) {
+    grid-column: span 4;
+  }
+
+  .account-card > .account-section:nth-of-type(2),
+  .account-card > .account-section:nth-of-type(3) {
+    grid-column: span 8;
+  }
+
+  .account-card > .danger-zone {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 80rem) {
+  .history-layout {
+    grid-template-columns: minmax(32rem, 1.35fr) minmax(21rem, 0.65fr);
   }
 }
 

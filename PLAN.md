@@ -6,7 +6,7 @@
 
 **Unidade de entrega:** fase completa com commit de encerramento
 
-**Status geral:** Fases 0–17 implementadas; lançamento público ainda aguarda as validações físicas e externas
+**Status geral:** Fases 0–18 implementadas; validação física concluída, e lançamento público ainda aguarda validações externas
 
 ## 1. Regras de execução
 
@@ -447,7 +447,7 @@ O hash não é escrito no próprio `HISTORY.md`, evitando o ciclo em que alterar
 
 ### Fase 11 — PWA, iOS e acessibilidade
 
-**Status:** concluída por autorização do titular — validação física diferida para a Fase 13
+**Status:** concluída — validação física em iOS, Android e desktop confirmada em 16/07/2026
 
 **Commit esperado:** `feat(phase-11): harden pwa and mobile experience`
 
@@ -460,10 +460,10 @@ O hash não é escrito no próprio `HISTORY.md`, evitando o ciclo em que alterar
 - [x] Fluxo de instalação para iOS, Android e desktop.
 - [x] Safe areas e teclado móvel.
 - [x] Estado standalone e retomada.
-- [ ] Auditoria WCAG 2.2 AA (automática verde; verificação manual diferida para a Fase 13).
-- [ ] Navegação por teclado, foco e leitores de tela (automática verde; leitores físicos diferidos para a Fase 13).
+- [x] Auditoria WCAG 2.2 AA, incluindo verificação manual física.
+- [x] Navegação por teclado, foco e leitores de tela, incluindo verificação manual física.
 - [x] Contraste, movimento reduzido e alvos de toque.
-- [ ] Teste em iPhone e Android físicos (diferido para o gate de lançamento da Fase 13 por autorização explícita do titular em 15/07/2026).
+- [x] Teste em iPhone, Android e desktop físicos confirmado pelo titular em 16/07/2026.
 
 #### Testes primeiro
 
@@ -471,7 +471,7 @@ O hash não é escrito no próprio `HISTORY.md`, evitando o ciclo em que alterar
 - [x] App shell carrega offline.
 - [x] Atualização não perde formulário/outbox.
 - [x] Testes automatizados de acessibilidade nas jornadas.
-- [ ] Checklists manuais com aparelho, versão e evidência (diferidos para a Fase 13).
+- [x] Checklist manual em aparelhos físicos; modelos e versões não foram registrados pelo titular.
 
 #### Critérios de saída
 
@@ -481,8 +481,8 @@ O hash não é escrito no próprio `HISTORY.md`, evitando o ciclo em que alterar
 
 **Desvio autorizado:** em 15/07/2026, o titular solicitou o commit da fase e a continuidade
 para a Fase 12 por não poder executar os testes físicos agora. Os itens manuais permanecem
-abertos e voltam a ser bloqueadores obrigatórios na Fase 13; este desvio não vale como evidência
-de compatibilidade física nem autoriza lançamento público sem o checklist.
+abertos e voltaram como bloqueadores na Fase 13. O desvio foi encerrado em 16/07/2026 pela
+confirmação do titular em iPhone, Android e desktop físicos.
 
 ### Fase 12 — Segurança, observabilidade e operação
 
@@ -534,7 +534,7 @@ bloqueadores obrigatórios do lançamento; a autorização não vale como deploy
 
 ### Fase 13 — Validação integral e lançamento
 
-**Status:** concluída por autorização do titular — validações físicas e externas permanecem bloqueadoras do lançamento
+**Status:** concluída por autorização do titular — validações externas permanecem bloqueadoras do lançamento
 
 **Commit esperado:** `release(phase-13): validate public launch`
 
@@ -548,7 +548,7 @@ bloqueadores obrigatórios do lançamento; a autorização não vale como deploy
 - [x] Validar exportação e exclusão.
 - [x] Testar upgrade de versão anterior e rollback de aplicação.
 - [x] Fazer auditoria manual de privacidade e linguagem de saúde.
-- [ ] Fazer teste exploratório em iOS, Android e desktop.
+- [x] Fazer teste exploratório em iOS, Android e desktop físicos.
 - [x] Corrigir achados por TDD.
 - [x] Congelar schema/contratos da versão 1.0.
 - [x] Criar release notes e checklist de abertura pública.
@@ -570,9 +570,9 @@ PostgreSQL com 12 arquivos/50 testes; Playwright com 15/15 jornadas; restauraç�
 RPO 0,0003 hora e RTO 6,89 segundos; Trivy 0.72.0 encontrou zero HIGH/CRITICAL corrigível nas
 imagens finais da API e do web.
 
-**Bloqueadores de lançamento:** AC-09 depende do checklist físico em iPhone, Android e desktop;
-AC-10 depende de Coolify/HTTPS/DNS/SMTP, bucket/lifecycle e restauração a partir do objeto externo.
-Sem essas evidências, AC-01 permanece pendente e o produto não deve receber tag nem ser aberto ao
+**Bloqueadores de lançamento:** AC-09 foi aprovado pelo titular em 16/07/2026. AC-10 ainda depende
+de Coolify/HTTPS/DNS/SMTP, bucket/lifecycle e restauração a partir do objeto externo. Sem essa
+evidência externa, AC-01 permanece pendente e o produto não deve receber tag nem ser aberto ao
 público.
 
 **Desvio autorizado:** em 15/07/2026, depois de toda a validação local ficar verde, o titular
@@ -582,7 +582,7 @@ física/externa e não autoriza tag `v1.0.0`, deploy ou abertura pública.
 
 ### Fase 14 — Refactor UI/UX premium
 
-**Status:** implementada e validada localmente — checklist físico de AC-09 permanece pendente
+**Status:** implementada e validada — checklist físico de AC-09 aprovado em 16/07/2026
 
 **Commit esperado:** `feat(web): deliver premium UI UX refactor`
 
@@ -716,7 +716,7 @@ alteram regras ou fórmulas existentes.
 #### Etapa 14.6 — Polimento e remoção do legado
 
 - [x] Remover classes e componentes sem consumidores.
-- [ ] Validar em dispositivos físicos 360–430 px, tablet, desktop, zoom de 200%, teclado e safe areas de iOS (gate AC-09).
+- [x] Validar em dispositivos físicos mobile, desktop, zoom de 200%, teclado e safe areas de iOS (gate AC-09).
 - [x] Validar contraste, reduced motion e forced colors.
 - [x] Confirmar que fontes, ícones e assets necessários são cacheados pela PWA.
 - [x] Verificar bundle e manter lazy loading de análises.
@@ -772,7 +772,7 @@ de design. A recuperação, a nova direção visual e os novos gates de aceite p
 
 ### Fase 15 — Recuperação UI/UX premium e estabilização visual
 
-**Status:** implementação concluída e aceita — validações físicas e externas permanecem bloqueadoras do lançamento
+**Status:** implementação concluída e aceita — validação física concluída; gates externos permanecem
 
 **Commit esperado:** `feat(web): rebuild premium responsive experience`
 
@@ -1015,12 +1015,12 @@ compreensíveis e o acabamento permanece estável com conteúdo realista.
 
 - [x] Criar testes de regressão para scroll, layout shift, overflow e sobreposição de elementos
       fixed/sticky.
-- [ ] Validar componentes e jornadas com axe, teclado, leitor de tela, zoom de 200%, reduced motion,
+- [x] Validar componentes e jornadas com axe, teclado, leitor de tela, zoom de 200%, reduced motion,
       forced colors e alto contraste.
 - [x] Medir CLS das telas com carga assíncrona e manter o valor dentro do orçamento definido na
       Etapa 15.0.
 - [x] Validar 320, 360, 390 e 430 px; tablet retrato/paisagem; 1366, 1440 e 1920 px.
-- [ ] Validar iPhone com safe area, Android/Chrome e desktop em dispositivos físicos.
+- [x] Validar iPhone com safe area, Android/Chrome e desktop em dispositivos físicos.
 - [x] Executar jornadas completas online, offline, reconexão, conflito e reload com outbox pendente.
 - [x] Revisar cada tela lado a lado com o contrato visual e registrar aceite humano explícito.
 - [ ] Substituir snapshots legados somente depois do aceite humano de cada viewport.
@@ -1028,7 +1028,7 @@ compreensíveis e o acabamento permanece estável com conteúdo realista.
       estados representativos definidos na auditoria.
 - [x] Executar `pnpm check`, integração PostgreSQL, E2E, build, auditoria de bundle e verificações
       de release.
-- [ ] Atualizar `HISTORY.md`, screenshots, evidências e checklist AC-09.
+- [x] Atualizar `HISTORY.md`, evidências e checklist AC-09; snapshots novos continuam em tarefa própria.
 
 **Critério de saída:** aceite humano registrado para desktop e mobile; zero overflow ou
 sobreposição bloqueante; navegação e loading sem saltos; WCAG 2.2 AA; dispositivos físicos
@@ -1064,6 +1064,8 @@ validados; snapshots e gates completos verdes.
 - [x] Unificar marca do login, shell, favicon, Apple Touch Icon e ícones PWA na mesma fonte vetorial,
       com variante maskable restrita à área segura.
 - [x] Registrar novo aceite humano das áreas ajustadas e da landing em mobile e desktop.
+- [x] Formalizar o ritmo interno de 8 px entre label/controle e 16 px entre campos ou
+      título/conteúdo; auditar todas as páginas autenticadas e automatizar a geometria.
 
 #### Sequência de entregas
 
@@ -1173,10 +1175,44 @@ offline e cadastro manual de um calendário equivalente ao HTML que originou a a
 - Formatação, governança documental e links internos verdes.
 - `HISTORY.md` atualizado e fase encerrada em commit próprio.
 
+### Fase 18 — CRUD de hábitos diários personalizados
+
+**Status:** concluída
+
+**Commit esperado:** `feat(phase-18): add daily habit management`
+
+**Objetivo:** completar `HABIT-004` e `HABIT-005` com uma interface local-first para criar,
+consultar, editar, ativar, desativar e excluir logicamente hábitos personalizados, preservando o
+histórico e o isolamento por titular.
+
+#### Escopo
+
+- [x] Adicionar a área Hábitos ao Planejamento.
+- [x] Permitir criar hábitos booleanos, de quantidade, escala e escolha.
+- [x] Permitir editar nome, tipo, unidade e opções sem invalidar entradas históricas.
+- [x] Permitir ativar e desativar um hábito preservando seu histórico.
+- [x] Permitir exclusão lógica sincronizável e cancelamento seguro de criação ainda local.
+- [x] Atualizar o guia do usuário com o novo fluxo.
+
+#### Testes primeiro
+
+- [x] RED de componente para criação dos quatro tipos, edição, ativação/desativação e exclusão.
+- [x] RED de sincronização local para excluir criação pendente e substituir atualização pendente por tombstone.
+- [x] RED de API/sync para atualizar opções preservando IDs referenciados pelo histórico.
+- [x] Regressão de Hoje, Histórico, offline, typecheck, lint, formatação e build.
+
+#### Critérios de saída
+
+- O CRUD funciona offline e cada mutação aplicável gera dado local e outbox atomicamente.
+- Desativar ou excluir um hábito não apaga entradas históricas.
+- Opções de escolha já referenciadas não são removidas fisicamente nem recriadas com outro ID.
+- Testes afetados, typecheck, lint, formatação e build verdes.
+- `HISTORY.md` atualizado e fase encerrada em commit próprio.
+
 ## 5. Dependências entre fases
 
 ```text
-0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17
+0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18
 ```
 
 Trabalhos internos de uma mesma fase podem ser paralelos somente quando não compartilham arquivos ou contratos instáveis. O encerramento continua único.

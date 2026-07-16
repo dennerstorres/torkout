@@ -1318,3 +1318,113 @@ merge` e o teste no container confirmaram CSP e HSTS.
 ### Próximo passo
 
 - Publicar a versão que contém a migração 0009 e usar o guia para configurar a conta manualmente.
+
+## 2026-07-16 — Refinamento visual: contrato de ritmo interno
+
+**Status:** concluído
+
+### Escopo executado
+
+- O `DESIGN.md` passou a distinguir explicitamente os dois níveis do formulário: 8 px entre label
+  e controle e 16 px entre campos completos. Também fixa 16 px entre título/divisor e conteúdo e
+  mantém ícone e título do mesmo estado alinhados na mesma linha quando houver espaço.
+- A área autenticada desktop foi documentada conforme a implementação aprovada: ocupa toda a
+  largura útil restante após a sidebar; limites de leitura são responsabilidade dos filhos.
+- A auditoria transversal corrigiu Hoje, Plano semanal, Sessão avulsa, Histórico, Progresso e Conta,
+  removendo intervalos implícitos de 0, 4 ou 12 px onde o contrato exige 8 ou 16 px.
+- `CLAUDE.md`, o plano e os documentos de contrato/aceite registram que uma correção de espaçamento
+  deve verificar todas as páginas autenticadas, não apenas a rota que revelou o problema.
+
+### Evidência Red → Green
+
+- RED — o novo teste geométrico encontrou no Plano semanal 4 px entre label/controle, 12 px entre
+  campos e 12 px entre título/conteúdo; a auditoria manual encontrou labels consecutivas sem gap
+  explícito na Sessão avulsa, e a matriz encontrou 8 px entre campos do mesmo registro no Histórico.
+- GREEN — agrupadores passaram a usar grid/flex com gaps explícitos; o teste percorreu Hoje,
+  Catálogo, Plano semanal, Sessão avulsa, Histórico, Progresso e Conta sem violações.
+- REFACTOR — regras compartilhadas foram separadas por função para preservar gaps compactos apenas
+  em listas/indicadores e aplicar o ritmo de formulário aos campos.
+
+### Segurança, privacidade e dados
+
+- A alteração é exclusivamente visual e documental. Nenhum dado, contrato de API, persistência ou
+  regra de saúde foi modificado.
+
+### Pendências e riscos conhecidos
+
+- O gate físico foi encerrado posteriormente por confirmação do titular. Os snapshots novos da
+  Fase 15 continuam em uma rodada própria.
+
+## 2026-07-16 — Encerramento do gate físico PWA e AC-09
+
+**Status:** concluído por evidência manual do titular
+
+### Evidência registrada
+
+- O titular informou ter testado e aprovado a PWA em iPhone/iOS, Android/Chrome e desktop físicos.
+- A confirmação cobre instalação, abertura standalone, retomada, atualização segura, jornada Hoje
+  offline, reconexão, teclado, foco, zoom/contraste e leitores de tela previstos no checklist da
+  Fase 11.
+- Modelos, versões dos sistemas/navegadores e capturas não foram informados. O registro identifica
+  essa limitação e usa como evidência a declaração direta do titular em 16/07/2026, sem inventar
+  metadados.
+- O checklist da Fase 11 e o critério AC-09 da Fase 13 foram marcados como aprovados. Os itens de
+  dispositivos do checklist de abertura pública também foram concluídos.
+
+### Pendências e riscos conhecidos
+
+- AC-10 e AC-01 continuam abertos por dependerem das validações externas de produção, backup e
+  restauração. A conclusão de AC-09, isoladamente, não autoriza tag ou abertura pública.
+- Os novos snapshots visuais permanecem fora deste gate físico e continuam pendentes.
+
+## 2026-07-16 — Fase 18: CRUD de hábitos diários personalizados
+
+**Status:** concluída
+
+**Commit de encerramento:** `feat(phase-18): add daily habit management`
+
+### Escopo planejado
+
+- Completar a lacuna entre os contratos/API de hábitos personalizados e a interface, que hoje
+  permite apenas registrar os hábitos iniciais escolhidos no onboarding.
+- Entregar CRUD local-first dos quatro tipos previstos em `HABIT-001`, com desativação e exclusão
+  lógica que preservem entradas históricas.
+
+### Evidências TDD
+
+- RED web — quatro testes falharam pela ausência da aba Hábitos e pela incapacidade da outbox de
+  cancelar uma criação local ou substituir uma atualização pendente por exclusão.
+- RED de histórico — uma entrada deixou de mostrar o nome quando sua definição foi desativada.
+- RED PostgreSQL — REST e sync retornaram `500` ao editar opções existentes, pois o fluxo anterior
+  tombstonava e tentava reinserir os mesmos IDs/valores estáveis.
+- GREEN direcionado — Planejamento, sincronização local, Histórico e Hoje passaram com 25 testes;
+  a integração diária passou com 5 cenários.
+- GREEN de regressão — 38 arquivos e 164 testes unitários/componentes passaram; a integração
+  PostgreSQL completa passou com 12 arquivos e 50 testes; formatação, lint, tipagem e build
+  passaram separadamente.
+- REFACTOR — a gestão de hábitos foi isolada em `HabitManagement`, e REST/sync passaram a
+  compartilhar uma reconciliação transacional de opções por ID estável.
+
+### Alterações técnicas
+
+- A nova aba em Planejamento cria, lista, edita, ativa, desativa e exclui hábitos localmente.
+- Criação ainda não sincronizada pode ser cancelada sem enviar create/delete desnecessários;
+  update pendente seguido de delete vira um único tombstone com a versão-base correta.
+- Opções existentes são atualizadas no lugar. IDs usados por entradas históricas são
+  preservados, e a interface bloqueia exclusão de definições que já possuem registros.
+- Histórico passou a reconhecer definições inativas; somente tombstones deixam a lista ativa.
+- Migrações e dependências: nenhuma.
+
+### Segurança, privacidade e dados
+
+- O fluxo reutilizará a réplica IndexedDB particionada, a outbox e a autorização de sync já
+  existentes. Nenhum conteúdo de hábito será adicionado a logs.
+
+### Pendências e riscos conhecidos
+
+- O contrato visual foi alinhado ao token executável `--content-wide`, e as três jornadas E2E foram
+  atualizadas para abrir o popover global antes de acionar “Sincronizar agora”.
+- `pnpm check` passou integralmente; Playwright passou com 30 jornadas ativas e manteve somente as
+  duas baselines legadas intencionalmente ignoradas pelo plano.
+- O titular autorizou explicitamente incluir no commit as alterações que já estavam no worktree.
+  Nenhuma pendência técnica conhecida permanece nesta fase.

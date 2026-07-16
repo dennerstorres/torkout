@@ -4,11 +4,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { PwaExperience, type ServiceWorkerUpdate } from './PwaExperience';
 
 describe('PWA installation and lifecycle', () => {
-  it('provides platform-specific installation guidance and the installed version', () => {
-    render(<PwaExperience version="1.2.3" />);
+  it('provides platform-specific installation guidance in a floating control', () => {
+    render(<PwaExperience />);
 
-    expect(screen.getByText('Versão 1.2.3')).toBeVisible();
-    fireEvent.click(screen.getByText('Como instalar'));
+    fireEvent.click(screen.getByText('Instalar app'));
     expect(screen.getByRole('heading', { name: 'iPhone e iPad' })).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Android' })).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Computador' })).toBeVisible();
@@ -21,7 +20,7 @@ describe('PWA installation and lifecycle', () => {
       prompt,
       userChoice: Promise.resolve({ outcome: 'accepted', platform: 'web' }),
     });
-    render(<PwaExperience version="1.2.3" />);
+    render(<PwaExperience />);
 
     window.dispatchEvent(installEvent);
     fireEvent.click(await screen.findByRole('button', { name: 'Instalar neste dispositivo' }));
@@ -42,7 +41,7 @@ describe('PWA installation and lifecycle', () => {
           Observação em andamento
           <textarea defaultValue="rascunho preservado" />
         </label>
-        <PwaExperience registerServiceWorker={register} version="1.2.3" />
+        <PwaExperience registerServiceWorker={register} />
       </>,
     );
 

@@ -86,7 +86,6 @@ describe('Today mobile tracking', () => {
         database={database}
         now={new Date('2026-07-15T01:00:00.000Z')}
         onBack={vi.fn()}
-        onSync={vi.fn()}
         syncState="offline"
         timeZone="America/Cuiaba"
       />,
@@ -154,7 +153,6 @@ describe('Today mobile tracking', () => {
         database={database}
         now={new Date('2026-07-15T01:00:00.000Z')}
         onBack={vi.fn()}
-        onSync={vi.fn()}
         syncState="offline"
         timeZone="America/Cuiaba"
       />,
@@ -205,7 +203,6 @@ describe('Today mobile tracking', () => {
         database={database}
         now={new Date('2026-07-15T01:00:00.000Z')}
         onBack={vi.fn()}
-        onSync={vi.fn()}
         syncState="offline"
         timeZone="America/Cuiaba"
       />,
@@ -222,7 +219,6 @@ describe('Today mobile tracking', () => {
         database={database}
         now={new Date('2026-07-15T01:00:00.000Z')}
         onBack={vi.fn()}
-        onSync={vi.fn()}
         syncState="offline"
         timeZone="America/Cuiaba"
       />,
@@ -261,7 +257,6 @@ describe('Today mobile tracking', () => {
         now={new Date('2026-07-15T01:00:00.000Z')}
         onBack={vi.fn()}
         onPlan={onPlan}
-        onSync={vi.fn()}
         syncState="synced"
         timeZone="America/Cuiaba"
       />,

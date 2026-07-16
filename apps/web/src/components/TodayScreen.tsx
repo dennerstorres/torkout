@@ -15,7 +15,6 @@ interface TodayScreenProps {
   now?: Date;
   onBack(): void;
   onPlan?(): void;
-  onSync(): void;
   syncState: SyncState;
   timeZone: string;
 }
@@ -133,7 +132,6 @@ export function TodayScreen({
   now = new Date(),
   onBack,
   onPlan,
-  onSync,
   syncState,
   timeZone,
 }: TodayScreenProps) {
@@ -690,7 +688,7 @@ export function TodayScreen({
 
       {runnerSessionId === null && (
         <section className="today-complementary-grid" aria-label="Registros complementares">
-          <section className="card today-section" aria-labelledby="habits-heading">
+          <section className="card today-section today-habits" aria-labelledby="habits-heading">
             <h2 id="habits-heading">Hábitos do dia</h2>
             {habits.length === 0 && <p>Nenhum hábito ativo.</p>}
             {habits.map((habit) => {
@@ -983,10 +981,6 @@ export function TodayScreen({
           </details>
         </section>
       )}
-
-      <button className="primary sticky-action" type="button" onClick={onSync}>
-        Sincronizar agora
-      </button>
     </main>
   );
 }
