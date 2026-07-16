@@ -35,7 +35,6 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 
 import { ApiHttpError, type ApiDependencies, requireAuthenticatedUser } from './auth-routes.js';
-import { evaluateProgressionForSession } from './progression-service.js';
 
 const idParamsSchema = z.strictObject({ id: z.uuid() });
 const deleteQuerySchema = z.strictObject({ version: z.coerce.number().int().positive() });
@@ -457,6 +456,86 @@ export async function insertSessionAggregate(
     }
     return true;
   });
+}
+
+export async function updatePlannedAdHocSession(
+  database: DatabaseClient,
+  userId: string,
+  id: string,
+  input: z.infer<typeof workoutSessionUpdateSchema>,
+) {
+  const current = await loadSession(database, userId, id);
+  if (!current) throw new ApiHttpError(404, 'SESSION_NOT_FOUND', 'Sessão não encontrada.');
+  if (current.version !== input.version)
+    throw new ApiHttpError(409, 'VERSION_CONFLICT', 'Sessão alterada.');
+  const changesComposition =
+    input.exercises !== undefined ||
+    input.templateNameSnapshot !== undefined ||
+    input.type !== undefined;
+  if (changesComposition && (current.source !== 'ad_hoc' || current.status !== 'planned')) {
+    throw new ApiHttpError(
+      409,
+      'SESSION_HISTORY_IMMUTABLE',
+      'Somente sessões avulsas ainda planejadas podem ter sua composição alterada.',
+    );
+  }
+  if (input.exercises) {
+    await assertExercisesAvailable(
+      database,
+      userId,
+      input.exercises.map((exercise) => exercise.exerciseId),
+    );
+  }
+  const { exercises: nextExercises, execution, version, ...changes } = input;
+  if (execution)
+    return applySessionExecution(database, userId, id, { execution, notes: input.notes, version });
+  await database.transaction(async (transaction) => {
+    const [updated] = await transaction
+      .update(workoutSessions)
+      .set(changes)
+      .where(
+        and(
+          eq(workoutSessions.id, id),
+          eq(workoutSessions.userId, userId),
+          eq(workoutSessions.version, version),
+          isNull(workoutSessions.deletedAt),
+        ),
+      )
+      .returning({ id: workoutSessions.id });
+    if (!updated) throw new ApiHttpError(409, 'VERSION_CONFLICT', 'Sessão alterada.');
+    if (nextExercises !== undefined) {
+      await transaction
+        .delete(sessionExercises)
+        .where(and(eq(sessionExercises.sessionId, id), eq(sessionExercises.userId, userId)));
+      for (const exercise of nextExercises) {
+        const sessionExerciseId = exercise.id ?? randomUUID();
+        await transaction.insert(sessionExercises).values({
+          exerciseId: exercise.exerciseId,
+          exerciseNameSnapshot: exercise.name,
+          id: sessionExerciseId,
+          notes: exercise.notes ?? null,
+          sessionId: id,
+          sortOrder: exercise.sortOrder,
+          trackingMetricSnapshot: exercise.trackingMetric,
+          userId,
+        });
+        if (exercise.sets.length > 0) {
+          await transaction.insert(exerciseSets).values(
+            exercise.sets.map((set) => ({
+              id: set.id ?? randomUUID(),
+              plannedDistanceMeters: set.targetDistanceMeters?.toString(),
+              plannedDurationSeconds: set.targetDurationSeconds,
+              plannedRepetitions: set.targetRepetitions,
+              sessionExerciseId,
+              setNumber: set.setNumber,
+              userId,
+            })),
+          );
+        }
+      }
+    }
+  });
+  return loadSession(database, userId, id);
 }
 
 export async function applySessionExecution(
@@ -923,22 +1002,45 @@ export function registerPlanningRoutes(app: FastifyInstance, dependencies: ApiDe
     const user = await requireAuthenticatedUser(request, dependencies);
     const { id } = parse(idParamsSchema, request.params);
     const input = parse(workoutSessionUpdateSchema, request.body);
-    const { version, ...changes } = input;
-    const [updated] = await dependencies.database
+    return updatePlannedAdHocSession(dependencies.database, user.id, id, input);
+  });
+
+  app.delete('/api/v1/sessions/:id', async (request) => {
+    const user = await requireAuthenticatedUser(request, dependencies);
+    const { id } = parse(idParamsSchema, request.params);
+    const { version } = parse(deleteQuerySchema, request.query);
+    const current = await loadSession(dependencies.database, user.id, id);
+    if (!current) throw new ApiHttpError(404, 'SESSION_NOT_FOUND', 'Sessão não encontrada.');
+    if (current.version !== version)
+      throw new ApiHttpError(409, 'VERSION_CONFLICT', 'Sessão alterada.');
+    if (current.status !== 'planned') {
+      throw new ApiHttpError(
+        409,
+        'SESSION_HISTORY_IMMUTABLE',
+        'Sessões históricas não podem ser excluídas.',
+      );
+    }
+    const [deleted] = await dependencies.database
       .update(workoutSessions)
-      .set(changes)
+      .set({ deletedAt: new Date() })
       .where(
         and(
           eq(workoutSessions.id, id),
           eq(workoutSessions.userId, user.id),
           eq(workoutSessions.version, version),
-          isNull(workoutSessions.deletedAt),
         ),
       )
-      .returning({ id: workoutSessions.id });
-    if (!updated) throw new ApiHttpError(404, 'SESSION_NOT_FOUND', 'Sessão não encontrada.');
-    await evaluateProgressionForSession(dependencies.database, user.id, id);
-    return loadSession(dependencies.database, user.id, id);
+      .returning({
+        deletedAt: workoutSessions.deletedAt,
+        id: workoutSessions.id,
+        version: workoutSessions.version,
+      });
+    if (!deleted) throw new ApiHttpError(409, 'VERSION_CONFLICT', 'Sessão alterada.');
+    return {
+      deletedAt: deleted.deletedAt?.toISOString() ?? null,
+      id: deleted.id,
+      version: deleted.version,
+    };
   });
 
   app.post('/api/v1/sessions/materialize', async (request) => {

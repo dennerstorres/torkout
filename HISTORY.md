@@ -1428,3 +1428,51 @@ merge` e o teste no container confirmaram CSP e HSTS.
   duas baselines legadas intencionalmente ignoradas pelo plano.
 - O titular autorizou explicitamente incluir no commit as alterações que já estavam no worktree.
   Nenhuma pendência técnica conhecida permanece nesta fase.
+
+## Fase 19 — CRUD de exercícios, planos semanais e sessões avulsas
+
+**Status:** concluída
+
+**Commit de encerramento:** `feat(phase-19): add planning entity management`
+
+### Escopo planejado
+
+- Completar as três áreas restantes do Planejamento com edição e exclusão local-first.
+- Preservar o catálogo do sistema e o histórico de sessões já executadas.
+- Ampliar o contrato de sessão avulsa para editar nome, tipo e composição enquanto planejada.
+
+### Evidências TDD
+
+- RED — o contrato recusou a composição completa de uma atualização de sessão e os testes de
+  componente não encontraram ações de editar/excluir nem filtraram sessões recorrentes.
+- GREEN direcionado — contratos e Planejamento passaram com 13 testes.
+- GREEN PostgreSQL — 12 arquivos e 50 testes de integração passaram, incluindo recomposição de
+  sessão avulsa e rejeição de alteração após ela virar histórico.
+- Regressão — `pnpm check` passou com 38 arquivos e 168 testes, cobrindo governança, freeze,
+  segurança, formatação, lint, tipagem e builds.
+- E2E — 30 jornadas passaram; as duas baselines visuais legadas continuaram intencionalmente
+  ignoradas.
+
+### Alterações técnicas
+
+- Exercícios personalizados agora podem ser editados, ativados, desativados e excluídos; os três
+  exercícios de sistema permanecem somente leitura.
+- Planos e templates podem ser carregados novamente no formulário, atualizados com vigência futura
+  e excluídos. A outbox ordena remoções de ocorrências futuras antes dos agregados recorrentes.
+- A área de sessões avulsas não mistura sessões agendadas. Sessões planejadas aceitam edição de
+  nome, data, tipo, exercícios, séries e alvos, além de exclusão; sessões históricas ficam imutáveis.
+- REST e sync compartilham atualização transacional da sessão, incluindo substituição de exercícios
+  e séries, controle otimista e verificação de titularidade/disponibilidade.
+- O freeze público de contratos foi promovido de 1.1.0 para 1.2.0. Schema e migrações não mudaram.
+- O guia do usuário documenta os novos fluxos e seus limites históricos.
+
+### Segurança, privacidade e dados
+
+- As mutações continuarão particionadas por titular e sincronizadas pela outbox existente.
+- Exclusões serão lógicas quando houver estado sincronizado; sessões históricas não serão apagadas.
+
+### Pendências e riscos conhecidos
+
+- O build mantém o aviso já conhecido de chunk principal acima de 500 kB; não houve regressão de
+  funcionalidade ou orçamento bloqueante nesta fase.
+- Nenhuma pendência funcional conhecida permanece.

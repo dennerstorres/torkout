@@ -47,6 +47,30 @@ interface ExerciseDraft {
   target: string;
 }
 
+function draftsFromExercises(value: unknown): ExerciseDraft[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => {
+    const exercise = item as Record<string, unknown>;
+    const sets = Array.isArray(exercise.sets)
+      ? (exercise.sets as Array<Record<string, unknown>>)
+      : [];
+    const first = sets[0] ?? {};
+    return {
+      exerciseId: String(exercise.exerciseId ?? ''),
+      setCount: Math.max(sets.length, 1),
+      target: String(
+        first.targetDistanceMeters ??
+          first.plannedDistanceMeters ??
+          first.targetDurationSeconds ??
+          first.plannedDurationSeconds ??
+          first.targetRepetitions ??
+          first.plannedRepetitions ??
+          1,
+      ),
+    };
+  });
+}
+
 function defaultDraft(type: ActivityType): ExerciseDraft {
   return type === 'walk'
     ? { exerciseId: SYSTEM_EXERCISES.walk.id, setCount: 1, target: '5000' }
@@ -96,6 +120,7 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
   const [exerciseName, setExerciseName] = useState('');
   const [exerciseMetric, setExerciseMetric] =
     useState<ExerciseOption['trackingMetric']>('repetitions');
+  const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
   const [planName, setPlanName] = useState('');
   const [templateName, setTemplateName] = useState('');
   const [activityType, setActivityType] = useState<ActivityType>('strength');
@@ -104,12 +129,16 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
   const [validFrom, setValidFrom] = useState(new Date().toISOString().slice(0, 10));
   const [validUntil, setValidUntil] = useState('');
   const [weekdays, setWeekdays] = useState<number[]>([]);
+  const [editingPlan, setEditingPlan] = useState<{ planId: string; templateId: string } | null>(
+    null,
+  );
   const [adHocName, setAdHocName] = useState('');
   const [adHocDate, setAdHocDate] = useState(new Date().toISOString().slice(0, 10));
   const [adHocType, setAdHocType] = useState<ActivityType>('strength');
   const [adHocExerciseDrafts, setAdHocExerciseDrafts] = useState<ExerciseDraft[]>([
     defaultDraft('strength'),
   ]);
+  const [editingAdHocId, setEditingAdHocId] = useState<string | null>(null);
 
   async function refresh(): Promise<void> {
     setRecords(await database.records.toArray());
@@ -125,7 +154,9 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
     };
   }, [database]);
 
-  const customExercises = recordsOf(records, 'exercise').map((record) => ({
+  const customExerciseRecords = recordsOf(records, 'exercise');
+  const customExercises = customExerciseRecords.map((record) => ({
+    active: record.data.active !== false,
     id: record.entityId,
     name: stringField(record.data, 'name', 'Exercício'),
     trackingMetric: stringField(
@@ -136,17 +167,19 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
   }));
   const exercises = [...catalog, ...customExercises];
   const plans = recordsOf(records, 'training_plan');
+  const templates = recordsOf(records, 'workout_template');
   const sessions = recordsOf(records, 'workout_session');
+  const adHocSessions = sessions.filter((record) => record.data.source === 'ad_hoc');
   const habits = recordsOf(records, 'habit_definition');
   const habitEntries = recordsOf(records, 'habit_entry');
 
-  async function addExercise(event: FormEvent<HTMLFormElement>): Promise<void> {
+  async function saveExercise(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
-    const id = crypto.randomUUID();
+    const id = editingExerciseId ?? crypto.randomUUID();
     await queueLocalMutation(database, {
       entityId: id,
       entityType: 'exercise',
-      operation: 'create',
+      operation: editingExerciseId ? 'update' : 'create',
       payload: {
         active: true,
         category: 'Personalizado',
@@ -155,8 +188,46 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
         trackingMetric: exerciseMetric,
       },
     });
+    setEditingExerciseId(null);
     setExerciseName('');
     setMessage('Exercício salvo localmente e pendente de sincronização.');
+    await refresh();
+  }
+
+  function editExercise(record: LocalRecord): void {
+    setEditingExerciseId(record.entityId);
+    setExerciseName(stringField(record.data, 'name'));
+    setExerciseMetric(
+      stringField(record.data, 'trackingMetric', 'repetitions') as ExerciseOption['trackingMetric'],
+    );
+  }
+
+  async function toggleExercise(record: LocalRecord): Promise<void> {
+    await queueLocalMutation(database, {
+      entityId: record.entityId,
+      entityType: 'exercise',
+      operation: 'update',
+      payload: { active: record.data.active === false },
+    });
+    setMessage(
+      record.data.active === false
+        ? 'Exercício ativado localmente.'
+        : 'Exercício desativado localmente.',
+    );
+    await refresh();
+  }
+
+  async function deleteExercise(record: LocalRecord): Promise<void> {
+    const name = stringField(record.data, 'name', 'exercício');
+    if (!window.confirm(`Excluir ${name}? O histórico já registrado será preservado.`)) return;
+    await queueLocalMutation(database, {
+      entityId: record.entityId,
+      entityType: 'exercise',
+      operation: 'delete',
+      payload: {},
+    });
+    if (editingExerciseId === record.entityId) setEditingExerciseId(null);
+    setMessage('Exercício excluído localmente.');
     await refresh();
   }
 
@@ -222,15 +293,36 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
       setMessage('Escolha os exercícios e ao menos um dia da semana.');
       return;
     }
-    const planId = crypto.randomUUID();
-    const templateId = crypto.randomUUID();
+    const planId = editingPlan?.planId ?? crypto.randomUUID();
+    const templateId = editingPlan?.templateId ?? crypto.randomUUID();
     const occurredAt = new Date();
+    let mutationOffset = 0;
+    if (editingPlan) {
+      const obsoleteSessions = sessions.filter(
+        (session) =>
+          session.data.templateId === templateId &&
+          session.data.status === 'planned' &&
+          stringField(session.data, 'plannedLocalDate') >= validFrom,
+      );
+      for (const session of obsoleteSessions) {
+        await queueLocalMutation(
+          database,
+          {
+            entityId: session.entityId,
+            entityType: 'workout_session',
+            operation: 'delete',
+            payload: {},
+          },
+          new Date(occurredAt.getTime() + mutationOffset++),
+        );
+      }
+    }
     await queueLocalMutation(
       database,
       {
         entityId: planId,
         entityType: 'training_plan',
-        operation: 'create',
+        operation: editingPlan ? 'update' : 'create',
         payload: {
           name: planName.trim(),
           status: 'active',
@@ -238,7 +330,7 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
           validUntil: validUntil || null,
         },
       },
-      occurredAt,
+      new Date(occurredAt.getTime() + mutationOffset++),
     );
     const templateExercises = plannedExercises(exerciseDrafts);
     const rules = weekdays.map((weekday) => ({
@@ -254,7 +346,7 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
       {
         entityId: templateId,
         entityType: 'workout_template',
-        operation: 'create',
+        operation: editingPlan ? 'update' : 'create',
         payload: {
           exercises: templateExercises,
           name: templateName.trim(),
@@ -262,14 +354,14 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
           planId,
           rules,
           type: activityType,
+          ...(editingPlan ? { effectiveFrom: validFrom } : {}),
         },
       },
-      new Date(occurredAt.getTime() + 1),
+      new Date(occurredAt.getTime() + mutationOffset++),
     );
     const lastDate = new Date(`${validUntil || validFrom}T12:00:00Z`);
     if (!validUntil) lastDate.setUTCDate(lastDate.getUTCDate() + 27);
     const cursor = new Date(`${validFrom}T12:00:00Z`);
-    let offset = 2;
     while (cursor <= lastDate) {
       const weekday = isoWeekday(cursor);
       const rule = rules.find((candidate) => candidate.weekday === weekday);
@@ -297,7 +389,7 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
             operation: 'create',
             payload: sessionPayload,
           },
-          new Date(occurredAt.getTime() + offset++),
+          new Date(occurredAt.getTime() + mutationOffset++),
         );
         const sessionRecord = await database.records.get(entityKey('workout_session', sessionId));
         if (sessionRecord) {
@@ -320,13 +412,81 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
     }
     setPlanName('');
     setTemplateName('');
-    setMessage('Planejamento salvo localmente e pendente de sincronização.');
+    setEditingPlan(null);
+    setMessage(
+      editingPlan
+        ? 'Planejamento atualizado localmente.'
+        : 'Planejamento salvo localmente e pendente de sincronização.',
+    );
     await refresh();
   }
 
-  async function addAdHocSession(event: FormEvent<HTMLFormElement>): Promise<void> {
+  function editWeeklyPlan(plan: LocalRecord, template: LocalRecord): void {
+    const type = stringField(template.data, 'type', 'strength') as ActivityType;
+    const rules = Array.isArray(template.data.rules)
+      ? (template.data.rules as Array<Record<string, unknown>>)
+      : [];
+    setEditingPlan({ planId: plan.entityId, templateId: template.entityId });
+    setPlanName(stringField(plan.data, 'name'));
+    setTemplateName(stringField(template.data, 'name'));
+    setActivityType(type);
+    setExerciseDrafts(type === 'rest' ? [] : draftsFromExercises(template.data.exercises));
+    setValidFrom(stringField(plan.data, 'validFrom', new Date().toISOString().slice(0, 10)));
+    setValidUntil(stringField(plan.data, 'validUntil'));
+    setWeekdays(rules.map((rule) => Number(rule.weekday)));
+    setLocalTime(stringField(rules[0] ?? {}, 'localTime', '18:00'));
+  }
+
+  async function deleteWeeklyPlan(plan: LocalRecord): Promise<void> {
+    const name = stringField(plan.data, 'name', 'plano');
+    if (!window.confirm(`Excluir ${name}? Sessões já realizadas serão preservadas.`)) return;
+    const ownedTemplates = templates.filter((template) => template.data.planId === plan.entityId);
+    const templateIds = new Set(ownedTemplates.map((template) => template.entityId));
+    const today = new Date().toISOString().slice(0, 10);
+    const occurredAt = new Date();
+    let offset = 0;
+    for (const session of sessions.filter(
+      (item) =>
+        templateIds.has(String(item.data.templateId)) &&
+        item.data.status === 'planned' &&
+        stringField(item.data, 'plannedLocalDate') >= today,
+    )) {
+      await queueLocalMutation(
+        database,
+        {
+          entityId: session.entityId,
+          entityType: 'workout_session',
+          operation: 'delete',
+          payload: {},
+        },
+        new Date(occurredAt.getTime() + offset++),
+      );
+    }
+    for (const template of ownedTemplates) {
+      await queueLocalMutation(
+        database,
+        {
+          entityId: template.entityId,
+          entityType: 'workout_template',
+          operation: 'delete',
+          payload: {},
+        },
+        new Date(occurredAt.getTime() + offset++),
+      );
+    }
+    await queueLocalMutation(
+      database,
+      { entityId: plan.entityId, entityType: 'training_plan', operation: 'delete', payload: {} },
+      new Date(occurredAt.getTime() + offset),
+    );
+    if (editingPlan?.planId === plan.entityId) setEditingPlan(null);
+    setMessage('Plano semanal excluído localmente; o histórico foi preservado.');
+    await refresh();
+  }
+
+  async function saveAdHocSession(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
-    const sessionId = crypto.randomUUID();
+    const sessionId = editingAdHocId ?? crypto.randomUUID();
     if (adHocType !== 'rest' && adHocExerciseDrafts.length === 0) {
       setMessage('Adicione ao menos um exercício à sessão.');
       return;
@@ -348,7 +508,7 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
     await queueLocalMutation(database, {
       entityId: sessionId,
       entityType: 'workout_session',
-      operation: 'create',
+      operation: editingAdHocId ? 'update' : 'create',
       payload,
     });
     const sessionRecord = await database.records.get(entityKey('workout_session', sessionId));
@@ -367,22 +527,34 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
         },
       });
     }
+    setEditingAdHocId(null);
     setAdHocName('');
-    setMessage('Sessão avulsa salva localmente.');
+    setMessage(
+      editingAdHocId ? 'Sessão avulsa atualizada localmente.' : 'Sessão avulsa salva localmente.',
+    );
     await refresh();
   }
 
-  async function updateSession(
-    record: LocalRecord,
-    payload: Record<string, unknown>,
-  ): Promise<void> {
+  function editAdHocSession(record: LocalRecord): void {
+    const type = stringField(record.data, 'type', 'strength') as ActivityType;
+    setEditingAdHocId(record.entityId);
+    setAdHocName(stringField(record.data, 'templateNameSnapshot'));
+    setAdHocDate(stringField(record.data, 'plannedLocalDate'));
+    setAdHocType(type);
+    setAdHocExerciseDrafts(type === 'rest' ? [] : draftsFromExercises(record.data.exercises));
+  }
+
+  async function deleteAdHocSession(record: LocalRecord): Promise<void> {
+    const name = stringField(record.data, 'templateNameSnapshot', 'sessão');
+    if (!window.confirm(`Excluir ${name}?`)) return;
     await queueLocalMutation(database, {
       entityId: record.entityId,
       entityType: 'workout_session',
-      operation: 'update',
-      payload,
+      operation: 'delete',
+      payload: {},
     });
-    setMessage('Sessão atualizada localmente.');
+    if (editingAdHocId === record.entityId) setEditingAdHocId(null);
+    setMessage('Sessão avulsa excluída localmente.');
     await refresh();
   }
 
@@ -438,15 +610,58 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
           <p className="eyebrow">Catálogo</p>
           <h2 id="exercise-heading">Exercícios</h2>
           <ul aria-label="Catálogo de exercícios" className="compact-list exercise-catalog-list">
-            {exercises.map((exercise) => (
+            {catalog.map((exercise) => (
               <li key={exercise.id}>
                 {exercise.name} · {trackingMetricLabel(exercise.trackingMetric)}
               </li>
             ))}
+            {customExerciseRecords.map((record) => {
+              const name = stringField(record.data, 'name', 'Exercício');
+              const metric = stringField(
+                record.data,
+                'trackingMetric',
+                'repetitions',
+              ) as ExerciseOption['trackingMetric'];
+              const active = record.data.active !== false;
+              return (
+                <li key={record.entityId}>
+                  <span>
+                    {name} · {trackingMetricLabel(metric)}
+                  </span>
+                  <span>{active ? 'Ativo' : 'Inativo'}</span>
+                  <div className="button-row">
+                    <button
+                      aria-label={`Editar ${name}`}
+                      type="button"
+                      onClick={() => editExercise(record)}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      aria-label={`${active ? 'Desativar' : 'Ativar'} ${name}`}
+                      type="button"
+                      onClick={() => void toggleExercise(record)}
+                    >
+                      {active ? 'Desativar' : 'Ativar'}
+                    </button>
+                    <button
+                      aria-label={`Excluir ${name}`}
+                      className="danger"
+                      type="button"
+                      onClick={() => void deleteExercise(record)}
+                    >
+                      Excluir
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
           <form
-            aria-label="Novo exercício personalizado"
-            onSubmit={(event) => void addExercise(event)}
+            aria-label={
+              editingExerciseId ? 'Editar exercício personalizado' : 'Novo exercício personalizado'
+            }
+            onSubmit={(event) => void saveExercise(event)}
           >
             <label>
               Nome do exercício
@@ -470,8 +685,19 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
               </select>
             </label>
             <button className="primary" type="submit">
-              Adicionar exercício
+              {editingExerciseId ? 'Salvar exercício' : 'Adicionar exercício'}
             </button>
+            {editingExerciseId && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingExerciseId(null);
+                  setExerciseName('');
+                }}
+              >
+                Cancelar edição
+              </button>
+            )}
           </form>
         </section>
       )}
@@ -487,7 +713,33 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
           {plans.length > 0 && (
             <ul className="compact-list">
               {plans.map((plan) => (
-                <li key={plan.entityId}>{stringField(plan.data, 'name', 'Plano')}</li>
+                <li key={plan.entityId}>
+                  <span>{stringField(plan.data, 'name', 'Plano')}</span>
+                  <div className="button-row">
+                    {templates.find((template) => template.data.planId === plan.entityId) && (
+                      <button
+                        aria-label={`Editar ${stringField(plan.data, 'name', 'Plano')}`}
+                        type="button"
+                        onClick={() =>
+                          editWeeklyPlan(
+                            plan,
+                            templates.find((template) => template.data.planId === plan.entityId)!,
+                          )
+                        }
+                      >
+                        Editar
+                      </button>
+                    )}
+                    <button
+                      aria-label={`Excluir ${stringField(plan.data, 'name', 'Plano')}`}
+                      className="danger"
+                      type="button"
+                      onClick={() => void deleteWeeklyPlan(plan)}
+                    >
+                      Excluir
+                    </button>
+                  </div>
+                </li>
               ))}
             </ul>
           )}
@@ -632,8 +884,20 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
               </div>
             </fieldset>
             <button className="primary" type="submit">
-              Salvar planejamento
+              {editingPlan ? 'Salvar alterações do plano' : 'Salvar planejamento'}
             </button>
+            {editingPlan && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingPlan(null);
+                  setPlanName('');
+                  setTemplateName('');
+                }}
+              >
+                Cancelar edição
+              </button>
+            )}
           </form>
         </section>
       )}
@@ -642,7 +906,7 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
         <section className="card planning-section" aria-labelledby="adhoc-heading">
           <p className="eyebrow">Agenda</p>
           <h2 id="adhoc-heading">Sessões avulsas</h2>
-          <form onSubmit={(event) => void addAdHocSession(event)}>
+          <form onSubmit={(event) => void saveAdHocSession(event)}>
             <label>
               Tipo da sessão avulsa
               <select
@@ -738,40 +1002,48 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
               </button>
             )}
             <button className="primary" type="submit">
-              Criar sessão avulsa
+              {editingAdHocId ? 'Salvar sessão avulsa' : 'Criar sessão avulsa'}
             </button>
+            {editingAdHocId && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingAdHocId(null);
+                  setAdHocName('');
+                }}
+              >
+                Cancelar edição
+              </button>
+            )}
           </form>
-          {sessions.map((session) => (
+          {adHocSessions.map((session) => (
             <article className="session-card" key={session.entityId}>
               <h3>{stringField(session.data, 'templateNameSnapshot', 'Sessão')}</h3>
-              <label>
-                Reagendar {stringField(session.data, 'templateNameSnapshot', 'sessão')}
-                <input
-                  type="date"
-                  value={stringField(session.data, 'plannedLocalDate')}
-                  onChange={(event) =>
-                    void updateSession(session, { plannedLocalDate: event.target.value })
-                  }
-                />
-              </label>
-              <button
-                className="danger"
-                type="button"
-                onClick={() => void updateSession(session, { status: 'cancelled' })}
-              >
-                Cancelar sessão
-              </button>
-              <div
-                className="button-row"
-                aria-label={`Ordenar ${stringField(session.data, 'templateNameSnapshot', 'sessão')}`}
-              >
-                <button type="button" onClick={() => void moveSession(session, -1)}>
-                  Mover para o dia anterior
-                </button>
-                <button type="button" onClick={() => void moveSession(session, 1)}>
-                  Mover para o dia seguinte
-                </button>
-              </div>
+              <p>
+                {stringField(session.data, 'plannedLocalDate')} ·{' '}
+                {stringField(session.data, 'status', 'planned')}
+              </p>
+              {session.data.status === 'planned' ? (
+                <div className="button-row">
+                  <button
+                    aria-label={`Editar ${stringField(session.data, 'templateNameSnapshot', 'sessão')}`}
+                    type="button"
+                    onClick={() => editAdHocSession(session)}
+                  >
+                    Editar
+                  </button>
+                  <button
+                    aria-label={`Excluir ${stringField(session.data, 'templateNameSnapshot', 'sessão')}`}
+                    className="danger"
+                    type="button"
+                    onClick={() => void deleteAdHocSession(session)}
+                  >
+                    Excluir
+                  </button>
+                </div>
+              ) : (
+                <p className="field-hint">Sessão histórica: edição e exclusão indisponíveis.</p>
+              )}
             </article>
           ))}
         </section>
@@ -790,10 +1062,4 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
       )}
     </main>
   );
-
-  async function moveSession(record: LocalRecord, days: number): Promise<void> {
-    const current = new Date(`${stringField(record.data, 'plannedLocalDate')}T12:00:00Z`);
-    current.setUTCDate(current.getUTCDate() + days);
-    await updateSession(record, { plannedLocalDate: current.toISOString().slice(0, 10) });
-  }
 }

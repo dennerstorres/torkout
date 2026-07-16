@@ -5,6 +5,7 @@ import {
   materializeSessionsSchema,
   trainingPlanCreateSchema,
   workoutSessionCreateSchema,
+  workoutSessionUpdateSchema,
   workoutTemplateCreateSchema,
 } from './planning.js';
 
@@ -83,5 +84,26 @@ describe('planning contracts', () => {
     expect(
       materializeSessionsSchema.safeParse({ from: '2026-07-01', through: '2027-07-01' }).success,
     ).toBe(false);
+  });
+
+  it('accepts complete composition changes for a planned ad-hoc session', () => {
+    expect(
+      workoutSessionUpdateSchema.safeParse({
+        exercises: [
+          {
+            exerciseId: '10000000-0000-4000-8000-000000000010',
+            name: 'Flexão inclinada',
+            sets: [{ setNumber: 1, targetRepetitions: 15 }],
+            sortOrder: 0,
+            trackingMetric: 'repetitions',
+          },
+        ],
+        notes: null,
+        plannedLocalDate: '2026-07-20',
+        templateNameSnapshot: 'Treino avulso editado',
+        type: 'strength',
+        version: 2,
+      }).success,
+    ).toBe(true);
   });
 });

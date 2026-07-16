@@ -41,6 +41,7 @@ import {
   insertTemplateAggregate,
   loadSession,
   loadTemplate,
+  updatePlannedAdHocSession,
 } from './planning-routes.js';
 import { evaluateProgressionForSession } from './progression-service.js';
 
@@ -1155,6 +1156,13 @@ async function applySessionOperation(
     };
   }
   if (operation.operation === 'delete') {
+    if (current.status !== 'planned') {
+      return {
+        errorCode: 'session_history_immutable',
+        operationId: operation.operationId,
+        status: 'rejected',
+      };
+    }
     const [deleted] = await transaction
       .update(workoutSessions)
       .set({ deletedAt: new Date() })
@@ -1175,24 +1183,18 @@ async function applySessionOperation(
       status: 'applied',
     };
   }
-  if (operation.payload.execution) {
-    const updated = await applySessionExecution(database, userId, operation.entityId, {
-      execution: operation.payload.execution,
-      notes: operation.payload.notes,
+  let updated;
+  try {
+    updated = await updatePlannedAdHocSession(database, userId, operation.entityId, {
+      ...operation.payload,
       version: operation.baseVersion,
     });
-    if (!updated) throw new Error('Session execution update did not return an aggregate.');
-    return {
-      operationId: operation.operationId,
-      record: { ...updated, deletedAt: null },
-      status: 'applied',
-    };
+  } catch (error) {
+    if (error instanceof ApiHttpError && error.statusCode === 409) {
+      return { errorCode: error.code, operationId: operation.operationId, status: 'rejected' };
+    }
+    throw error;
   }
-  await transaction
-    .update(workoutSessions)
-    .set(operation.payload)
-    .where(and(eq(workoutSessions.id, operation.entityId), eq(workoutSessions.userId, userId)));
-  const updated = await loadSession(database, userId, operation.entityId);
   if (!updated) throw new Error('Session update did not return an aggregate.');
   return {
     operationId: operation.operationId,

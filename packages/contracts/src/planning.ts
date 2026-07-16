@@ -205,15 +205,26 @@ export const workoutSessionCreateSchema = z.strictObject({
   type: activityTypeSchema,
 });
 
-export const workoutSessionUpdateSchema = z.strictObject({
-  execution: workoutExecutionSchema.optional(),
-  notes: nullableText(2_000),
-  plannedLocalDate: z.iso.date().optional(),
-  status: workoutStatusSchema.optional(),
-  suggestedLocalTime: timeSchema.nullable().optional(),
-  timeZone: timeZoneSchema.optional(),
-  version: z.number().int().positive(),
-});
+export const workoutSessionUpdateSchema = z
+  .strictObject({
+    execution: workoutExecutionSchema.optional(),
+    exercises: z.array(plannedExerciseSchema).max(100).optional(),
+    notes: nullableText(2_000),
+    plannedLocalDate: z.iso.date().optional(),
+    status: workoutStatusSchema.optional(),
+    suggestedLocalTime: timeSchema.nullable().optional(),
+    templateNameSnapshot: z.string().trim().min(1).max(120).optional(),
+    timeZone: timeZoneSchema.optional(),
+    type: activityTypeSchema.optional(),
+    version: z.number().int().positive(),
+  })
+  .superRefine((value, context) => {
+    if (value.type && value.exercises)
+      validateTemplate(
+        value as { exercises: unknown[]; type: z.infer<typeof activityTypeSchema> },
+        context,
+      );
+  });
 
 export const materializeSessionsSchema = z
   .strictObject({ from: z.iso.date(), through: z.iso.date() })

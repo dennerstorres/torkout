@@ -346,4 +346,188 @@ describe('mobile-first planning', () => {
     );
     database.close();
   });
+
+  it('edits and deletes custom exercises while keeping system exercises read-only', async () => {
+    const database = createUserSyncDatabase(userId);
+    const exerciseId = 'a9100000-0000-4000-8000-000000000001';
+    await database.records.put({
+      data: {
+        active: true,
+        category: 'Personalizado',
+        instructions: null,
+        name: 'Prancha',
+        trackingMetric: 'duration',
+      },
+      deletedAt: null,
+      entityId: exerciseId,
+      entityType: 'exercise',
+      key: `exercise:${exerciseId}`,
+      syncStatus: 'synced',
+      updatedAt: '2026-07-16T12:00:00.000Z',
+      version: 2,
+    });
+    render(<PlanningScreen database={database} onBack={vi.fn()} syncState="synced" />);
+
+    expect(await screen.findByText(/Prancha/)).toBeVisible();
+    expect(screen.queryByRole('button', { name: /Editar Flexão/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Editar Prancha' }));
+    fireEvent.change(screen.getByLabelText('Nome do exercício'), {
+      target: { value: 'Prancha alta' },
+    });
+    fireEvent.submit(screen.getByRole('button', { name: 'Salvar exercício' }).closest('form')!);
+    expect(await screen.findByText(/Prancha alta/)).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Desativar Prancha alta' }));
+    expect(await screen.findByText('Inativo')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Ativar Prancha alta' }));
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Excluir Prancha alta' }));
+    await waitFor(() => expect(screen.queryByText(/Prancha alta/)).not.toBeInTheDocument());
+    expect((await database.outbox.toArray()).at(-1)).toMatchObject({
+      entityId: exerciseId,
+      entityType: 'exercise',
+      operation: 'delete',
+    });
+    database.close();
+  });
+
+  it('edits and deletes a weekly plan without deleting completed sessions', async () => {
+    const database = createUserSyncDatabase(userId);
+    const planId = 'a9400000-0000-4000-8000-000000000001';
+    const templateId = 'a9500000-0000-4000-8000-000000000001';
+    const historicalId = 'a9600000-0000-4000-8000-000000000001';
+    const base = {
+      deletedAt: null,
+      syncStatus: 'synced' as const,
+      updatedAt: '2026-07-16T12:00:00.000Z',
+      version: 1,
+    };
+    await database.records.bulkPut([
+      {
+        ...base,
+        data: { name: 'Plano atual', status: 'active', validFrom: '2026-07-01', validUntil: null },
+        entityId: planId,
+        entityType: 'training_plan',
+        key: `training_plan:${planId}`,
+      },
+      {
+        ...base,
+        data: {
+          exercises: [],
+          name: 'Recuperação',
+          notes: null,
+          planId,
+          rules: [
+            {
+              id: 'a9700000-0000-4000-8000-000000000001',
+              localTime: '18:00',
+              timeZone: 'America/Cuiaba',
+              validFrom: '2026-07-01',
+              validUntil: null,
+              weekday: 4,
+            },
+          ],
+          type: 'rest',
+        },
+        entityId: templateId,
+        entityType: 'workout_template',
+        key: `workout_template:${templateId}`,
+      },
+      {
+        ...base,
+        data: {
+          exercises: [],
+          plannedLocalDate: '2026-07-10',
+          source: 'scheduled',
+          status: 'completed',
+          templateId,
+          templateNameSnapshot: 'Recuperação',
+          timeZone: 'America/Cuiaba',
+          type: 'rest',
+        },
+        entityId: historicalId,
+        entityType: 'workout_session',
+        key: `workout_session:${historicalId}`,
+      },
+    ]);
+    render(<PlanningScreen database={database} onBack={vi.fn()} syncState="synced" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Plano semanal' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Editar Plano atual' }));
+    expect(screen.getByLabelText('Nome do treino')).toHaveValue('Recuperação');
+    fireEvent.change(screen.getByLabelText('Nome do plano'), {
+      target: { value: 'Plano renovado' },
+    });
+    fireEvent.submit(
+      screen.getByRole('button', { name: 'Salvar alterações do plano' }).closest('form')!,
+    );
+    expect(await screen.findByText('Plano renovado')).toBeVisible();
+    expect(
+      (await database.outbox.toArray())
+        .filter((item) => item.operation === 'update')
+        .map((item) => item.entityType),
+    ).toEqual(expect.arrayContaining(['training_plan', 'workout_template']));
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Excluir Plano renovado' }));
+    await waitFor(() => expect(screen.queryByText('Plano renovado')).not.toBeInTheDocument());
+    expect(await database.records.get(`workout_session:${historicalId}`)).toBeDefined();
+    database.close();
+  });
+
+  it('edits and deletes only planned ad-hoc sessions and hides scheduled sessions from the area', async () => {
+    const database = createUserSyncDatabase(userId);
+    const plannedId = 'a9200000-0000-4000-8000-000000000001';
+    const completedId = 'a9200000-0000-4000-8000-000000000002';
+    const scheduledId = 'a9200000-0000-4000-8000-000000000003';
+    const session = (id: string, name: string, source: string, status: string) => ({
+      data: {
+        exercises: [],
+        jointPainStatus: 'unknown',
+        notes: null,
+        plannedLocalDate: '2026-07-20',
+        source,
+        status,
+        suggestedLocalTime: '18:00',
+        templateId: source === 'scheduled' ? 'a9300000-0000-4000-8000-000000000001' : null,
+        templateNameSnapshot: name,
+        timeZone: 'America/Cuiaba',
+        type: 'rest',
+      },
+      deletedAt: null,
+      entityId: id,
+      entityType: 'workout_session' as const,
+      key: `workout_session:${id}`,
+      syncStatus: 'synced' as const,
+      updatedAt: '2026-07-16T12:00:00.000Z',
+      version: 1,
+    });
+    await database.records.bulkPut([
+      session(plannedId, 'Mobilidade', 'ad_hoc', 'planned'),
+      session(completedId, 'Alongamento concluído', 'ad_hoc', 'completed'),
+      session(scheduledId, 'Treino recorrente', 'scheduled', 'planned'),
+    ]);
+    render(<PlanningScreen database={database} onBack={vi.fn()} syncState="synced" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Sessão avulsa' }));
+
+    expect(await screen.findByText('Mobilidade')).toBeVisible();
+    expect(screen.getByText('Alongamento concluído')).toBeVisible();
+    expect(screen.queryByText('Treino recorrente')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Editar Alongamento concluído' }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Editar Mobilidade' }));
+    fireEvent.change(screen.getByLabelText('Nome da sessão avulsa'), {
+      target: { value: 'Mobilidade leve' },
+    });
+    fireEvent.submit(screen.getByRole('button', { name: 'Salvar sessão avulsa' }).closest('form')!);
+    expect(await screen.findByText('Mobilidade leve')).toBeVisible();
+    expect((await database.outbox.toArray()).at(-1)?.payload).toMatchObject({
+      exercises: [],
+      templateNameSnapshot: 'Mobilidade leve',
+      type: 'rest',
+    });
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Excluir Mobilidade leve' }));
+    await waitFor(() => expect(screen.queryByText('Mobilidade leve')).not.toBeInTheDocument());
+    expect(await database.records.get(`workout_session:${completedId}`)).toBeDefined();
+    database.close();
+  });
 });

@@ -259,15 +259,41 @@ describe('planning API', () => {
       type: 'other',
     });
     expect(created.statusCode).toBe(201);
+    const recomposed = await request(users.first, 'PUT', `/api/v1/sessions/${created.json().id}`, {
+      exercises: [
+        {
+          exerciseId: SYSTEM_EXERCISES.pushUp.id,
+          name: 'Flexão',
+          sets: [{ setNumber: 1, targetRepetitions: 10 }],
+          sortOrder: 0,
+          trackingMetric: 'repetitions',
+        },
+      ],
+      templateNameSnapshot: 'Força avulsa',
+      type: 'strength',
+      version: created.json().version,
+    });
+    expect(recomposed.json()).toMatchObject({
+      templateNameSnapshot: 'Força avulsa',
+      type: 'strength',
+    });
+    expect(recomposed.json().exercises[0].sets[0]).toMatchObject({ plannedRepetitions: 10 });
     const rescheduled = await request(users.first, 'PUT', `/api/v1/sessions/${created.json().id}`, {
       plannedLocalDate: '2026-07-15',
-      version: created.json().version,
+      version: recomposed.json().version,
     });
     const cancelled = await request(users.first, 'PUT', `/api/v1/sessions/${created.json().id}`, {
       status: 'cancelled',
       version: rescheduled.json().version,
     });
     expect(cancelled.json()).toMatchObject({ plannedLocalDate: '2026-07-15', status: 'cancelled' });
+    const immutable = await request(users.first, 'PUT', `/api/v1/sessions/${created.json().id}`, {
+      exercises: [],
+      templateNameSnapshot: 'Reescrito',
+      type: 'rest',
+      version: cancelled.json().version,
+    });
+    expect(immutable.statusCode).toBe(409);
     expect(
       (
         await request(users.second, 'GET', '/api/v1/sessions?from=2026-07-01&through=2026-07-31')

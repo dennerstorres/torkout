@@ -1209,10 +1209,45 @@ histórico e o isolamento por titular.
 - Testes afetados, typecheck, lint, formatação e build verdes.
 - `HISTORY.md` atualizado e fase encerrada em commit próprio.
 
+### Fase 19 — CRUD de exercícios, planos semanais e sessões avulsas
+
+**Status:** concluída
+
+**Commit esperado:** `feat(phase-19): add planning entity management`
+
+**Objetivo:** completar o Planejamento com criação, consulta, edição e exclusão local-first de
+exercícios personalizados, planos semanais e sessões avulsas, sem permitir alterações no catálogo
+do sistema nem apagar o histórico de treinos já executados.
+
+#### Escopo
+
+- [x] Permitir editar, ativar, desativar e excluir exercícios personalizados.
+- [x] Permitir editar e excluir planos semanais e seus templates, aplicando mudanças ao futuro.
+- [x] Permitir editar integralmente e excluir sessões avulsas ainda planejadas.
+- [x] Manter sessões iniciadas ou concluídas como histórico imutável no Planejamento.
+- [x] Sincronizar todas as mutações pela réplica local e outbox existentes.
+- [x] Atualizar o guia do usuário com os novos fluxos.
+
+#### Testes primeiro
+
+- [x] RED de componente para edição e exclusão dos três agregados.
+- [x] RED de contratos/API/sync para edição integral de sessão avulsa planejada.
+- [x] RED de preservação de sessões históricas ao alterar ou excluir planejamento recorrente.
+- [x] Regressão de Hoje, Histórico, offline, typecheck, lint, formatação e build.
+
+#### Critérios de saída
+
+- O CRUD funciona offline e produz estado local e outbox atomicamente.
+- Exercícios do catálogo do sistema permanecem somente leitura.
+- Alterações recorrentes não reescrevem sessões já iniciadas, concluídas ou históricas.
+- Sessões avulsas já iniciadas não podem ter sua composição reescrita ou ser excluídas.
+- Testes afetados, integração, E2E, typecheck, lint, formatação e build verdes.
+- `HISTORY.md` atualizado e fase encerrada em commit próprio.
+
 ## 5. Dependências entre fases
 
 ```text
-0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18
+0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19
 ```
 
 Trabalhos internos de uma mesma fase podem ser paralelos somente quando não compartilham arquivos ou contratos instáveis. O encerramento continua único.

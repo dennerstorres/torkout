@@ -72,6 +72,10 @@ Para reproduzir a alternativa do HTML, cadastre:
 
 Cadastrar um exercício não cria sessões no calendário. Ele apenas o disponibiliza nos editores.
 
+Os exercícios personalizados aparecem com as ações **Editar**, **Ativar/Desativar** e **Excluir**.
+O catálogo do sistema permanece somente leitura. Desativar ou excluir um exercício não apaga os
+treinos já registrados; a alteração apenas impede seu uso em novos planejamentos.
+
 ## 5. Criar um plano semanal
 
 1. Abra **Planejamento**.
@@ -88,6 +92,11 @@ Cadastrar um exercício não cria sessões no calendário. Ele apenas o disponib
 As duas datas de vigência são inclusivas. Se a data final ficar vazia, a aplicação cria inicialmente
 as ocorrências dos próximos 28 dias. Para reproduzir todo o HTML de uma vez, sempre informe a data
 final indicada neste guia.
+
+Planos já cadastrados aparecem acima do formulário. Use **Editar** para carregar o plano e o treino
+no formulário; ao salvar, a nova recorrência substitui somente as sessões futuras a partir da nova
+vigência. Use **Excluir** para remover o plano e suas sessões futuras ainda planejadas. Sessões já
+iniciadas ou concluídas permanecem no histórico.
 
 ### Alvos em faixa
 
@@ -236,6 +245,11 @@ para criar os planos futuros.
 Use **Planejamento → Sessão avulsa** somente para uma atividade que ainda não foi criada pelos
 planos semanais. Informe tipo, nome, data, exercícios, séries e os valores realmente feitos e toque
 em **Criar sessão avulsa**.
+
+Uma sessão avulsa ainda com estado `planned` pode ser aberta em **Editar** para alterar nome, data,
+tipo, exercícios, séries e alvos, ou removida com **Excluir**. Depois que a execução começa, ela vira
+histórico e essas duas ações deixam de ficar disponíveis; correções da execução devem ser feitas no
+fluxo de registro correspondente.
 
 As caminhadas, quartas de recuperação e domingos de descanso já foram materializados pelos planos
 das seções 6.1 a 6.3. Não crie outra sessão avulsa para essas datas, pois isso produziria duplicata.
