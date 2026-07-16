@@ -61,6 +61,7 @@ function createOperation(overrides: Record<string, unknown> = {}) {
     operation: 'create',
     operationId: '84000000-0000-4000-8000-000000000001',
     payload: {
+      additionalMeasurements: [{ key: 'neck', label: 'Pescoço', unit: 'cm', value: 37.5 }],
       localDate: '2026-07-14',
       measuredAt: '2026-07-14T15:00:00.000Z',
       weightKg: 70,
@@ -105,7 +106,15 @@ describe('local-first sync API', () => {
     expect(response.json()).toMatchObject({
       results: [
         { errorCode: 'invalid_operation', operationId: null, status: 'rejected' },
-        { operationId: valid.operationId, record: { version: 1, weightKg: 70 }, status: 'applied' },
+        {
+          operationId: valid.operationId,
+          record: {
+            additionalMeasurements: [{ key: 'neck', label: 'Pescoço', unit: 'cm', value: 37.5 }],
+            version: 1,
+            weightKg: 70,
+          },
+          status: 'applied',
+        },
       ],
     });
     const stored = await pool.query('select id from body_measurements where id = $1', [

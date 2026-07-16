@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 
 import { syncStateMessage, trackingMetricLabel } from '../presentation';
 import {
+  entityKey,
   queueLocalMutation,
   type LocalRecord,
   type UserSyncDatabase,
@@ -22,7 +23,11 @@ interface ExerciseOption {
   trackingMetric: 'distance' | 'duration' | 'repetitions';
 }
 
-const catalog: ExerciseOption[] = [SYSTEM_EXERCISES.pushUp, SYSTEM_EXERCISES.squat];
+const catalog: ExerciseOption[] = [
+  SYSTEM_EXERCISES.pushUp,
+  SYSTEM_EXERCISES.squat,
+  SYSTEM_EXERCISES.walk,
+];
 
 const weekdayOptions = [
   { label: 'Segunda-feira', value: 1 },
@@ -31,8 +36,46 @@ const weekdayOptions = [
   { label: 'Quinta-feira', value: 4 },
   { label: 'Sexta-feira', value: 5 },
   { label: 'Sábado', value: 6 },
-  { label: 'Domingo', value: 0 },
+  { label: 'Domingo', value: 7 },
 ] as const;
+
+type ActivityType = 'strength' | 'walk' | 'rest' | 'other';
+
+interface ExerciseDraft {
+  exerciseId: string;
+  setCount: number;
+  target: string;
+}
+
+function defaultDraft(type: ActivityType): ExerciseDraft {
+  return type === 'walk'
+    ? { exerciseId: SYSTEM_EXERCISES.walk.id, setCount: 1, target: '5000' }
+    : { exerciseId: SYSTEM_EXERCISES.pushUp.id, setCount: 3, target: '12' };
+}
+
+function isoWeekday(date: Date): number {
+  return date.getUTCDay() || 7;
+}
+
+function localExerciseViews(
+  exercises: Array<Record<string, unknown> & { sets: Array<Record<string, unknown>> }>,
+): Record<string, unknown>[] {
+  return exercises.map((exercise) => ({
+    ...exercise,
+    sets: (exercise.sets as Array<Record<string, unknown>>).map((set) => ({
+      actualDistanceMeters: null,
+      actualDurationSeconds: null,
+      actualRepetitions: null,
+      completed: false,
+      id: set.id,
+      plannedDistanceMeters: set.targetDistanceMeters ?? null,
+      plannedDurationSeconds: set.targetDurationSeconds ?? null,
+      plannedRepetitions: set.targetRepetitions ?? null,
+      setNumber: set.setNumber,
+    })),
+    status: 'planned',
+  }));
+}
 
 function recordsOf(records: LocalRecord[], entityType: SyncEntityType): LocalRecord[] {
   return records.filter((record) => record.entityType === entityType && record.deletedAt === null);
@@ -53,13 +96,18 @@ export function PlanningScreen({ database, onBack, onSync, syncState }: Planning
     useState<ExerciseOption['trackingMetric']>('repetitions');
   const [planName, setPlanName] = useState('');
   const [templateName, setTemplateName] = useState('');
-  const [selectedExerciseId, setSelectedExerciseId] = useState<string>(SYSTEM_EXERCISES.pushUp.id);
-  const [target, setTarget] = useState('12');
+  const [activityType, setActivityType] = useState<ActivityType>('strength');
+  const [exerciseDrafts, setExerciseDrafts] = useState<ExerciseDraft[]>([defaultDraft('strength')]);
   const [localTime, setLocalTime] = useState('18:00');
   const [validFrom, setValidFrom] = useState(new Date().toISOString().slice(0, 10));
+  const [validUntil, setValidUntil] = useState('');
   const [weekdays, setWeekdays] = useState<number[]>([]);
   const [adHocName, setAdHocName] = useState('');
   const [adHocDate, setAdHocDate] = useState(new Date().toISOString().slice(0, 10));
+  const [adHocType, setAdHocType] = useState<ActivityType>('strength');
+  const [adHocExerciseDrafts, setAdHocExerciseDrafts] = useState<ExerciseDraft[]>([
+    defaultDraft('strength'),
+  ]);
 
   async function refresh(): Promise<void> {
     setRecords(await database.records.toArray());
@@ -104,9 +152,56 @@ export function PlanningScreen({ database, onBack, onSync, syncState }: Planning
       },
     });
     setExerciseName('');
-    setSelectedExerciseId(id);
     setMessage('Exercício salvo localmente e pendente de sincronização.');
     await refresh();
+  }
+
+  function changeActivityType(type: ActivityType): void {
+    setActivityType(type);
+    setExerciseDrafts(type === 'rest' ? [] : [defaultDraft(type)]);
+  }
+
+  function updateDraft(index: number, patch: Partial<ExerciseDraft>): void {
+    setExerciseDrafts((current) =>
+      current.map((draft, draftIndex) => (draftIndex === index ? { ...draft, ...patch } : draft)),
+    );
+  }
+
+  function changeAdHocType(type: ActivityType): void {
+    setAdHocType(type);
+    setAdHocExerciseDrafts(type === 'rest' ? [] : [defaultDraft(type)]);
+  }
+
+  function updateAdHocDraft(index: number, patch: Partial<ExerciseDraft>): void {
+    setAdHocExerciseDrafts((current) =>
+      current.map((draft, draftIndex) => (draftIndex === index ? { ...draft, ...patch } : draft)),
+    );
+  }
+
+  function plannedExercises(drafts: ExerciseDraft[]) {
+    return drafts.map((draft, sortOrder) => {
+      const exercise = exercises.find((item) => item.id === draft.exerciseId)!;
+      const numericTarget = Number(draft.target);
+      const targetField =
+        exercise.trackingMetric === 'distance'
+          ? { targetDistanceMeters: numericTarget }
+          : exercise.trackingMetric === 'duration'
+            ? { targetDurationSeconds: numericTarget }
+            : { targetRepetitions: numericTarget };
+      return {
+        exerciseId: exercise.id,
+        id: crypto.randomUUID(),
+        name: exercise.name,
+        notes: null,
+        sets: Array.from({ length: draft.setCount }, (_, index) => ({
+          id: crypto.randomUUID(),
+          setNumber: index + 1,
+          ...targetField,
+        })),
+        sortOrder,
+        trackingMetric: exercise.trackingMetric,
+      };
+    });
   }
 
   function toggleWeekday(weekday: number): void {
@@ -119,9 +214,8 @@ export function PlanningScreen({ database, onBack, onSync, syncState }: Planning
 
   async function savePlanning(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
-    const exercise = exercises.find((item) => item.id === selectedExerciseId);
-    if (!exercise || weekdays.length === 0) {
-      setMessage('Escolha um exercício e ao menos um dia da semana.');
+    if ((activityType !== 'rest' && exerciseDrafts.length === 0) || weekdays.length === 0) {
+      setMessage('Escolha os exercícios e ao menos um dia da semana.');
       return;
     }
     const planId = crypto.randomUUID();
@@ -133,17 +227,24 @@ export function PlanningScreen({ database, onBack, onSync, syncState }: Planning
         entityId: planId,
         entityType: 'training_plan',
         operation: 'create',
-        payload: { name: planName.trim(), status: 'active', validFrom, validUntil: null },
+        payload: {
+          name: planName.trim(),
+          status: 'active',
+          validFrom,
+          validUntil: validUntil || null,
+        },
       },
       occurredAt,
     );
-    const numericTarget = Number(target);
-    const setTarget =
-      exercise.trackingMetric === 'distance'
-        ? { targetDistanceMeters: numericTarget }
-        : exercise.trackingMetric === 'duration'
-          ? { targetDurationSeconds: numericTarget }
-          : { targetRepetitions: numericTarget };
+    const templateExercises = plannedExercises(exerciseDrafts);
+    const rules = weekdays.map((weekday) => ({
+      id: crypto.randomUUID(),
+      localTime,
+      timeZone: 'America/Cuiaba',
+      validFrom,
+      validUntil: validUntil || null,
+      weekday,
+    }));
     await queueLocalMutation(
       database,
       {
@@ -151,37 +252,68 @@ export function PlanningScreen({ database, onBack, onSync, syncState }: Planning
         entityType: 'workout_template',
         operation: 'create',
         payload: {
-          exercises: [
-            {
-              exerciseId: exercise.id,
-              id: crypto.randomUUID(),
-              name: exercise.name,
-              notes: null,
-              sets: [1, 2, 3].map((setNumber) => ({
-                id: crypto.randomUUID(),
-                setNumber,
-                ...setTarget,
-              })),
-              sortOrder: 0,
-              trackingMetric: exercise.trackingMetric,
-            },
-          ],
+          exercises: templateExercises,
           name: templateName.trim(),
           notes: null,
           planId,
-          rules: weekdays.map((weekday) => ({
-            id: crypto.randomUUID(),
-            localTime,
-            timeZone: 'America/Cuiaba',
-            validFrom,
-            validUntil: null,
-            weekday,
-          })),
-          type: exercise.trackingMetric === 'distance' ? 'walk' : 'strength',
+          rules,
+          type: activityType,
         },
       },
       new Date(occurredAt.getTime() + 1),
     );
+    const lastDate = new Date(`${validUntil || validFrom}T12:00:00Z`);
+    if (!validUntil) lastDate.setUTCDate(lastDate.getUTCDate() + 27);
+    const cursor = new Date(`${validFrom}T12:00:00Z`);
+    let offset = 2;
+    while (cursor <= lastDate) {
+      const weekday = isoWeekday(cursor);
+      const rule = rules.find((candidate) => candidate.weekday === weekday);
+      if (rule) {
+        const sessionId = crypto.randomUUID();
+        const sessionExercises = plannedExercises(exerciseDrafts);
+        const sessionPayload = {
+          exercises: sessionExercises,
+          notes: null,
+          plannedLocalDate: cursor.toISOString().slice(0, 10),
+          scheduleRuleId: rule.id,
+          source: 'scheduled',
+          status: 'planned',
+          suggestedLocalTime: localTime,
+          templateId,
+          templateNameSnapshot: templateName.trim(),
+          timeZone: 'America/Cuiaba',
+          type: activityType,
+        };
+        await queueLocalMutation(
+          database,
+          {
+            entityId: sessionId,
+            entityType: 'workout_session',
+            operation: 'create',
+            payload: sessionPayload,
+          },
+          new Date(occurredAt.getTime() + offset++),
+        );
+        const sessionRecord = await database.records.get(entityKey('workout_session', sessionId));
+        if (sessionRecord) {
+          await database.records.put({
+            ...sessionRecord,
+            data: {
+              ...sessionPayload,
+              exercises: localExerciseViews(
+                sessionExercises as Array<
+                  Record<string, unknown> & { sets: Array<Record<string, unknown>> }
+                >,
+              ),
+              jointPainStatus: 'unknown',
+              version: 0,
+            },
+          });
+        }
+      }
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
     setPlanName('');
     setTemplateName('');
     setMessage('Planejamento salvo localmente e pendente de sincronização.');
@@ -190,24 +322,47 @@ export function PlanningScreen({ database, onBack, onSync, syncState }: Planning
 
   async function addAdHocSession(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
+    const sessionId = crypto.randomUUID();
+    if (adHocType !== 'rest' && adHocExerciseDrafts.length === 0) {
+      setMessage('Adicione ao menos um exercício à sessão.');
+      return;
+    }
+    const sessionExercises = plannedExercises(adHocExerciseDrafts);
+    const payload = {
+      exercises: sessionExercises,
+      notes: null,
+      plannedLocalDate: adHocDate,
+      scheduleRuleId: null,
+      source: 'ad_hoc',
+      status: 'planned',
+      suggestedLocalTime: localTime,
+      templateId: null,
+      templateNameSnapshot: adHocName.trim(),
+      timeZone: 'America/Cuiaba',
+      type: adHocType,
+    };
     await queueLocalMutation(database, {
-      entityId: crypto.randomUUID(),
+      entityId: sessionId,
       entityType: 'workout_session',
       operation: 'create',
-      payload: {
-        exercises: [],
-        notes: null,
-        plannedLocalDate: adHocDate,
-        scheduleRuleId: null,
-        source: 'ad_hoc',
-        status: 'planned',
-        suggestedLocalTime: localTime,
-        templateId: null,
-        templateNameSnapshot: adHocName.trim(),
-        timeZone: 'America/Cuiaba',
-        type: 'other',
-      },
+      payload,
     });
+    const sessionRecord = await database.records.get(entityKey('workout_session', sessionId));
+    if (sessionRecord) {
+      await database.records.put({
+        ...sessionRecord,
+        data: {
+          ...payload,
+          exercises: localExerciseViews(
+            sessionExercises as Array<
+              Record<string, unknown> & { sets: Array<Record<string, unknown>> }
+            >,
+          ),
+          jointPainStatus: 'unknown',
+          version: 0,
+        },
+      });
+    }
     setAdHocName('');
     setMessage('Sessão avulsa salva localmente.');
     await refresh();
@@ -343,28 +498,78 @@ export function PlanningScreen({ database, onBack, onSync, syncState }: Planning
               />
             </label>
             <label>
-              Exercício do treino
+              Tipo de atividade
               <select
-                value={selectedExerciseId}
-                onChange={(event) => setSelectedExerciseId(event.target.value)}
+                value={activityType}
+                onChange={(event) => changeActivityType(event.target.value as ActivityType)}
               >
-                {exercises.map((exercise) => (
-                  <option key={exercise.id} value={exercise.id}>
-                    {exercise.name}
-                  </option>
-                ))}
+                <option value="strength">Força</option>
+                <option value="walk">Caminhada</option>
+                <option value="rest">Descanso/recuperação</option>
+                <option value="other">Outra atividade</option>
               </select>
             </label>
-            <label>
-              Repetições por série
-              <input
-                min="1"
-                required
-                type="number"
-                value={target}
-                onChange={(event) => setTarget(event.target.value)}
-              />
-            </label>
+            {exerciseDrafts.map((draft, index) => (
+              <fieldset className="form-group" key={`${index}-${draft.exerciseId}`}>
+                <legend>Exercício {index + 1}</legend>
+                <label>
+                  Exercício {index + 1}
+                  <select
+                    aria-label={`Exercício ${index + 1}`}
+                    value={draft.exerciseId}
+                    onChange={(event) => updateDraft(index, { exerciseId: event.target.value })}
+                  >
+                    {exercises.map((exercise) => (
+                      <option key={exercise.id} value={exercise.id}>
+                        {exercise.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Séries do exercício {index + 1}
+                  <input
+                    aria-label={`Séries do exercício ${index + 1}`}
+                    min="1"
+                    type="number"
+                    value={draft.setCount}
+                    onChange={(event) =>
+                      updateDraft(index, { setCount: Number(event.target.value) })
+                    }
+                  />
+                </label>
+                <label>
+                  Alvo por série do exercício {index + 1}
+                  <input
+                    aria-label={`Alvo por série do exercício ${index + 1}`}
+                    min="1"
+                    type="number"
+                    value={draft.target}
+                    onChange={(event) => updateDraft(index, { target: event.target.value })}
+                  />
+                </label>
+                {exerciseDrafts.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setExerciseDrafts((current) => current.filter((_, item) => item !== index))
+                    }
+                  >
+                    Remover exercício {index + 1}
+                  </button>
+                )}
+              </fieldset>
+            ))}
+            {activityType !== 'rest' && (
+              <button
+                type="button"
+                onClick={() =>
+                  setExerciseDrafts((current) => [...current, defaultDraft('strength')])
+                }
+              >
+                Adicionar exercício ao treino
+              </button>
+            )}
             <label>
               Horário local
               <input
@@ -381,6 +586,15 @@ export function PlanningScreen({ database, onBack, onSync, syncState }: Planning
                 type="date"
                 value={validFrom}
                 onChange={(event) => setValidFrom(event.target.value)}
+              />
+            </label>
+            <label>
+              Vigência até
+              <input
+                min={validFrom}
+                type="date"
+                value={validUntil}
+                onChange={(event) => setValidUntil(event.target.value)}
               />
             </label>
             <fieldset className="weekday-picker">
@@ -411,6 +625,18 @@ export function PlanningScreen({ database, onBack, onSync, syncState }: Planning
           <h2 id="adhoc-heading">Sessões avulsas</h2>
           <form onSubmit={(event) => void addAdHocSession(event)}>
             <label>
+              Tipo da sessão avulsa
+              <select
+                value={adHocType}
+                onChange={(event) => changeAdHocType(event.target.value as ActivityType)}
+              >
+                <option value="strength">Força</option>
+                <option value="walk">Caminhada</option>
+                <option value="rest">Descanso/recuperação</option>
+                <option value="other">Outra atividade</option>
+              </select>
+            </label>
+            <label>
               Nome da sessão avulsa
               <input
                 required
@@ -427,6 +653,71 @@ export function PlanningScreen({ database, onBack, onSync, syncState }: Planning
                 onChange={(event) => setAdHocDate(event.target.value)}
               />
             </label>
+            {adHocExerciseDrafts.map((draft, index) => (
+              <fieldset className="exercise-draft" key={`${index}-${draft.exerciseId}`}>
+                <legend>Exercício {index + 1} da sessão</legend>
+                <label>
+                  Exercício da sessão {index + 1}
+                  <select
+                    aria-label={`Exercício da sessão ${index + 1}`}
+                    value={draft.exerciseId}
+                    onChange={(event) =>
+                      updateAdHocDraft(index, { exerciseId: event.target.value })
+                    }
+                  >
+                    {exercises.map((exercise) => (
+                      <option key={exercise.id} value={exercise.id}>
+                        {exercise.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Séries da sessão {index + 1}
+                  <input
+                    aria-label={`Séries da sessão ${index + 1}`}
+                    min="1"
+                    type="number"
+                    value={draft.setCount}
+                    onChange={(event) =>
+                      updateAdHocDraft(index, { setCount: Number(event.target.value) })
+                    }
+                  />
+                </label>
+                <label>
+                  Alvo da sessão {index + 1}
+                  <input
+                    aria-label={`Alvo da sessão ${index + 1}`}
+                    min="1"
+                    type="number"
+                    value={draft.target}
+                    onChange={(event) => updateAdHocDraft(index, { target: event.target.value })}
+                  />
+                </label>
+                {adHocExerciseDrafts.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAdHocExerciseDrafts((current) =>
+                        current.filter((_, item) => item !== index),
+                      )
+                    }
+                  >
+                    Remover exercício da sessão {index + 1}
+                  </button>
+                )}
+              </fieldset>
+            ))}
+            {adHocType !== 'rest' && (
+              <button
+                type="button"
+                onClick={() =>
+                  setAdHocExerciseDrafts((current) => [...current, defaultDraft('strength')])
+                }
+              >
+                Adicionar exercício à sessão
+              </button>
+            )}
             <button className="primary" type="submit">
               Criar sessão avulsa
             </button>

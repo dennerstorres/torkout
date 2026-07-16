@@ -147,6 +147,57 @@ describe('Today mobile tracking', () => {
     database.close();
   });
 
+  it('saves a retroactive custom body measurement without requiring weight or waist', async () => {
+    const database = await seed();
+    render(
+      <TodayScreen
+        database={database}
+        now={new Date('2026-07-15T01:00:00.000Z')}
+        onBack={vi.fn()}
+        onSync={vi.fn()}
+        syncState="offline"
+        timeZone="America/Cuiaba"
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Data da medição'), {
+      target: { value: '2026-07-01' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Adicionar outra medida' }));
+    fireEvent.change(screen.getByLabelText('Tipo da medida 1'), {
+      target: { value: 'abdomen' },
+    });
+    fireEvent.change(screen.getByLabelText('Valor da medida 1'), { target: { value: '82.5' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Adicionar outra medida' }));
+    fireEvent.change(screen.getByLabelText('Tipo da medida 2'), {
+      target: { value: 'custom' },
+    });
+    fireEvent.change(screen.getByLabelText('Nome da medida 2'), {
+      target: { value: 'Braço relaxado' },
+    });
+    fireEvent.change(screen.getByLabelText('Unidade da medida 2'), {
+      target: { value: 'mm' },
+    });
+    fireEvent.change(screen.getByLabelText('Valor da medida 2'), { target: { value: '315' } });
+    fireEvent.submit(screen.getByRole('button', { name: 'Salvar medida' }).closest('form')!);
+
+    await waitFor(async () => {
+      const measurement = (await database.outbox.toArray()).find(
+        (entry) => entry.entityType === 'body_measurement',
+      );
+      expect(measurement?.payload).toMatchObject({
+        additionalMeasurements: [
+          { key: 'abdomen', label: 'Abdômen', unit: 'cm', value: 82.5 },
+          { key: 'braço_relaxado', label: 'Braço relaxado', unit: 'mm', value: 315 },
+        ],
+        localDate: '2026-07-01',
+        waistCm: null,
+        weightKg: null,
+      });
+    });
+    database.close();
+  });
+
   it('restores an unfinished form after a reload from IndexedDB', async () => {
     const database = await seed();
     const first = render(

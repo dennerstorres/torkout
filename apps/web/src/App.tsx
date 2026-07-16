@@ -327,21 +327,6 @@ function AppContent({ api }: { api: AppApi }) {
         name={name}
         onBack={() => setView('today')}
         onPlan={() => setView('planning')}
-        {...(offline
-          ? {}
-          : {
-              onImportHistory: async () => {
-                await api.importDailyHistory();
-                const historical = await api.loadDaily('2026-07-13');
-                await cacheDailyData(sync.database!, [
-                  { entityType: 'workout_session', items: historical.sessions },
-                  { entityType: 'habit_definition', items: historical.habits },
-                  { entityType: 'habit_entry', items: historical.habitEntries },
-                  { entityType: 'pain_report', items: historical.painReports },
-                  { entityType: 'body_measurement', items: historical.measurements },
-                ]);
-              },
-            })}
         onSync={() => void sync.sync()}
         syncState={offline ? 'offline' : sync.snapshot.state}
         timeZone={timeZone}

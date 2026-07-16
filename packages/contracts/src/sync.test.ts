@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { syncOperationSchema, syncPushRequestSchema } from './sync.js';
+import {
+  bodyMeasurementCreatePayloadSchema,
+  syncOperationSchema,
+  syncPushRequestSchema,
+} from './sync.js';
 
 const operation = {
   baseVersion: null,
@@ -18,6 +22,20 @@ const operation = {
 };
 
 describe('sync contracts', () => {
+  it('accepts a body measurement containing only extensible circumferences', () => {
+    expect(
+      bodyMeasurementCreatePayloadSchema.parse({
+        additionalMeasurements: [
+          { key: 'biceps_left', label: 'Bíceps esquerdo', unit: 'cm', value: 31.4 },
+        ],
+        localDate: '2026-07-01',
+        measuredAt: '2026-07-01T12:00:00.000Z',
+        notes: null,
+        waistCm: null,
+        weightKg: null,
+      }),
+    ).toMatchObject({ additionalMeasurements: [{ key: 'biceps_left', value: 31.4 }] });
+  });
   it('accepts daily execution, pain and habit operations while preserving explicit unknown pain', () => {
     const sessionExecution = {
       ...operation,

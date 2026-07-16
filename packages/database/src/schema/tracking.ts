@@ -5,6 +5,7 @@ import {
   date,
   index,
   integer,
+  jsonb,
   numeric,
   pgEnum,
   pgTable,
@@ -159,6 +160,10 @@ export const bodyMeasurements = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     localDate: date('local_date', { mode: 'string' }).notNull(),
     measuredAt: timestamp('measured_at', { mode: 'date', withTimezone: true }).notNull(),
+    additionalMeasurements: jsonb('additional_measurements')
+      .$type<Array<{ key: string; label: string; unit: string; value: number }>>()
+      .default([])
+      .notNull(),
     weightKg: numeric('weight_kg', { precision: 6, scale: 2 }),
     waistCm: numeric('waist_cm', { precision: 6, scale: 2 }),
     notes: text('notes'),
@@ -167,7 +172,7 @@ export const bodyMeasurements = pgTable(
     index('body_measurements_user_date_idx').on(table.userId, table.localDate),
     check(
       'body_measurements_value_presence_check',
-      sql`${table.weightKg} is not null or ${table.waistCm} is not null`,
+      sql`${table.weightKg} is not null or ${table.waistCm} is not null or jsonb_array_length(${table.additionalMeasurements}) > 0`,
     ),
     check(
       'body_measurements_plausibility_check',

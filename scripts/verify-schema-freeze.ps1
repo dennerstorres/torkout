@@ -3,8 +3,8 @@ param([switch]$Print)
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
-$expectedContracts = 'b69d77c22d8df25446aa2a166e969024373d4465acf92bf4b74a2da807351736'
-$expectedSchema = 'e695a94fce04b0fe2a6b4084253a8bfcc75d5e0105d9431e5d6057eff640e77a'
+$expectedContracts = 'dc85f622501cff950eaccdcf3ed308c286983a2761c4a58b951214c18a8aee60'
+$expectedSchema = '564266cca8534dd105e7d44c5681604a639013d2f3d532fca22e98025f14ddba'
 
 function Get-TreeDigest([string[]]$paths) {
     $files = foreach ($relativePath in $paths) {
@@ -41,4 +41,4 @@ if ($failures.Count -gt 0) {
     exit 1
 }
 
-Write-Host 'Schema and public contracts match the 1.0.0 freeze.' -ForegroundColor Green
+Write-Host 'Schema and public contracts match the 1.1.0 freeze.' -ForegroundColor Green

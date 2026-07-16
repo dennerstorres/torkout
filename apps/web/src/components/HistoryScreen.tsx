@@ -561,6 +561,35 @@ export function HistoryScreen({
                 }}
               />
             </label>
+            {Array.isArray(measurement.data.additionalMeasurements) &&
+              (
+                measurement.data.additionalMeasurements as Array<{
+                  key: string;
+                  label: string;
+                  unit: string;
+                  value: number;
+                }>
+              ).map((additional, index, all) => (
+                <label key={`${additional.key}-${index}`}>
+                  {additional.label} ({additional.unit}) em {dateLabel(selectedDate)}
+                  <input
+                    defaultValue={additional.value}
+                    min="0.1"
+                    step="0.1"
+                    type="number"
+                    onBlur={(event) => {
+                      if (!event.target.value) return;
+                      void updateRecord(measurement, {
+                        additionalMeasurements: all.map((item, itemIndex) =>
+                          itemIndex === index
+                            ? { ...item, value: Number(event.target.value) }
+                            : item,
+                        ),
+                      });
+                    }}
+                  />
+                </label>
+              ))}
           </div>
         ))}
 

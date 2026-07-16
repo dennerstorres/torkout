@@ -5,6 +5,7 @@ test('retries a committed batch after a lost response without duplicating local 
 }) => {
   const userId = 'e1000000-0000-4000-8000-000000000001';
   let pushAttempts = 0;
+  let initialBatchSize = 0;
   const committed = new Map<string, Record<string, unknown>>();
 
   await page.route('**/auth/get-session', (route) =>
@@ -37,6 +38,7 @@ test('retries a committed batch after a lost response without duplicating local 
         payload: Record<string, unknown>;
       }>;
     };
+    if (pushAttempts === 1) initialBatchSize = body.operations.length;
     for (const operation of body.operations) {
       committed.set(operation.operationId, {
         ...operation.payload,
@@ -69,11 +71,14 @@ test('retries a committed batch after a lost response without duplicating local 
   await expect(page.getByText('Não foi possível sincronizar. Nada foi perdido.')).toBeVisible();
   await page.getByLabel('Abrir detalhes da sincronização').click();
   const syncDetails = page.getByRole('region', { name: 'Sincronização' });
-  await expect(syncDetails.getByRole('status')).toContainText('2 alterações pendentes');
+  await expect(syncDetails.getByRole('status')).toContainText(
+    `${initialBatchSize} alterações pendentes`,
+  );
 
   await syncDetails.getByRole('button', { name: 'Sincronizar agora' }).click();
   await expect(syncDetails.getByRole('status')).toContainText('0 alterações pendentes');
   await expect(syncDetails.getByRole('status')).toContainText('Tudo sincronizado');
   expect(pushAttempts).toBe(2);
-  expect(committed.size).toBe(2);
+  expect(initialBatchSize).toBeGreaterThan(2);
+  expect(committed.size).toBe(initialBatchSize);
 });

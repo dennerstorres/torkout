@@ -14,11 +14,28 @@ interface TodayScreenProps {
   name?: string;
   now?: Date;
   onBack(): void;
-  onImportHistory?(): Promise<void>;
   onPlan?(): void;
   onSync(): void;
   syncState: SyncState;
   timeZone: string;
+}
+
+const BODY_MEASUREMENT_OPTIONS = [
+  { key: 'abdomen', label: 'Abdômen' },
+  { key: 'biceps', label: 'Bíceps' },
+  { key: 'thigh', label: 'Coxa' },
+  { key: 'hips', label: 'Quadril/glúteos' },
+  { key: 'neck', label: 'Pescoço' },
+  { key: 'chest', label: 'Peito' },
+  { key: 'calf', label: 'Panturrilha' },
+  { key: 'custom', label: 'Outra medida' },
+] as const;
+
+interface AdditionalMeasurementDraft {
+  key: string;
+  customLabel: string;
+  unit: string;
+  value: string;
 }
 
 interface SetView {
@@ -115,7 +132,6 @@ export function TodayScreen({
   name,
   now = new Date(),
   onBack,
-  onImportHistory,
   onPlan,
   onSync,
   syncState,
@@ -126,6 +142,10 @@ export function TodayScreen({
   const [message, setMessage] = useState(syncMessages[syncState]);
   const [weight, setWeight] = useState('');
   const [waist, setWaist] = useState('');
+  const [measurementDate, setMeasurementDate] = useState(date);
+  const [additionalMeasurements, setAdditionalMeasurements] = useState<
+    AdditionalMeasurementDraft[]
+  >([]);
   const [painType, setPainType] = useState<'joint' | 'muscular'>('muscular');
   const [painIntensity, setPainIntensity] = useState('not_informed');
   const [painRegion, setPainRegion] = useState('other');
@@ -277,13 +297,31 @@ export function TodayScreen({
 
   async function saveMeasurement(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
-    if (!weight && !waist) return;
+    const extra = additionalMeasurements
+      .filter((measurement) => measurement.value)
+      .map((measurement) => {
+        const preset = BODY_MEASUREMENT_OPTIONS.find((option) => option.key === measurement.key);
+        return {
+          key:
+            measurement.key === 'custom'
+              ? measurement.customLabel.trim().toLocaleLowerCase('pt-BR').replace(/\s+/g, '_')
+              : measurement.key,
+          label:
+            measurement.key === 'custom'
+              ? measurement.customLabel.trim()
+              : (preset?.label ?? measurement.key),
+          unit: measurement.unit,
+          value: Number(measurement.value),
+        };
+      });
+    if (!weight && !waist && extra.length === 0) return;
     await queueLocalMutation(database, {
       entityId: crypto.randomUUID(),
       entityType: 'body_measurement',
       operation: 'create',
       payload: {
-        localDate: date,
+        additionalMeasurements: extra,
+        localDate: measurementDate,
         measuredAt: now.toISOString(),
         notes: painNotes || null,
         waistCm: waist ? Number(waist) : null,
@@ -292,6 +330,7 @@ export function TodayScreen({
     });
     setWeight('');
     setWaist('');
+    setAdditionalMeasurements([]);
     setMessage('Salvo localmente: medida pendente de sincronização.');
     await refresh();
   }
@@ -810,6 +849,15 @@ export function TodayScreen({
               <h2 id="measurements-heading">Nova medição</h2>
               <form onSubmit={(event) => void saveMeasurement(event)}>
                 <label>
+                  Data da medição
+                  <input
+                    required
+                    type="date"
+                    value={measurementDate}
+                    onChange={(event) => setMeasurementDate(event.target.value)}
+                  />
+                </label>
+                <label>
                   Peso (kg)
                   <input
                     min="0.1"
@@ -829,6 +877,106 @@ export function TodayScreen({
                     onChange={(event) => setWaist(event.target.value)}
                   />
                 </label>
+                {additionalMeasurements.map((measurement, index) => (
+                  <fieldset className="form-group" key={index}>
+                    <legend>Medida adicional {index + 1}</legend>
+                    <label>
+                      Tipo da medida {index + 1}
+                      <select
+                        aria-label={`Tipo da medida ${index + 1}`}
+                        value={measurement.key}
+                        onChange={(event) =>
+                          setAdditionalMeasurements((current) =>
+                            current.map((item, itemIndex) =>
+                              itemIndex === index ? { ...item, key: event.target.value } : item,
+                            ),
+                          )
+                        }
+                      >
+                        {BODY_MEASUREMENT_OPTIONS.map((option) => (
+                          <option key={option.key} value={option.key}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    {measurement.key === 'custom' && (
+                      <label>
+                        Nome da medida {index + 1}
+                        <input
+                          required
+                          value={measurement.customLabel}
+                          onChange={(event) =>
+                            setAdditionalMeasurements((current) =>
+                              current.map((item, itemIndex) =>
+                                itemIndex === index
+                                  ? { ...item, customLabel: event.target.value }
+                                  : item,
+                              ),
+                            )
+                          }
+                        />
+                      </label>
+                    )}
+                    <label>
+                      Unidade da medida {index + 1}
+                      <select
+                        aria-label={`Unidade da medida ${index + 1}`}
+                        value={measurement.unit}
+                        onChange={(event) =>
+                          setAdditionalMeasurements((current) =>
+                            current.map((item, itemIndex) =>
+                              itemIndex === index ? { ...item, unit: event.target.value } : item,
+                            ),
+                          )
+                        }
+                      >
+                        <option value="cm">cm</option>
+                        <option value="mm">mm</option>
+                        <option value="in">polegadas</option>
+                      </select>
+                    </label>
+                    <label>
+                      Valor da medida {index + 1}
+                      <input
+                        aria-label={`Valor da medida ${index + 1}`}
+                        min="0.1"
+                        required
+                        step="0.1"
+                        type="number"
+                        value={measurement.value}
+                        onChange={(event) =>
+                          setAdditionalMeasurements((current) =>
+                            current.map((item, itemIndex) =>
+                              itemIndex === index ? { ...item, value: event.target.value } : item,
+                            ),
+                          )
+                        }
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAdditionalMeasurements((current) =>
+                          current.filter((_, itemIndex) => itemIndex !== index),
+                        )
+                      }
+                    >
+                      Remover medida {index + 1}
+                    </button>
+                  </fieldset>
+                ))}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setAdditionalMeasurements((current) => [
+                      ...current,
+                      { customLabel: '', key: 'abdomen', unit: 'cm', value: '' },
+                    ])
+                  }
+                >
+                  Adicionar outra medida
+                </button>
                 <button type="submit">Salvar medida</button>
               </form>
             </section>
@@ -836,11 +984,6 @@ export function TodayScreen({
         </section>
       )}
 
-      {onImportHistory && (
-        <button type="button" onClick={() => void onImportHistory()}>
-          Importar histórico de 13/07/2026
-        </button>
-      )}
       <button className="primary sticky-action" type="button" onClick={onSync}>
         Sincronizar agora
       </button>

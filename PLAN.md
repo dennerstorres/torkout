@@ -1,12 +1,12 @@
 # Torkout — Plano de Implementação
 
-**Base:** `SPEC.md` versão 1.0
+**Base:** `SPEC.md` versão 1.1
 
 **Método obrigatório:** TDD Red → Green → Refactor
 
 **Unidade de entrega:** fase completa com commit de encerramento
 
-**Status geral:** Fases 0–14 implementadas localmente; Fase 15 aceita e publicada para revisão; lançamento público ainda aguarda as validações físicas e externas
+**Status geral:** Fases 0–16 implementadas; lançamento público ainda aguarda as validações físicas e externas
 
 ## 1. Regras de execução
 
@@ -1095,10 +1095,62 @@ visual em desktop e mobile. Nenhum snapshot novo deve ser aceito apenas para tor
 - Snapshots visuais aprovados por pessoa e cobertura ampliada para as telas principais.
 - `pnpm check`, integração, E2E, build e verificações de release verdes.
 
+### Fase 16 — Planejamento completo e antropometria extensível
+
+**Status:** concluída
+
+**Commit esperado:** `feat(phase-16): complete planning and body measurements`
+
+**Objetivo:** permitir que uma conta vazia reproduza por cadastro qualquer calendário pessoal de
+treino, caminhada e recuperação, inclusive retroativo, e registre medidas corporais livres sem
+dados pessoais ou importadores dedicados no produto.
+
+#### Etapa 16.1 — Planejamento e lançamentos retroativos
+
+- [x] Remover o importador dedicado ao histórico de 13/07/2026 da interface, contratos e API.
+- [x] Corrigir domingo para o valor ISO `7` em todo o editor.
+- [x] Permitir escolher força, caminhada, descanso ou outra atividade.
+- [x] Permitir vários exercícios por template, com ordem, quantidade de séries e alvo próprios.
+- [x] Tratar caminhada como uma atividade única de distância/duração.
+- [x] Permitir vigência inicial/final passada ou futura.
+- [x] Materializar localmente a janela do plano e enfileirar sessões sem depender de job externo.
+- [x] Permitir sessão avulsa completa em qualquer data, com os mesmos detalhes do planejamento.
+- [x] Preservar início vazio e estados vazios acionáveis.
+
+#### Etapa 16.2 — Medidas corporais extensíveis
+
+- [x] Ampliar contrato e banco para medidas adicionais estruturadas e versionadas.
+- [x] Oferecer abdômen, bíceps, coxa, quadril/glúteos, pescoço, peito e panturrilha.
+- [x] Permitir nome personalizado, unidade e valor.
+- [x] Permitir data retroativa na tela Hoje e no Histórico.
+- [x] Sincronizar, exportar e exibir as medidas adicionais sem quebrar peso/cintura existentes.
+- [x] Preservar isolamento por usuário, conflito explícito e outbox local-first.
+
+#### Testes primeiro
+
+- [x] Teste Red para template com dois exercícios e séries diferentes.
+- [x] Teste Red para caminhada única de 5 km e descanso no domingo.
+- [x] Teste Red para materialização local idempotente e sessão avulsa retroativa completa.
+- [x] Teste Red para conta vazia sem importador pessoal.
+- [x] Teste Red de contrato, schema, sync e UI para medidas adicionais/customizadas.
+- [x] Teste Red para medição contendo apenas circunferência e data retroativa.
+- [x] Regressão de histórico, analytics, portabilidade, offline e autorização.
+
+#### Critérios de saída
+
+- Um usuário consegue cadastrar pela interface um calendário equivalente ao HTML de referência,
+  sem qualquer preset ou dado pessoal no código.
+- Sessões planejadas aparecem localmente em Hoje/Histórico antes da sincronização e sobrevivem a
+  reload offline.
+- Lançamentos retroativos usam os mesmos contratos e proteções dos registros atuais.
+- Medidas corporais adicionais aparecem no registro e histórico e atravessam sync/exportação.
+- Testes, integração afetada, E2E, typecheck, lint, formatação e build verdes.
+- `HISTORY.md` atualizado e fase encerrada em commit próprio.
+
 ## 5. Dependências entre fases
 
 ```text
-0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15
+0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16
 ```
 
 Trabalhos internos de uma mesma fase podem ser paralelos somente quando não compartilham arquivos ou contratos instáveis. O encerramento continua único.

@@ -64,6 +64,13 @@
       "when": 1784077200000,
       "tag": "0008_release_rollback_compatibility",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1784167412866,
+      "tag": "0009_phase_16_planning_measurements",
+      "breakpoints": true
     }
   ]
 }

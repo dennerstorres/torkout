@@ -1,15 +1,12 @@
 import { expect, test } from '@playwright/test';
 
-test('tracks Today offline on mobile, survives reload and imports authenticated history', async ({
-  page,
-}) => {
+test('tracks Today offline on mobile and survives reload', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-07-14T20:00:00Z'));
   const userId = 'b6000000-0000-4000-8000-000000000001';
   const sessionId = 'b6100000-0000-4000-8000-000000000001';
   const exerciseId = 'b6100000-0000-4000-8000-000000000002';
   const setId = 'b6100000-0000-4000-8000-000000000003';
   let networkAvailable = true;
-  let imported = false;
   let pushedExecution = false;
 
   await page.route('**/auth/get-session', (route) => {
@@ -69,13 +66,6 @@ test('tracks Today offline on mobile, survives reload and imports authenticated 
   );
   await page.route('**/api/v1/pain-reports?**', (route) => route.fulfill({ json: { items: [] } }));
   await page.route('**/api/v1/measurements?**', (route) => route.fulfill({ json: { items: [] } }));
-  await page.route('**/api/v1/daily-history/import', (route) => {
-    imported = true;
-    return route.fulfill({
-      json: { created: true, sessionId: 'b6200000-0000-4000-8000-000000000001' },
-      status: 201,
-    });
-  });
   await page.route('**/api/v1/sync/pull**', (route) => {
     if (!networkAvailable) return route.abort('internetdisconnected');
     return route.fulfill({
@@ -134,6 +124,4 @@ test('tracks Today offline on mobile, survives reload and imports authenticated 
   await page.evaluate(() => window.dispatchEvent(new Event('online')));
   await page.getByRole('button', { name: 'Sincronizar agora' }).click();
   await expect.poll(() => pushedExecution).toBe(true);
-  await page.getByRole('button', { name: 'Importar histórico de 13/07/2026' }).click();
-  await expect.poll(() => imported).toBe(true);
 });

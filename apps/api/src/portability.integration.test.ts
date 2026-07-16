@@ -91,6 +91,7 @@ describe('data portability and erasure API', () => {
     ]);
     await db.insert(bodyMeasurements).values([
       {
+        additionalMeasurements: [{ key: 'abdomen', label: 'Abdômen', unit: 'cm', value: 82.5 }],
         id: '23000000-0000-4000-8000-000000000001',
         localDate: '2026-07-14',
         measuredAt: new Date('2026-07-14T15:00:00.000Z'),
@@ -156,7 +157,11 @@ describe('data portability and erasure API', () => {
     expect(exported.formatVersion).toBe('1.0.0');
     expect(exported.timeZone).toBe('America/Cuiaba');
     expect(exported.entities.bodyMeasurements).toEqual([
-      expect.objectContaining({ notes: 'medição da primeira pessoa', userId: userIds.first }),
+      expect.objectContaining({
+        additionalMeasurements: [{ key: 'abdomen', label: 'Abdômen', unit: 'cm', value: 82.5 }],
+        notes: 'medição da primeira pessoa',
+        userId: userIds.first,
+      }),
     ]);
     expect(exported.pendingChanges).toEqual([
       expect.objectContaining({ origin: 'local_pending', operation: 'create' }),

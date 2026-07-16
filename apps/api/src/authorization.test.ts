@@ -34,7 +34,6 @@ const protectedRoutes = [
   ['PUT', '/api/v1/habits/00000000-0000-4000-8000-000000000001/entries/2026-07-14'],
   ['GET', '/api/v1/measurements?localDate=2026-07-14'],
   ['POST', '/api/v1/measurements'],
-  ['POST', '/api/v1/daily-history/import'],
   ['GET', '/api/v1/history?from=2026-07-01&through=2026-07-31'],
   ['GET', '/api/v1/progress?from=2026-07-01&through=2026-07-31'],
   ['GET', '/api/v1/progression/suggestions'],

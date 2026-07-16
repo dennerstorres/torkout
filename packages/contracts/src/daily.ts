@@ -172,10 +172,6 @@ export const habitEntryUpdateSchema = z
     }
   });
 
-export const dailyImportSchema = z.strictObject({
-  localDate: z.literal('2026-07-13'),
-});
-
 export type HabitDefinitionCreate = z.infer<typeof habitDefinitionCreateSchema>;
 export type PainReportCreate = z.infer<typeof painReportCreateSchema>;
 export type WorkoutExecution = z.infer<typeof workoutExecutionSchema>;

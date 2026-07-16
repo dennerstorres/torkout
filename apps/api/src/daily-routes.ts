@@ -1,13 +1,11 @@
 import {
   bodyMeasurementCreatePayloadSchema,
-  dailyImportSchema,
   habitDefinitionCreateSchema,
   habitDefinitionUpdateSchema,
   habitEntryValueSchema,
   painReportCreateSchema,
   painReportUpdateSchema,
   workoutSessionUpdateSchema,
-  SYSTEM_EXERCISES,
   type HabitDefinitionCreate,
 } from '@torkout/contracts';
 import {
@@ -17,7 +15,6 @@ import {
   habitEntries,
   habitOptions,
   painReports,
-  sessionExercises,
   workoutSessions,
   type DatabaseClient,
 } from '@torkout/database';
@@ -61,6 +58,7 @@ function painView(row: typeof painReports.$inferSelect) {
 
 function measurementView(row: typeof bodyMeasurements.$inferSelect) {
   return {
+    additionalMeasurements: row.additionalMeasurements,
     id: row.id,
     localDate: row.localDate,
     measuredAt: row.measuredAt.toISOString(),
@@ -395,6 +393,7 @@ export function registerDailyRoutes(app: FastifyInstance, dependencies: ApiDepen
     const [created] = await dependencies.database
       .insert(bodyMeasurements)
       .values({
+        additionalMeasurements: input.additionalMeasurements ?? [],
         localDate: input.localDate,
         measuredAt: new Date(input.measuredAt),
         notes: input.notes ?? null,
@@ -405,102 +404,5 @@ export function registerDailyRoutes(app: FastifyInstance, dependencies: ApiDepen
       .returning();
     if (!created) throw new Error('Measurement insert did not return a row.');
     return reply.status(201).send(measurementView(created));
-  });
-
-  app.post('/api/v1/daily-history/import', async (request, reply) => {
-    const user = await requireAuthenticatedUser(request, dependencies);
-    const input = parse(dailyImportSchema, request.body);
-    const [existing] = await dependencies.database
-      .select({ id: workoutSessions.id })
-      .from(workoutSessions)
-      .where(
-        and(
-          eq(workoutSessions.userId, user.id),
-          eq(workoutSessions.importKey, 'history-2026-07-13'),
-          isNull(workoutSessions.deletedAt),
-        ),
-      )
-      .limit(1);
-    if (existing) return { created: false, painReports: 2, sessionId: existing.id };
-
-    const sessionId = randomUUID();
-    await dependencies.database.transaction(async (transaction) => {
-      await transaction.insert(workoutSessions).values({
-        completedAt: new Date('2026-07-14T00:00:00.000Z'),
-        importKey: 'history-2026-07-13',
-        jointPainStatus: 'reported',
-        plannedLocalDate: input.localDate,
-        source: 'ad_hoc',
-        startedAt: new Date('2026-07-13T22:00:00.000Z'),
-        status: 'partial',
-        templateNameSnapshot: 'Histórico de 13/07/2026',
-        timeZone: 'America/Cuiaba',
-        type: 'strength',
-        userId: user.id,
-        id: sessionId,
-      });
-      const definitions = [
-        { exerciseId: SYSTEM_EXERCISES.pushUp.id, name: 'Flexão', repetitions: 12, stopped: false },
-        {
-          exerciseId: SYSTEM_EXERCISES.squat.id,
-          name: 'Agachamento livre',
-          repetitions: 15,
-          stopped: true,
-        },
-      ];
-      const insertedExercises: Array<{ exerciseId: string; id: string; setIds: string[] }> = [];
-      for (const [sortOrder, definition] of definitions.entries()) {
-        const exerciseId = randomUUID();
-        await transaction.insert(sessionExercises).values({
-          exerciseId: definition.exerciseId,
-          exerciseNameSnapshot: definition.name,
-          id: exerciseId,
-          sessionId,
-          sortOrder,
-          status: definition.stopped ? 'stopped' : 'completed',
-          trackingMetricSnapshot: 'repetitions',
-          userId: user.id,
-        });
-        const setIds = [randomUUID(), randomUUID(), randomUUID()];
-        await transaction.insert(exerciseSets).values(
-          setIds.map((id, index) => ({
-            actualRepetitions: definition.repetitions,
-            completed: !definition.stopped || index < 2,
-            id,
-            plannedRepetitions: definition.repetitions,
-            sessionExerciseId: exerciseId,
-            setNumber: index + 1,
-            userId: user.id,
-          })),
-        );
-        insertedExercises.push({ exerciseId: definition.exerciseId, id: exerciseId, setIds });
-      }
-      const squat = insertedExercises[1]!;
-      await transaction.insert(painReports).values([
-        {
-          bodyRegion: 'thigh',
-          exerciseStopped: false,
-          intensity: 'light',
-          localDate: '2026-07-14',
-          moment: 'next_day',
-          sessionId,
-          type: 'muscular',
-          userId: user.id,
-        },
-        {
-          bodyRegion: 'ankle',
-          exerciseId: squat.exerciseId,
-          exerciseSetId: squat.setIds[2],
-          exerciseStopped: true,
-          intensity: 'moderate',
-          localDate: input.localDate,
-          moment: 'during',
-          sessionId,
-          type: 'joint',
-          userId: user.id,
-        },
-      ]);
-    });
-    return reply.status(201).send({ created: true, painReports: 2, sessionId });
   });
 }

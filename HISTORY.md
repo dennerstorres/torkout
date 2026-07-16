@@ -1181,3 +1181,89 @@ merge` e o teste no container confirmaram CSP e HSTS.
   snapshots permanece uma ação consciente separada, sem reutilizar os baselines reprovados.
 - AC-09 em iPhone, Android/Chrome e desktop físicos continua sendo gate de lançamento e não é
   substituído pelas validações no Chrome automatizado.
+
+## 2026-07-15 — Fase 16: planejamento completo e antropometria extensível
+
+**Status:** concluída
+
+**Commit de encerramento:** `feat(phase-16): complete planning and body measurements`
+
+### Escopo executado
+
+- O produto continua vazio para contas novas e deixou de oferecer o importador dedicado ao
+  histórico pessoal de 13/07/2026. A mesma informação pode ser cadastrada manualmente, inclusive
+  de forma retroativa, pelos fluxos normais do produto.
+- O editor semanal aceita força, caminhada, descanso e outras atividades; domingo usa ISO `7`;
+  cada treino pode ter vários exercícios, quantidade de séries e alvo próprios; e a vigência pode
+  começar e terminar em datas passadas ou futuras.
+- As ocorrências do calendário são materializadas na réplica local e colocadas na outbox junto com
+  plano e template. Planos sem término materializam uma janela inicial de 28 dias; planos com
+  término materializam toda a vigência informada.
+- Sessões avulsas aceitam data retroativa, tipo, vários exercícios, séries e alvos. Caminhada usa um
+  único exercício de distância no catálogo de sistema e descanso não cria séries artificiais.
+- Peso e cintura permanecem compatíveis. Uma medição agora também pode conter abdômen, bíceps,
+  coxa, quadril/glúteos, pescoço, peito, panturrilha ou uma medida livre com rótulo, unidade e valor,
+  inclusive sem peso ou cintura e em data retroativa.
+- Histórico permite visualizar e corrigir medidas adicionais. Sync e exportação carregam a lista
+  estruturada sem expor dados de outro usuário.
+
+### Evidências TDD
+
+- RED — testes de `PlanningScreen` falharam inicialmente porque o editor aceitava somente um
+  exercício, domingo não correspondia ao ISO esperado, a caminhada não existia no catálogo, as
+  sessões não eram materializadas localmente e a sessão retroativa usava detalhes fixos.
+- RED — testes de `TodayScreen` e contratos falharam porque não existiam data retroativa, medidas
+  adicionais/customizadas nem payload válido contendo somente circunferência. Um teste adicional
+  confirmou a ausência da unidade configurável.
+- GREEN — os testes direcionados de Planejamento, Hoje, Histórico e contratos passaram com 17
+  testes nos quatro arquivos diretamente afetados.
+- REFACTOR — a representação local das séries planejadas foi separada do payload de criação enviado
+  à API, evitando que a tela Hoje recebesse campos de template. Esperas determinísticas eliminaram
+  operações Dexie pendentes após o encerramento dos testes.
+- Regressão — `pnpm check` passou com 38 arquivos e 158 testes, incluindo governança, freeze 1.1.0,
+  scanner de segredos, formatação, lint, tipagem e builds.
+- Integração — com PostgreSQL 18 efêmero, 12 arquivos e 49 testes passaram. A primeira execução sem
+  `TEST_DATABASE_URL` foi rejeitada corretamente; com o banco configurado, a única regressão
+  encontrada foi a expectativa antiga do catálogo sem Caminhada, depois corrigida.
+- E2E — 29 jornadas passaram e duas baselines visuais legadas permaneceram intencionalmente
+  ignoradas. O teste de reconexão foi atualizado para a quantidade variável de ocorrências locais e
+  confirmou repetição idempotente do lote sem duplicação.
+
+### Alterações técnicas
+
+- Migração `0009_phase_16_planning_measurements.sql`: adiciona
+  `body_measurements.additional_measurements` em JSONB, amplia a restrição de presença e cadastra o
+  exercício de sistema Caminhada de forma idempotente.
+- O freeze público foi promovido de 1.0.0 para 1.1.0, com novos hashes explícitos de contratos e
+  schema.
+- Removido o endpoint `POST /api/v1/daily-history/import` e seus contratos/cliente. Nenhum endpoint
+  específico novo foi necessário; planejamento, sync, histórico e exportação existentes foram
+  ampliados.
+- A skill `redesign-existing-projects` orientou a preservação do sistema visual e dos componentes
+  existentes; os novos campos usam a mesma hierarquia, sem troca de stack ou redesign fora do
+  escopo.
+
+### Segurança, privacidade e dados
+
+- Nenhum plano, data pessoal ou medição real foi incluído como seed. O catálogo contém somente os
+  exercícios genéricos de sistema.
+- Validação estrita limita quantidade, chaves, rótulos, unidades e valores das medidas. A API segue
+  aplicando autorização por usuário, versionamento, tombstone e conflito explícito.
+- A exportação serializa a lista adicional na célula CSV/JSON existente e continua excluindo
+  sessões de autenticação, tokens, hashes e dados de outras contas.
+
+### Desvios do plano
+
+- Uma única Fase 16 foi suficiente; não houve necessidade de dividir o trabalho em fases adicionais.
+- Para recorrências sem data final, a materialização local é limitada aos primeiros 28 dias para não
+  criar uma outbox infinita. O usuário pode informar a vigência final para materializar todo o
+  calendário desejado.
+
+### Pendências e riscos conhecidos
+
+- Nenhuma pendência técnica da Fase 16. As validações em aparelhos físicos e bloqueadores externos
+  de lançamento das fases anteriores continuam sendo gates do lançamento público.
+
+### Próximo passo
+
+- Aplicar a migração 0009 no ambiente de destino antes de publicar a versão 1.1.0.

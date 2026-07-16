@@ -77,6 +77,7 @@ async function seed() {
       numericValue: 2,
     }),
     record('body_measurement', measurementId, {
+      additionalMeasurements: [{ key: 'abdomen', label: 'Abdômen', unit: 'cm', value: 91.5 }],
       localDate: '2026-07-13',
       measuredAt: '2026-07-13T12:00:00.000Z',
       weightKg: 80,
@@ -147,6 +148,11 @@ describe('calendar and historical editing', () => {
     fireEvent.blur(screen.getByLabelText('Proteína'));
     fireEvent.change(screen.getByLabelText('Peso em 13/07/2026'), { target: { value: '79.5' } });
     fireEvent.blur(screen.getByLabelText('Peso em 13/07/2026'));
+    expect(screen.getByLabelText('Abdômen (cm) em 13/07/2026')).toHaveValue(91.5);
+    fireEvent.change(screen.getByLabelText('Abdômen (cm) em 13/07/2026'), {
+      target: { value: '90.5' },
+    });
+    fireEvent.blur(screen.getByLabelText('Abdômen (cm) em 13/07/2026'));
     fireEvent.change(screen.getByLabelText('Intensidade da dor em joelho'), {
       target: { value: 'moderate' },
     });

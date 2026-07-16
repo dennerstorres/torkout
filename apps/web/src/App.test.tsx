@@ -48,7 +48,6 @@ function createApi(overrides: Record<string, unknown> = {}) {
       sessions: { completed: 0, partial: 0 },
       walks: { distanceMeters: 0, frequencyPerWeek: 0, sessions: 0 },
     })),
-    importDailyHistory: vi.fn(async () => ({ created: true, sessionId: 'history-session' })),
     requestPasswordReset: vi.fn(async () => undefined),
     decideProgression: vi.fn(async () => ({
       decision: 'accepted',

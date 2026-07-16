@@ -220,25 +220,6 @@ describe('daily tracking API', () => {
     expect(measurements.json().items).toHaveLength(2);
   });
 
-  it('imports the authenticated 13/07 history exactly once without a global seed', async () => {
-    const first = await request(users.first, 'POST', '/api/v1/daily-history/import', {
-      localDate: '2026-07-13',
-    });
-    const repeated = await request(users.first, 'POST', '/api/v1/daily-history/import', {
-      localDate: '2026-07-13',
-    });
-    expect(first.statusCode).toBe(201);
-    expect(first.json()).toMatchObject({ created: true, painReports: 2 });
-    expect(repeated.json()).toMatchObject({ created: false, sessionId: first.json().sessionId });
-
-    const otherUser = await request(
-      users.second,
-      'GET',
-      '/api/v1/sessions?from=2026-07-13&through=2026-07-13',
-    );
-    expect(otherUser.json().items).toEqual([]);
-  });
-
   it('synchronizes daily entities and execution with per-item results', async () => {
     const deviceId = 'a6300000-0000-4000-8000-000000000001';
     const session = (

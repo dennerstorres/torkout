@@ -1,6 +1,6 @@
 # Torkout — Especificação do Produto e da Arquitetura
 
-**Versão:** 1.0
+**Versão:** 1.1
 
 **Data:** 14/07/2026
 
@@ -210,6 +210,21 @@ O projeto será um monorepo gerenciado por `pnpm`. A estrutura poderá ser simpl
 
 **PLAN-012:** aceitar progressões futuras manuais por data de vigência.
 
+**PLAN-013:** o editor de template deve permitir vários exercícios no mesmo treino, com ordem,
+quantidade de séries e alvo próprios por exercício.
+
+**PLAN-014:** caminhada deve ser cadastrada como uma atividade única, com distância e duração
+planejadas, sem reutilizar artificialmente o conceito de três séries.
+
+**PLAN-015:** permitir definir início e fim da vigência, inclusive em datas passadas, e
+materializar localmente as sessões da janela escolhida antes da sincronização.
+
+**PLAN-016:** permitir cadastrar sessões avulsas completas em qualquer data civil, inclusive
+retroativa, com tipo, exercícios, séries, horário, caminhada e observações.
+
+**PLAN-017:** permitir cadastrar descanso e recuperação como tipos explícitos, inclusive aos
+domingos, usando numeração ISO de segunda `1` a domingo `7`.
+
 ### 7.5 Tela Hoje
 
 **TODAY-001:** mostrar data civil atual no fuso do usuário.
@@ -312,6 +327,17 @@ O projeto será um monorepo gerenciado por `pnpm`. A estrutura poderá ser simpl
 **BODY-005:** registrar instante, data local e observação.
 
 **BODY-006:** validar faixas plausíveis sem impedir casos legítimos; valores fora da faixa comum exigem confirmação.
+
+**BODY-007:** permitir registrar, além de peso e cintura, circunferências de abdômen/barriga,
+bíceps, coxa, quadril/glúteos, pescoço, peito, panturrilha e outras regiões personalizadas.
+
+**BODY-008:** cada medição adicional preserva nome, unidade e valor no snapshot histórico; nomes
+personalizados não alteram registros anteriores.
+
+**BODY-009:** permitir escolher a data civil da medição para lançamento retroativo.
+
+**BODY-010:** uma medição pode conter qualquer combinação não vazia de peso, cintura e medidas
+adicionais, sem tornar peso ou cintura obrigatórios.
 
 ### 7.10 Calendário e histórico
 
@@ -501,7 +527,8 @@ Todas as tabelas de domínio incluem `id uuid`, `user_id uuid` quando aplicável
 - `habit_definitions`: nome, tipo, unidade, ordem e estado.
 - `habit_options`: rótulo, valor estável e ordem.
 - `habit_entries`: data local e exatamente um valor booleano, numérico, textual ou opção.
-- `body_measurements`: instante, data local, peso, cintura e observação.
+- `body_measurements`: instante, data local, peso, cintura, medidas adicionais estruturadas e
+  observação.
 
 ### 8.5 Progressão
 
@@ -525,7 +552,7 @@ Todas as tabelas de domínio incluem `id uuid`, `user_id uuid` quando aplicável
 - Número de série é único dentro do exercício da sessão.
 - Ordem de exercício é única dentro do template ou sessão.
 - Valores reais não podem ser negativos.
-- Pelo menos peso ou cintura deve existir em uma medição.
+- Pelo menos peso, cintura ou uma medida adicional deve existir em uma medição.
 - Relatos de dor exigem tipo e momento.
 - Aceite de sugestão é idempotente.
 - `version` aumenta em toda mutação sincronizável.
@@ -697,19 +724,11 @@ Cobertura é indicador, não objetivo isolado. Regras de progressão, autorizaç
 
 ## 15. Dados iniciais
 
-O catálogo terá flexão e agachamento livre. O onboarding poderá oferecer um exemplo editável:
+O catálogo terá apenas exercícios genéricos do sistema. Contas novas começam sem plano, sessões,
+medidas ou histórico pessoal. A aplicação não inclui importação dedicada a uma pessoa ou data.
 
-- Flexões: 3 séries de 12.
-- Agachamentos: 3 séries de 15.
-- Caminhada: 5 km às segundas e sextas.
-- Horário preferencial após 18h.
-
-Dados pessoais reais não entram em seed global. O registro de 13/07/2026 deverá ser criado somente na conta do titular, por formulário ou importação autenticada:
-
-- 3 × 12 flexões.
-- 3 × 15 agachamentos.
-- Dor muscular no dia seguinte.
-- Desconforto articular em pé/tornozelo durante a terceira série de agachamentos.
+Todo plano e todo lançamento retroativo são criados explicitamente pelo usuário pelos mesmos
+formulários disponíveis às demais contas.
 
 ## 16. Implantação e backup
 

@@ -66,7 +66,6 @@ export interface AppApi {
   loadDaily(localDate: string): Promise<DailyBootstrap>;
   loadHistoryPage(from: string, through: string, cursor?: string): Promise<HistoryPage>;
   loadProgressAnalytics(from: string, through: string): Promise<ProgressAnalyticsResponse>;
-  importDailyHistory(): Promise<{ created: boolean; sessionId: string }>;
   requestPasswordReset(email: string): Promise<void>;
   decideProgression(
     suggestionId: string,
@@ -166,11 +165,6 @@ export const browserApi: AppApi = {
     const query = new URLSearchParams({ from, through });
     return productRequest(`/progress?${query.toString()}`);
   },
-  importDailyHistory: () =>
-    productRequest('/daily-history/import', {
-      body: JSON.stringify({ localDate: '2026-07-13' }),
-      method: 'POST',
-    }),
   async listSessions() {
     const result = await authClient.listSessions();
     assertAuthResult(result);

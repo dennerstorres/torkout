@@ -75,7 +75,11 @@ describe('initial PostgreSQL schema', () => {
     const catalog = await pool.query<{ name: string }>(
       'select name from exercises where is_system = true order by name',
     );
-    expect(catalog.rows.map(({ name }) => name)).toEqual(['Agachamento livre', 'Flexão']);
+    expect(catalog.rows.map(({ name }) => name)).toEqual([
+      'Agachamento livre',
+      'Caminhada',
+      'Flexão',
+    ]);
   });
 
   it('keeps both current and rollback legal versions active for the release window', async () => {
@@ -120,6 +124,18 @@ describe('initial PostgreSQL schema', () => {
         [userId],
       ),
     ).rejects.toMatchObject({ constraint: 'body_measurements_value_presence_check' });
+
+    const additionalOnly = await pool.query<{ additional_measurements: unknown }>(
+      `insert into body_measurements
+         (user_id, local_date, measured_at, additional_measurements)
+       values ($1, '2026-07-14', '2026-07-14T11:00:00Z',
+         '[{"key":"neck","label":"Pescoço","unit":"cm","value":37.5}]'::jsonb)
+       returning additional_measurements`,
+      [userId],
+    );
+    expect(additionalOnly.rows[0]?.additional_measurements).toEqual([
+      { key: 'neck', label: 'Pescoço', unit: 'cm', value: 37.5 },
+    ]);
 
     const habit = await pool.query<{ id: string }>(
       `insert into habit_definitions (user_id, name, type)

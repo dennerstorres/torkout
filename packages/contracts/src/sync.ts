@@ -33,6 +33,17 @@ export const syncEntityTypeSchema = z.enum([
 export const syncOperationKindSchema = z.enum(['create', 'update', 'delete']);
 
 const bodyMeasurementFields = {
+  additionalMeasurements: z
+    .array(
+      z.strictObject({
+        key: z.string().trim().min(1).max(80),
+        label: z.string().trim().min(1).max(120),
+        unit: z.string().trim().min(1).max(20),
+        value: z.number().positive().max(10_000),
+      }),
+    )
+    .max(50)
+    .optional(),
   localDate: z.iso.date(),
   measuredAt: z.iso.datetime({ offset: true }),
   notes: z.string().trim().max(2_000).nullable().optional(),
@@ -42,12 +53,19 @@ const bodyMeasurementFields = {
 
 export const bodyMeasurementCreatePayloadSchema = z
   .strictObject(bodyMeasurementFields)
-  .refine((payload) => payload.weightKg != null || payload.waistCm != null, {
-    message: 'Informe peso ou cintura.',
-  });
+  .refine(
+    (payload) =>
+      payload.weightKg != null ||
+      payload.waistCm != null ||
+      (payload.additionalMeasurements?.length ?? 0) > 0,
+    {
+      message: 'Informe ao menos uma medida.',
+    },
+  );
 
 export const bodyMeasurementUpdatePayloadSchema = z
   .strictObject({
+    additionalMeasurements: bodyMeasurementFields.additionalMeasurements.optional(),
     localDate: bodyMeasurementFields.localDate.optional(),
     measuredAt: bodyMeasurementFields.measuredAt.optional(),
     notes: bodyMeasurementFields.notes,

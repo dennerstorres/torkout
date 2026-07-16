@@ -58,6 +58,7 @@ function serializeMeasurement(row: MeasurementRow, tombstoneOnly = false): SyncR
   if (tombstoneOnly) return identity;
   return {
     ...identity,
+    additionalMeasurements: row.additionalMeasurements,
     localDate: row.localDate,
     measuredAt: row.measuredAt.toISOString(),
     notes: row.notes,
@@ -175,6 +176,7 @@ async function applyMeasurementOperation(
       .insert(bodyMeasurements)
       .values({
         id: operation.entityId,
+        additionalMeasurements: operation.payload.additionalMeasurements ?? [],
         localDate: operation.payload.localDate,
         measuredAt: new Date(operation.payload.measuredAt),
         notes: operation.payload.notes ?? null,
@@ -222,6 +224,10 @@ async function applyMeasurementOperation(
   }
 
   const mergedResult = bodyMeasurementCreatePayloadSchema.safeParse({
+    additionalMeasurements:
+      'additionalMeasurements' in operation.payload
+        ? operation.payload.additionalMeasurements
+        : current.additionalMeasurements,
     localDate: operation.payload.localDate ?? current.localDate,
     measuredAt: operation.payload.measuredAt ?? current.measuredAt.toISOString(),
     notes: 'notes' in operation.payload ? operation.payload.notes : current.notes,
@@ -249,6 +255,7 @@ async function applyMeasurementOperation(
   const [updated] = await transaction
     .update(bodyMeasurements)
     .set({
+      additionalMeasurements: merged.additionalMeasurements ?? [],
       localDate: merged.localDate,
       measuredAt: new Date(merged.measuredAt),
       notes: merged.notes ?? null,

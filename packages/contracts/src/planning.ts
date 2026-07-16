@@ -15,6 +15,12 @@ export const SYSTEM_EXERCISES = {
     name: 'Agachamento livre',
     trackingMetric: 'repetitions',
   },
+  walk: {
+    category: 'Cardio',
+    id: '00000000-0000-4000-8000-000000000003',
+    name: 'Caminhada',
+    trackingMetric: 'distance',
+  },
 } as const;
 
 export const trackingMetricSchema = z.enum(['repetitions', 'duration', 'distance']);
