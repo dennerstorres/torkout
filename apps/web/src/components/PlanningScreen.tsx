@@ -39,6 +39,22 @@ const weekdayOptions = [
   { label: 'Domingo', value: 7 },
 ] as const;
 
+const activityTypeLabels: Record<ActivityType, string> = {
+  other: 'Outra atividade',
+  rest: 'Descanso/recuperação',
+  strength: 'Força',
+  walk: 'Caminhada',
+};
+
+const sessionStatusLabels: Record<string, string> = {
+  cancelled: 'Cancelada',
+  completed: 'Concluída',
+  in_progress: 'Em andamento',
+  missed: 'Não realizada',
+  partial: 'Parcial',
+  planned: 'Planejada',
+};
+
 type ActivityType = 'strength' | 'walk' | 'rest' | 'other';
 
 interface ExerciseDraft {
@@ -107,6 +123,51 @@ function recordsOf(records: LocalRecord[], entityType: SyncEntityType): LocalRec
 
 function stringField(data: Record<string, unknown>, key: string, fallback = ''): string {
   return typeof data[key] === 'string' ? data[key] : fallback;
+}
+
+function AdHocSessionList({
+  onDelete,
+  onEdit,
+  sessions,
+}: {
+  onDelete(session: LocalRecord): void;
+  onEdit(session: LocalRecord): void;
+  sessions: LocalRecord[];
+}) {
+  if (sessions.length === 0) {
+    return <p className="planning-empty-state">Nenhuma sessão avulsa cadastrada.</p>;
+  }
+  return (
+    <ul className="planning-management-list">
+      {sessions.map((session) => {
+        const name = stringField(session.data, 'templateNameSnapshot', 'Sessão');
+        const type = stringField(session.data, 'type', 'other') as ActivityType;
+        const status = stringField(session.data, 'status', 'planned');
+        return (
+          <li key={session.entityId}>
+            <div>
+              <strong>{name}</strong>
+              <span>{activityTypeLabels[type]}</span>
+              <span>{stringField(session.data, 'plannedLocalDate')}</span>
+              <span>{sessionStatusLabels[status] ?? status}</span>
+            </div>
+            {status === 'planned' ? (
+              <div className="button-row">
+                <button type="button" onClick={() => onEdit(session)}>
+                  Editar {name}
+                </button>
+                <button className="danger" type="button" onClick={() => onDelete(session)}>
+                  Excluir {name}
+                </button>
+              </div>
+            ) : (
+              <span>Sessão histórica: edição e exclusão indisponíveis.</span>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
 }
 
 export function PlanningScreen({ database, onBack, syncState }: PlanningScreenProps) {
@@ -609,10 +670,17 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
         <section className="card planning-section" aria-labelledby="exercise-heading">
           <p className="eyebrow">Catálogo</p>
           <h2 id="exercise-heading">Exercícios</h2>
-          <ul aria-label="Catálogo de exercícios" className="compact-list exercise-catalog-list">
+          <ul
+            aria-label="Catálogo de exercícios"
+            className="planning-management-list exercise-catalog-list"
+          >
             {catalog.map((exercise) => (
               <li key={exercise.id}>
-                {exercise.name} · {trackingMetricLabel(exercise.trackingMetric)}
+                <div>
+                  <strong>{exercise.name}</strong>
+                  <span>{trackingMetricLabel(exercise.trackingMetric)}</span>
+                  <span>Do sistema</span>
+                </div>
               </li>
             ))}
             {customExerciseRecords.map((record) => {
@@ -625,24 +693,25 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
               const active = record.data.active !== false;
               return (
                 <li key={record.entityId}>
-                  <span>
-                    {name} · {trackingMetricLabel(metric)}
-                  </span>
-                  <span>{active ? 'Ativo' : 'Inativo'}</span>
+                  <div>
+                    <strong>{name}</strong>
+                    <span>{trackingMetricLabel(metric)}</span>
+                    <span>{active ? 'Ativo' : 'Inativo'}</span>
+                  </div>
                   <div className="button-row">
                     <button
                       aria-label={`Editar ${name}`}
                       type="button"
                       onClick={() => editExercise(record)}
                     >
-                      Editar
+                      Editar {name}
                     </button>
                     <button
                       aria-label={`${active ? 'Desativar' : 'Ativar'} ${name}`}
                       type="button"
                       onClick={() => void toggleExercise(record)}
                     >
-                      {active ? 'Desativar' : 'Ativar'}
+                      {active ? 'Desativar' : 'Ativar'} {name}
                     </button>
                     <button
                       aria-label={`Excluir ${name}`}
@@ -650,7 +719,7 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
                       type="button"
                       onClick={() => void deleteExercise(record)}
                     >
-                      Excluir
+                      Excluir {name}
                     </button>
                   </div>
                 </li>
@@ -684,20 +753,22 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
                 <option value="distance">Distância</option>
               </select>
             </label>
-            <button className="primary" type="submit">
-              {editingExerciseId ? 'Salvar exercício' : 'Adicionar exercício'}
-            </button>
-            {editingExerciseId && (
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingExerciseId(null);
-                  setExerciseName('');
-                }}
-              >
-                Cancelar edição
+            <div className="button-row">
+              <button className="primary" type="submit">
+                {editingExerciseId ? 'Salvar exercício' : 'Adicionar exercício'}
               </button>
-            )}
+              {editingExerciseId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingExerciseId(null);
+                    setExerciseName('');
+                  }}
+                >
+                  Cancelar edição
+                </button>
+              )}
+            </div>
           </form>
         </section>
       )}
@@ -711,36 +782,47 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
             intacto.
           </p>
           {plans.length > 0 && (
-            <ul className="compact-list">
-              {plans.map((plan) => (
-                <li key={plan.entityId}>
-                  <span>{stringField(plan.data, 'name', 'Plano')}</span>
-                  <div className="button-row">
-                    {templates.find((template) => template.data.planId === plan.entityId) && (
+            <ul className="planning-management-list">
+              {plans.map((plan) => {
+                const name = stringField(plan.data, 'name', 'Plano');
+                const template = templates.find(
+                  (candidate) => candidate.data.planId === plan.entityId,
+                );
+                const type = stringField(template?.data ?? {}, 'type', 'other') as ActivityType;
+                return (
+                  <li key={plan.entityId}>
+                    <div>
+                      <strong>{name}</strong>
+                      {template && <span>{stringField(template.data, 'name', 'Treino')}</span>}
+                      <span>{activityTypeLabels[type]}</span>
+                      <span>
+                        {stringField(plan.data, 'status', 'active') === 'active'
+                          ? 'Ativo'
+                          : 'Inativo'}
+                      </span>
+                    </div>
+                    <div className="button-row">
+                      {template && (
+                        <button
+                          aria-label={`Editar ${name}`}
+                          type="button"
+                          onClick={() => editWeeklyPlan(plan, template)}
+                        >
+                          Editar {name}
+                        </button>
+                      )}
                       <button
-                        aria-label={`Editar ${stringField(plan.data, 'name', 'Plano')}`}
+                        aria-label={`Excluir ${name}`}
+                        className="danger"
                         type="button"
-                        onClick={() =>
-                          editWeeklyPlan(
-                            plan,
-                            templates.find((template) => template.data.planId === plan.entityId)!,
-                          )
-                        }
+                        onClick={() => void deleteWeeklyPlan(plan)}
                       >
-                        Editar
+                        Excluir {name}
                       </button>
-                    )}
-                    <button
-                      aria-label={`Excluir ${stringField(plan.data, 'name', 'Plano')}`}
-                      className="danger"
-                      type="button"
-                      onClick={() => void deleteWeeklyPlan(plan)}
-                    >
-                      Excluir
-                    </button>
-                  </div>
-                </li>
-              ))}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
           <form className="weekly-plan-form" onSubmit={(event) => void savePlanning(event)}>
@@ -883,21 +965,23 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
                 ))}
               </div>
             </fieldset>
-            <button className="primary" type="submit">
-              {editingPlan ? 'Salvar alterações do plano' : 'Salvar planejamento'}
-            </button>
-            {editingPlan && (
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingPlan(null);
-                  setPlanName('');
-                  setTemplateName('');
-                }}
-              >
-                Cancelar edição
+            <div className="button-row">
+              <button className="primary" type="submit">
+                {editingPlan ? 'Salvar alterações do plano' : 'Salvar planejamento'}
               </button>
-            )}
+              {editingPlan && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingPlan(null);
+                    setPlanName('');
+                    setTemplateName('');
+                  }}
+                >
+                  Cancelar edição
+                </button>
+              )}
+            </div>
           </form>
         </section>
       )}
@@ -906,6 +990,11 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
         <section className="card planning-section" aria-labelledby="adhoc-heading">
           <p className="eyebrow">Agenda</p>
           <h2 id="adhoc-heading">Sessões avulsas</h2>
+          <AdHocSessionList
+            sessions={adHocSessions}
+            onEdit={editAdHocSession}
+            onDelete={(session) => void deleteAdHocSession(session)}
+          />
           <form onSubmit={(event) => void saveAdHocSession(event)}>
             <label>
               Tipo da sessão avulsa
@@ -1001,51 +1090,23 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
                 Adicionar exercício à sessão
               </button>
             )}
-            <button className="primary" type="submit">
-              {editingAdHocId ? 'Salvar sessão avulsa' : 'Criar sessão avulsa'}
-            </button>
-            {editingAdHocId && (
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingAdHocId(null);
-                  setAdHocName('');
-                }}
-              >
-                Cancelar edição
+            <div className="button-row">
+              <button className="primary" type="submit">
+                {editingAdHocId ? 'Salvar sessão avulsa' : 'Criar sessão avulsa'}
               </button>
-            )}
-          </form>
-          {adHocSessions.map((session) => (
-            <article className="session-card" key={session.entityId}>
-              <h3>{stringField(session.data, 'templateNameSnapshot', 'Sessão')}</h3>
-              <p>
-                {stringField(session.data, 'plannedLocalDate')} ·{' '}
-                {stringField(session.data, 'status', 'planned')}
-              </p>
-              {session.data.status === 'planned' ? (
-                <div className="button-row">
-                  <button
-                    aria-label={`Editar ${stringField(session.data, 'templateNameSnapshot', 'sessão')}`}
-                    type="button"
-                    onClick={() => editAdHocSession(session)}
-                  >
-                    Editar
-                  </button>
-                  <button
-                    aria-label={`Excluir ${stringField(session.data, 'templateNameSnapshot', 'sessão')}`}
-                    className="danger"
-                    type="button"
-                    onClick={() => void deleteAdHocSession(session)}
-                  >
-                    Excluir
-                  </button>
-                </div>
-              ) : (
-                <p className="field-hint">Sessão histórica: edição e exclusão indisponíveis.</p>
+              {editingAdHocId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingAdHocId(null);
+                    setAdHocName('');
+                  }}
+                >
+                  Cancelar edição
+                </button>
               )}
-            </article>
-          ))}
+            </div>
+          </form>
         </section>
       )}
 

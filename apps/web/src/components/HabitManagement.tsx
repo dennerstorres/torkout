@@ -164,7 +164,7 @@ export function HabitManagement({ database, habitEntries, habits, onChanged }: P
       {habits.length === 0 ? (
         <p>Nenhum hábito cadastrado.</p>
       ) : (
-        <ul className="habit-management-list">
+        <ul className="planning-management-list">
           {habits.map((habit) => {
             const habitName = stringField(habit.data, 'name', 'Hábito');
             const habitType = stringField(habit.data, 'type', 'boolean') as HabitType;

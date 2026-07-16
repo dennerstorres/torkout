@@ -26,7 +26,10 @@ describe('mobile-first planning', () => {
     });
     fireEvent.change(screen.getByLabelText('Métrica'), { target: { value: 'duration' } });
     fireEvent.submit(screen.getByRole('button', { name: 'Adicionar exercício' }).closest('form')!);
-    expect(await screen.findByText(/Prancha/)).toBeVisible();
+    expect(await screen.findByText('Prancha', { selector: 'strong' })).toBeVisible();
+    expect(screen.getByRole('list', { name: 'Catálogo de exercícios' })).toHaveClass(
+      'planning-management-list',
+    );
 
     fireEvent.click(screen.getByRole('button', { name: 'Plano semanal' }));
     fireEvent.change(screen.getByLabelText('Nome do plano'), {
@@ -368,20 +371,22 @@ describe('mobile-first planning', () => {
     });
     render(<PlanningScreen database={database} onBack={vi.fn()} syncState="synced" />);
 
-    expect(await screen.findByText(/Prancha/)).toBeVisible();
+    expect(await screen.findByText('Prancha', { selector: 'strong' })).toBeVisible();
     expect(screen.queryByRole('button', { name: /Editar Flexão/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Editar Prancha' }));
     fireEvent.change(screen.getByLabelText('Nome do exercício'), {
       target: { value: 'Prancha alta' },
     });
     fireEvent.submit(screen.getByRole('button', { name: 'Salvar exercício' }).closest('form')!);
-    expect(await screen.findByText(/Prancha alta/)).toBeVisible();
+    expect(await screen.findByText('Prancha alta', { selector: 'strong' })).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: 'Desativar Prancha alta' }));
     expect(await screen.findByText('Inativo')).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: 'Ativar Prancha alta' }));
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     fireEvent.click(screen.getByRole('button', { name: 'Excluir Prancha alta' }));
-    await waitFor(() => expect(screen.queryByText(/Prancha alta/)).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.queryByText('Prancha alta', { selector: 'strong' })).not.toBeInTheDocument(),
+    );
     expect((await database.outbox.toArray()).at(-1)).toMatchObject({
       entityId: exerciseId,
       entityType: 'exercise',
@@ -451,6 +456,9 @@ describe('mobile-first planning', () => {
     ]);
     render(<PlanningScreen database={database} onBack={vi.fn()} syncState="synced" />);
     fireEvent.click(screen.getByRole('button', { name: 'Plano semanal' }));
+    expect((await screen.findByText('Plano atual')).closest('ul')).toHaveClass(
+      'planning-management-list',
+    );
     fireEvent.click(await screen.findByRole('button', { name: 'Editar Plano atual' }));
     expect(screen.getByLabelText('Nome do treino')).toHaveValue('Recuperação');
     fireEvent.change(screen.getByLabelText('Nome do plano'), {
@@ -508,6 +516,7 @@ describe('mobile-first planning', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sessão avulsa' }));
 
     expect(await screen.findByText('Mobilidade')).toBeVisible();
+    expect(screen.getByText('Mobilidade').closest('ul')).toHaveClass('planning-management-list');
     expect(screen.getByText('Alongamento concluído')).toBeVisible();
     expect(screen.queryByText('Treino recorrente')).not.toBeInTheDocument();
     expect(

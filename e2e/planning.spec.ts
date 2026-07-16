@@ -78,7 +78,9 @@ test('plans offline on a mobile viewport and keeps the outbox across reload', as
   await expect(page.getByText(/Você está offline/i)).toBeVisible();
   await page.getByRole('button', { name: 'Planejamento' }).click();
   await page.getByRole('button', { name: 'Plano semanal' }).click();
-  await expect(page.getByText('Plano sem rede')).toBeVisible();
+  await expect(
+    page.locator('.planning-management-list strong').getByText('Plano sem rede'),
+  ).toBeVisible();
   await expect(page.locator('.planning-layout > .sync-note')).toContainText(
     'salvas neste dispositivo',
   );

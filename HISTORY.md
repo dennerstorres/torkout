@@ -1476,3 +1476,14 @@ merge` e o teste no container confirmaram CSP e HSTS.
 - O build mantém o aviso já conhecido de chunk principal acima de 500 kB; não houve regressão de
   funcionalidade ou orçamento bloqueante nesta fase.
 - Nenhuma pendência funcional conhecida permanece.
+
+### Correção visual pós-encerramento
+
+- As listagens de exercícios, planos semanais e sessões avulsas passaram a reutilizar a mesma
+  estrutura visual da gestão de hábitos: nome em destaque, metadados espaçados, divisores e ações
+  nomeadas em uma linha própria.
+- Sessões avulsas agora são listadas antes do formulário, como nas demais áreas de Planejamento, e
+  exibem um estado vazio explícito.
+- Os formulários de edição também agrupam salvar e cancelar no mesmo padrão de Hábitos.
+- A correção foi verificada no localhost com dados reais do navegador, além dos testes de componente
+  e do contrato visual responsivo.
