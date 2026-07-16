@@ -87,7 +87,7 @@ export function AnalyticsScreen(_props: AnalyticsScreenProps) {
           <p>Os indicadores resumem seus registros; eles não substituem orientação profissional.</p>
         </div>
         {onProgression && (
-          <button className="primary" type="button" onClick={onProgression}>
+          <button className="progression-link" type="button" onClick={onProgression}>
             Ver sugestões de progressão
           </button>
         )}
@@ -156,8 +156,27 @@ export function AnalyticsScreen(_props: AnalyticsScreenProps) {
         {loading ? 'Carregando indicadores…' : message}
       </p>
 
+      {loading && !analytics ? <AnalyticsLoadingContent /> : null}
       {analytics && <AnalyticsContent analytics={analytics} />}
     </main>
+  );
+}
+
+function AnalyticsLoadingContent() {
+  return (
+    <div
+      className="analytics-grid analytics-loading-grid"
+      data-testid="analytics-loading-grid"
+      aria-hidden="true"
+    >
+      {['Resumo', 'Peso', 'Cintura', 'Consistência', 'Registros'].map((label) => (
+        <section className="card analytics-loading-panel" key={label}>
+          <span className="skeleton-line skeleton-line--title" />
+          <span className="skeleton-line" />
+          <span className="skeleton-line skeleton-line--short" />
+        </section>
+      ))}
+    </div>
   );
 }
 
@@ -228,28 +247,45 @@ function AnalyticsContent({ analytics }: { analytics: ProgressAnalyticsResponse 
         </p>
       </section>
 
-      <AccessibleLineChart
-        name="Evolução do peso"
-        points={weight}
-        tableName="Dados de evolução do peso"
-        unit="kg"
-      />
-      <AccessibleLineChart
-        name="Evolução da cintura"
-        points={waist}
-        tableName="Dados de evolução da cintura"
-        unit="cm"
-      />
-      <AccessibleLineChart
-        description={analytics.consistency.explanation}
-        name="Consistência semanal"
-        points={consistency}
-        tableName="Dados de consistência semanal"
-        unit="%"
-      />
-      <p className="analytics-formula-version">
-        Versão da fórmula: <code>{analytics.consistency.formulaVersion}</code>
-      </p>
+      <section className="analytics-narrative" aria-labelledby="body-trends-heading">
+        <header>
+          <p className="eyebrow">Corpo</p>
+          <h2 id="body-trends-heading">Medições ao longo do tempo</h2>
+        </header>
+        <div className="analytics-narrative-grid">
+          <AccessibleLineChart
+            name="Evolução do peso"
+            points={weight}
+            tableName="Dados de evolução do peso"
+            unit="kg"
+          />
+          <AccessibleLineChart
+            name="Evolução da cintura"
+            points={waist}
+            tableName="Dados de evolução da cintura"
+            unit="cm"
+          />
+        </div>
+      </section>
+
+      <section className="analytics-narrative" aria-labelledby="consistency-trends-heading">
+        <header>
+          <p className="eyebrow">Ritmo de treino</p>
+          <h2 id="consistency-trends-heading">Consistência planejada</h2>
+        </header>
+        <div className="analytics-narrative-grid analytics-narrative-grid--single">
+          <AccessibleLineChart
+            description={analytics.consistency.explanation}
+            name="Consistência semanal"
+            points={consistency}
+            tableName="Dados de consistência semanal"
+            unit="%"
+          />
+        </div>
+        <p className="analytics-formula-version">
+          Versão da fórmula: <code>{analytics.consistency.formulaVersion}</code>
+        </p>
+      </section>
 
       <section className="card analytics-summary">
         <h2>Exercícios</h2>
@@ -277,7 +313,7 @@ function AnalyticsContent({ analytics }: { analytics: ProgressAnalyticsResponse 
       <section className="card analytics-summary">
         <h2>Dor registrada</h2>
         <p className="field-hint">
-          Frequencia por tipo, intensidade e regiao, atribuida a data civil informada no relato.
+          Frequência por tipo, intensidade e região, atribuída à data civil informada no relato.
         </p>
         {analytics.pain.length === 0 ? (
           <p>Dados insuficientes: nenhum relato de dor no período.</p>
@@ -376,7 +412,7 @@ function intensityLabel(intensity: string): string {
   return (
     { light: 'Leve', moderate: 'Moderada', not_informed: 'Não informada', strong: 'Forte' }[
       intensity
-    ] ?? intensity
+    ] ?? 'Outra intensidade'
   );
 }
 
@@ -388,6 +424,6 @@ function regionLabel(region: string): string {
       foot: 'Pé',
       knee: 'Joelho',
       shoulder: 'Ombro',
-    }[region] ?? region
+    }[region] ?? 'Outra região'
   );
 }

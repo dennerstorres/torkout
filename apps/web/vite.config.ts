@@ -17,7 +17,7 @@ export default defineConfig({
     VitePWA({
       injectRegister: null,
       manifest: {
-        background_color: '#eef2ed',
+        background_color: '#0b0f0e',
         categories: ['fitness', 'lifestyle'],
         description: 'Planejamento e registro local-first de treinos e hábitos.',
         dir: 'ltr',
@@ -47,7 +47,7 @@ export default defineConfig({
         scope: '/',
         short_name: 'Torkout',
         start_url: '/',
-        theme_color: '#16281f',
+        theme_color: '#0b0f0e',
       },
       registerType: 'prompt',
       workbox: {

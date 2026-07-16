@@ -45,7 +45,7 @@ export function effectiveHistoryStatus(
 }
 
 export function buildCalendarMonth(month: string): CalendarDay[] {
-  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) throw new Error('MÃªs civil invÃ¡lido.');
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) throw new Error('Mês civil inválido.');
   const first = parseCivilDate(`${month}-01`);
   const mondayOffset = (first.getUTCDay() + 6) % 7;
   const gridStart = new Date(first.getTime() - mondayOffset * DAY_MS);

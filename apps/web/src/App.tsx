@@ -11,6 +11,7 @@ import { ProgressionScreen } from './components/ProgressionScreen';
 import { PwaExperience } from './components/PwaExperience';
 import { ResetPasswordScreen } from './components/ResetPasswordScreen';
 import { TodayScreen } from './components/TodayScreen';
+import { DesignSystemLab } from './components/DesignSystemLab';
 import { clearOfflineIdentity, readOfflineIdentity, recordOnlineIdentity } from './offline-auth';
 import { deleteUserSyncDatabase, entityKey, type UserSyncDatabase } from './sync/local-database';
 import { useSyncRuntime } from './sync/use-sync-runtime';
@@ -74,6 +75,7 @@ async function cacheDailyData(
 }
 
 export function App({ api = browserApi }: { api?: AppApi }) {
+  if (window.location.pathname === '/design-system') return <DesignSystemLab />;
   return (
     <>
       <a className="skip-link" href="#main-content">
@@ -108,7 +110,8 @@ function AppContent({ api }: { api: AppApi }) {
     const heading = document.querySelector<HTMLElement>('#main-content main h1');
     if (!heading) return;
     heading.tabIndex = -1;
-    heading.focus();
+    heading.focus({ preventScroll: true });
+    window.scrollTo({ behavior: 'auto', left: 0, top: 0 });
   }, [view]);
   const loadHistoryRange = useCallback(
     async (from: string, through: string) => {
@@ -358,8 +361,16 @@ function AppContent({ api }: { api: AppApi }) {
     page = (
       <Suspense
         fallback={
-          <main className="centered-layout" aria-busy="true">
-            <p>Carregando indicadores…</p>
+          <main className="analytics-layout analytics-route-loading" aria-busy="true">
+            <header className="analytics-header">
+              <div>
+                <p className="eyebrow">Indicadores pessoais</p>
+                <h1>Progresso</h1>
+              </div>
+            </header>
+            <p className="sync-note" role="status">
+              Carregando indicadores…
+            </p>
           </main>
         }
       >

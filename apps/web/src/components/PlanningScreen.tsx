@@ -1,6 +1,7 @@
 import { SYSTEM_EXERCISES, type SyncEntityType } from '@torkout/contracts';
 import { useEffect, useState, type FormEvent } from 'react';
 
+import { syncStateMessage, trackingMetricLabel } from '../presentation';
 import {
   queueLocalMutation,
   type LocalRecord,
@@ -23,6 +24,16 @@ interface ExerciseOption {
 
 const catalog: ExerciseOption[] = [SYSTEM_EXERCISES.pushUp, SYSTEM_EXERCISES.squat];
 
+const weekdayOptions = [
+  { label: 'Segunda-feira', value: 1 },
+  { label: 'Terça-feira', value: 2 },
+  { label: 'Quarta-feira', value: 3 },
+  { label: 'Quinta-feira', value: 4 },
+  { label: 'Sexta-feira', value: 5 },
+  { label: 'Sábado', value: 6 },
+  { label: 'Domingo', value: 0 },
+] as const;
+
 function recordsOf(records: LocalRecord[], entityType: SyncEntityType): LocalRecord[] {
   return records.filter((record) => record.entityType === entityType && record.deletedAt === null);
 }
@@ -32,6 +43,7 @@ function stringField(data: Record<string, unknown>, key: string, fallback = ''):
 }
 
 export function PlanningScreen({ database, onBack, onSync, syncState }: PlanningScreenProps) {
+  const [activeArea, setActiveArea] = useState<'catalog' | 'weekly' | 'adhoc'>('catalog');
   const [records, setRecords] = useState<LocalRecord[]>([]);
   const [message, setMessage] = useState(
     'Alterações são salvas neste dispositivo antes da sincronização.',
@@ -228,205 +240,232 @@ export function PlanningScreen({ database, onBack, onSync, syncState }: Planning
       </header>
 
       <p className="sync-note" role="status">
-        {message} Estado: {syncState}.
+        {message || syncStateMessage(syncState)}
       </p>
 
-      <section className="card planning-section" aria-labelledby="exercise-heading">
-        <p className="eyebrow">Catálogo</p>
-        <h2 id="exercise-heading">Exercícios</h2>
-        <ul className="compact-list">
-          {exercises.map((exercise) => (
-            <li key={exercise.id}>
-              {exercise.name} · {exercise.trackingMetric}
-            </li>
-          ))}
-        </ul>
-        <form
-          aria-label="Novo exercício personalizado"
-          onSubmit={(event) => void addExercise(event)}
+      <nav aria-label="Áreas do planejamento" className="planning-tabs">
+        <button
+          aria-pressed={activeArea === 'catalog'}
+          type="button"
+          onClick={() => setActiveArea('catalog')}
         >
-          <label>
-            Nome do exercício
-            <input
-              required
-              value={exerciseName}
-              onChange={(event) => setExerciseName(event.target.value)}
-            />
-          </label>
-          <label>
-            Métrica
-            <select
-              value={exerciseMetric}
-              onChange={(event) =>
-                setExerciseMetric(event.target.value as ExerciseOption['trackingMetric'])
-              }
-            >
-              <option value="repetitions">Repetições</option>
-              <option value="duration">Duração</option>
-              <option value="distance">Distância</option>
-            </select>
-          </label>
-          <button className="primary" type="submit">
-            Adicionar exercício
-          </button>
-        </form>
-      </section>
+          Exercícios
+        </button>
+        <button
+          aria-pressed={activeArea === 'weekly'}
+          type="button"
+          onClick={() => setActiveArea('weekly')}
+        >
+          Plano semanal
+        </button>
+        <button
+          aria-pressed={activeArea === 'adhoc'}
+          type="button"
+          onClick={() => setActiveArea('adhoc')}
+        >
+          Sessão avulsa
+        </button>
+      </nav>
 
-      <section className="card planning-section" aria-labelledby="weekly-heading">
-        <p className="eyebrow">Recorrência</p>
-        <h2 id="weekly-heading">Plano semanal</h2>
-        <p className="field-hint">
-          Alterações em planos recorrentes afetam somente sessões futuras; o histórico permanece
-          intacto.
-        </p>
-        {plans.length > 0 && (
-          <ul className="compact-list">
-            {plans.map((plan) => (
-              <li key={plan.entityId}>{stringField(plan.data, 'name', 'Plano')}</li>
+      {activeArea === 'catalog' && (
+        <section className="card planning-section" aria-labelledby="exercise-heading">
+          <p className="eyebrow">Catálogo</p>
+          <h2 id="exercise-heading">Exercícios</h2>
+          <ul aria-label="Catálogo de exercícios" className="compact-list exercise-catalog-list">
+            {exercises.map((exercise) => (
+              <li key={exercise.id}>
+                {exercise.name} · {trackingMetricLabel(exercise.trackingMetric)}
+              </li>
             ))}
           </ul>
-        )}
-        <form onSubmit={(event) => void savePlanning(event)}>
-          <label>
-            Nome do plano
-            <input
-              required
-              value={planName}
-              onChange={(event) => setPlanName(event.target.value)}
-            />
-          </label>
-          <label>
-            Nome do treino
-            <input
-              required
-              value={templateName}
-              onChange={(event) => setTemplateName(event.target.value)}
-            />
-          </label>
-          <label>
-            Exercício do treino
-            <select
-              value={selectedExerciseId}
-              onChange={(event) => setSelectedExerciseId(event.target.value)}
-            >
-              {exercises.map((exercise) => (
-                <option key={exercise.id} value={exercise.id}>
-                  {exercise.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Repetições por série
-            <input
-              min="1"
-              required
-              type="number"
-              value={target}
-              onChange={(event) => setTarget(event.target.value)}
-            />
-          </label>
-          <label>
-            Horário local
-            <input
-              required
-              type="time"
-              value={localTime}
-              onChange={(event) => setLocalTime(event.target.value)}
-            />
-          </label>
-          <label>
-            Vigência a partir de
-            <input
-              required
-              type="date"
-              value={validFrom}
-              onChange={(event) => setValidFrom(event.target.value)}
-            />
-          </label>
-          <fieldset>
-            <legend>Dias da semana</legend>
-            <label className="inline-check">
-              <input
-                checked={weekdays.includes(1)}
-                type="checkbox"
-                onChange={() => toggleWeekday(1)}
-              />
-              Segunda-feira
-            </label>
-            <label className="inline-check">
-              <input
-                checked={weekdays.includes(5)}
-                type="checkbox"
-                onChange={() => toggleWeekday(5)}
-              />
-              Sexta-feira
-            </label>
-          </fieldset>
-          <button className="primary" type="submit">
-            Salvar planejamento
-          </button>
-        </form>
-      </section>
-
-      <section className="card planning-section" aria-labelledby="adhoc-heading">
-        <p className="eyebrow">Agenda</p>
-        <h2 id="adhoc-heading">Sessões avulsas</h2>
-        <form onSubmit={(event) => void addAdHocSession(event)}>
-          <label>
-            Nome da sessão avulsa
-            <input
-              required
-              value={adHocName}
-              onChange={(event) => setAdHocName(event.target.value)}
-            />
-          </label>
-          <label>
-            Data da sessão avulsa
-            <input
-              required
-              type="date"
-              value={adHocDate}
-              onChange={(event) => setAdHocDate(event.target.value)}
-            />
-          </label>
-          <button className="primary" type="submit">
-            Criar sessão avulsa
-          </button>
-        </form>
-        {sessions.map((session) => (
-          <article className="session-card" key={session.entityId}>
-            <h3>{stringField(session.data, 'templateNameSnapshot', 'Sessão')}</h3>
+          <form
+            aria-label="Novo exercício personalizado"
+            onSubmit={(event) => void addExercise(event)}
+          >
             <label>
-              Reagendar {stringField(session.data, 'templateNameSnapshot', 'sessão')}
+              Nome do exercício
               <input
-                type="date"
-                value={stringField(session.data, 'plannedLocalDate')}
-                onChange={(event) =>
-                  void updateSession(session, { plannedLocalDate: event.target.value })
-                }
+                required
+                value={exerciseName}
+                onChange={(event) => setExerciseName(event.target.value)}
               />
             </label>
-            <button
-              type="button"
-              onClick={() => void updateSession(session, { status: 'cancelled' })}
-            >
-              Cancelar sessão
+            <label>
+              Métrica
+              <select
+                value={exerciseMetric}
+                onChange={(event) =>
+                  setExerciseMetric(event.target.value as ExerciseOption['trackingMetric'])
+                }
+              >
+                <option value="repetitions">Repetições</option>
+                <option value="duration">Duração</option>
+                <option value="distance">Distância</option>
+              </select>
+            </label>
+            <button className="primary" type="submit">
+              Adicionar exercício
             </button>
-            <div
-              className="button-row"
-              aria-label={`Ordenar ${stringField(session.data, 'templateNameSnapshot', 'sessão')}`}
-            >
-              <button type="button" onClick={() => void moveSession(session, -1)}>
-                Mover para o dia anterior
+          </form>
+        </section>
+      )}
+
+      {activeArea === 'weekly' && (
+        <section className="card planning-section" aria-labelledby="weekly-heading">
+          <p className="eyebrow">Recorrência</p>
+          <h2 id="weekly-heading">Plano semanal</h2>
+          <p className="field-hint">
+            Alterações em planos recorrentes afetam somente sessões futuras; o histórico permanece
+            intacto.
+          </p>
+          {plans.length > 0 && (
+            <ul className="compact-list">
+              {plans.map((plan) => (
+                <li key={plan.entityId}>{stringField(plan.data, 'name', 'Plano')}</li>
+              ))}
+            </ul>
+          )}
+          <form className="weekly-plan-form" onSubmit={(event) => void savePlanning(event)}>
+            <label>
+              Nome do plano
+              <input
+                required
+                value={planName}
+                onChange={(event) => setPlanName(event.target.value)}
+              />
+            </label>
+            <label>
+              Nome do treino
+              <input
+                required
+                value={templateName}
+                onChange={(event) => setTemplateName(event.target.value)}
+              />
+            </label>
+            <label>
+              Exercício do treino
+              <select
+                value={selectedExerciseId}
+                onChange={(event) => setSelectedExerciseId(event.target.value)}
+              >
+                {exercises.map((exercise) => (
+                  <option key={exercise.id} value={exercise.id}>
+                    {exercise.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Repetições por série
+              <input
+                min="1"
+                required
+                type="number"
+                value={target}
+                onChange={(event) => setTarget(event.target.value)}
+              />
+            </label>
+            <label>
+              Horário local
+              <input
+                required
+                type="time"
+                value={localTime}
+                onChange={(event) => setLocalTime(event.target.value)}
+              />
+            </label>
+            <label>
+              Vigência a partir de
+              <input
+                required
+                type="date"
+                value={validFrom}
+                onChange={(event) => setValidFrom(event.target.value)}
+              />
+            </label>
+            <fieldset className="weekday-picker">
+              <legend>Dias da semana</legend>
+              <div className="weekday-options">
+                {weekdayOptions.map((weekday) => (
+                  <label className="inline-check" key={weekday.value}>
+                    <input
+                      checked={weekdays.includes(weekday.value)}
+                      type="checkbox"
+                      onChange={() => toggleWeekday(weekday.value)}
+                    />
+                    {weekday.label}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <button className="primary" type="submit">
+              Salvar planejamento
+            </button>
+          </form>
+        </section>
+      )}
+
+      {activeArea === 'adhoc' && (
+        <section className="card planning-section" aria-labelledby="adhoc-heading">
+          <p className="eyebrow">Agenda</p>
+          <h2 id="adhoc-heading">Sessões avulsas</h2>
+          <form onSubmit={(event) => void addAdHocSession(event)}>
+            <label>
+              Nome da sessão avulsa
+              <input
+                required
+                value={adHocName}
+                onChange={(event) => setAdHocName(event.target.value)}
+              />
+            </label>
+            <label>
+              Data da sessão avulsa
+              <input
+                required
+                type="date"
+                value={adHocDate}
+                onChange={(event) => setAdHocDate(event.target.value)}
+              />
+            </label>
+            <button className="primary" type="submit">
+              Criar sessão avulsa
+            </button>
+          </form>
+          {sessions.map((session) => (
+            <article className="session-card" key={session.entityId}>
+              <h3>{stringField(session.data, 'templateNameSnapshot', 'Sessão')}</h3>
+              <label>
+                Reagendar {stringField(session.data, 'templateNameSnapshot', 'sessão')}
+                <input
+                  type="date"
+                  value={stringField(session.data, 'plannedLocalDate')}
+                  onChange={(event) =>
+                    void updateSession(session, { plannedLocalDate: event.target.value })
+                  }
+                />
+              </label>
+              <button
+                className="danger"
+                type="button"
+                onClick={() => void updateSession(session, { status: 'cancelled' })}
+              >
+                Cancelar sessão
               </button>
-              <button type="button" onClick={() => void moveSession(session, 1)}>
-                Mover para o dia seguinte
-              </button>
-            </div>
-          </article>
-        ))}
-      </section>
+              <div
+                className="button-row"
+                aria-label={`Ordenar ${stringField(session.data, 'templateNameSnapshot', 'sessão')}`}
+              >
+                <button type="button" onClick={() => void moveSession(session, -1)}>
+                  Mover para o dia anterior
+                </button>
+                <button type="button" onClick={() => void moveSession(session, 1)}>
+                  Mover para o dia seguinte
+                </button>
+              </div>
+            </article>
+          ))}
+        </section>
+      )}
 
       <button className="primary sticky-action" type="button" onClick={onSync}>
         Sincronizar agora

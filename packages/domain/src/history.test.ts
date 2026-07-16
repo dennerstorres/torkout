@@ -31,6 +31,15 @@ describe('calendar history rules', () => {
     expect(days.at(-1)).toMatchObject({ inMonth: false, localDate: '2026-08-02' });
   });
 
+  it('keeps four, five and six-week months aligned to complete calendar rows', () => {
+    expect(buildCalendarMonth('2021-02')).toHaveLength(28);
+    expect(buildCalendarMonth('2026-07')).toHaveLength(35);
+    expect(buildCalendarMonth('2026-08')).toHaveLength(42);
+    for (const month of ['2021-02', '2026-07', '2026-08']) {
+      expect(buildCalendarMonth(month).length % 7).toBe(0);
+    }
+  });
+
   it('combines activity, status and pain filters on the same day and session', () => {
     const day = {
       hasPain: true,

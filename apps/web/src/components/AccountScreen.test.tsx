@@ -50,11 +50,17 @@ describe('account portability screen', () => {
         database={database}
         onBack={() => undefined}
         onDownload={onDownload}
+        version="1.0.0"
       />,
     );
 
     expect(screen.getByText(/7 diárias, 5 semanais e 12 mensais/i)).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Aplicativo' })).toBeVisible();
+    expect(screen.getByText(/Versão 1\.0\.0/)).toBeVisible();
     expect(screen.getByLabelText(/Incluir alterações locais pendentes/i)).toBeChecked();
+    expect(screen.getByRole('group', { name: 'Opções de exportação' })).toHaveClass(
+      'account-export-actions',
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Exportar JSON' }));
 
     await waitFor(() => expect(exportData).toHaveBeenCalledOnce());
@@ -72,5 +78,34 @@ describe('account portability screen', () => {
     expect(onDownload).toHaveBeenCalledWith(
       expect.objectContaining({ fileName: 'torkout-export.json' }),
     );
+  });
+
+  it('requires an explicit second step before destructive local removal and reports server errors', async () => {
+    const onSignOut = vi.fn();
+    const api = {
+      deleteAccount: vi.fn().mockRejectedValue(new Error('reauthentication_required')),
+      listSessions: vi.fn(async () => []),
+    } as unknown as AppApi;
+
+    render(
+      <AccountScreen api={api} onBack={() => undefined} onSignOut={onSignOut} version="1.0.0" />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sair e remover dados deste dispositivo' }));
+    expect(onSignOut).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent(/alterações.*não foram sincronizadas/i);
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Digite EXCLUIR MINHA CONTA'), {
+      target: { value: 'EXCLUIR MINHA CONTA' },
+    });
+    fireEvent.change(screen.getByLabelText('Confirme sua senha'), {
+      target: { value: 'senha-incorreta' },
+    });
+    fireEvent.submit(screen.getByRole('button', { name: 'Excluir minha conta' }).closest('form')!);
+    expect(
+      await screen.findByText(/Não foi possível excluir a conta.*frase de confirmação/i),
+    ).toBeVisible();
   });
 });

@@ -1,6 +1,13 @@
 import type { LocalConflict } from '../sync/local-database';
 import type { OutboxEntry } from '../sync/local-database';
 import type { SyncState } from '../sync/sync-coordinator';
+import {
+  recordFieldLabel,
+  recordFieldValue,
+  syncEntityLabel,
+  syncOperationLabel,
+  syncOperationStateLabel,
+} from '../presentation';
 
 const labels: Record<SyncState, string> = {
   'auth-required': 'Reconecte e entre novamente para enviar suas alterações.',
@@ -49,8 +56,9 @@ export function SyncPanel(props: SyncPanelProps) {
           <ul className="sync-operation-list">
             {props.pendingOperations?.map((operation) => (
               <li key={operation.operationId}>
-                {operation.entityType} · {operation.operation} · {operation.state}
-                {operation.lastError ? ` · ${operation.lastError}` : ''}
+                {syncEntityLabel(operation.entityType)} · {syncOperationLabel(operation.operation)}{' '}
+                · {syncOperationStateLabel(operation.state)}
+                {operation.lastError ? ' · Não foi possível enviar; tente novamente.' : ''}
               </li>
             ))}
           </ul>
@@ -58,9 +66,9 @@ export function SyncPanel(props: SyncPanelProps) {
       )}
       {props.conflicts.map((conflict) => (
         <article className="sync-conflict" key={conflict.id}>
-          <h3>Conflito em {conflict.entityType}</h3>
-          <p>Versão local: {JSON.stringify(conflict.localPayload)}</p>
-          <p>Versão do servidor: {JSON.stringify(conflict.serverRecord)}</p>
+          <h3>{syncEntityLabel(conflict.entityType)}</h3>
+          <ConflictVersion label="Sua versão" record={conflict.localPayload} />
+          <ConflictVersion label="Versão recebida" record={conflict.serverRecord} />
           <div className="link-actions">
             <button type="button" onClick={() => props.onResolve(conflict.id, 'local')}>
               Usar versão local
@@ -71,6 +79,30 @@ export function SyncPanel(props: SyncPanelProps) {
           </div>
         </article>
       ))}
+    </section>
+  );
+}
+
+function ConflictVersion({ label, record }: { label: string; record: unknown }) {
+  const entries =
+    record && typeof record === 'object'
+      ? Object.entries(record as Record<string, unknown>).filter(([key]) => key !== 'version')
+      : [];
+  return (
+    <section className="sync-conflict__version" aria-label={label}>
+      <h4>{label}</h4>
+      {entries.length === 0 ? (
+        <p>Informação preservada.</p>
+      ) : (
+        <dl>
+          {entries.map(([key, value]) => (
+            <div key={key}>
+              <dt>{recordFieldLabel(key)}</dt>
+              <dd>{recordFieldValue(key, value)}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
     </section>
   );
 }

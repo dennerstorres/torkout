@@ -184,7 +184,7 @@ export function calculateProgressAnalytics(input: AnalyticsInput): ProgressAnaly
   return {
     consistency: {
       explanation:
-        'ConcluÃ­da vale 1, parcial vale 0,5 e perdida vale 0; descanso e cancelamento nÃ£o entram no denominador.',
+        'Concluída vale 1, parcial vale 0,5 e perdida vale 0; descanso e cancelamento não entram no denominador.',
       formulaVersion: 'weekly-consistency/v1',
       weeks,
     },

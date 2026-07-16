@@ -55,10 +55,16 @@ test('reviews and explicitly accepts an explainable progression on mobile', asyn
   await page.getByRole('button', { name: 'Progresso' }).click();
   await page.getByRole('button', { name: 'Ver sugestões de progressão' }).click();
   await expect(page.getByRole('heading', { name: 'Sugestões' })).toBeVisible();
+  const headerGap = await page.evaluate(() => {
+    const toolbar = document.querySelector('.progression-toolbar')!;
+    const eyebrow = document.querySelector('.progression-card > .eyebrow')!;
+    return eyebrow.getBoundingClientRect().top - toolbar.getBoundingClientRect().bottom;
+  });
+  expect(headerGap).toBeGreaterThanOrEqual(24);
   await expect(page.getByText(/não substitui a orientação/i)).toBeVisible();
   await page.getByText('Como esta sugestão foi calculada').click();
-  await expect(page.getByText('Versão 1.0.0', { exact: true })).toBeVisible();
+  await expect(page.getByText(/Regra de progressão, versão 1\.0\.0/i)).toBeVisible();
   await page.getByRole('button', { name: 'Aceitar' }).click();
   await expect.poll(() => accepted).toBe(true);
-  await expect(page.getByRole('status')).toContainText('accepted');
+  await expect(page.getByRole('status')).toContainText('aceita');
 });

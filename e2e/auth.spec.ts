@@ -17,14 +17,18 @@ test('registers and requests password recovery without revealing account existen
   );
   await page.goto('/');
 
-  await page.getByRole('button', { name: 'Criar conta' }).click();
+  await page.getByRole('button', { name: 'Começar agora' }).click();
   await page.getByLabel('Nome').fill('Pessoa Nova');
   await page.getByLabel('E-mail').fill('person@example.invalid');
   await page.getByLabel('Senha').fill('strong-password-123');
   await page.getByRole('button', { name: 'Cadastrar' }).click();
   await expect(page.getByRole('status')).toContainText('enviaremos uma confirmação');
 
-  await page.getByRole('button', { name: 'Esqueci minha senha' }).click();
+  const recoveryButton = page.getByRole('button', { name: 'Esqueci minha senha' });
+  await expect(recoveryButton).toHaveCSS('padding-left', '12px');
+  await recoveryButton.hover();
+  await expect(recoveryButton).toHaveCSS('background-color', 'rgba(183, 223, 75, 0.08)');
+  await recoveryButton.click();
   await page.getByLabel('E-mail').fill('person@example.invalid');
   await page.getByRole('button', { name: 'Enviar link' }).click();
   await expect(page.getByRole('status')).toContainText('Se a conta existir');

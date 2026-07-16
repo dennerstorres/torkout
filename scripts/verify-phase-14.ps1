@@ -21,8 +21,12 @@ foreach ($relativePath in $requiredFiles) {
     }
 }
 
-$styles = Get-Content -LiteralPath (Join-Path $root 'apps/web/src/styles.css') -Raw -Encoding UTF8
-foreach ($token in @('--color-primary: #d4ff00', '--color-secondary: #7000ff', '--color-danger: #ff4d4d', 'prefers-reduced-motion', 'forced-colors', 'safe-area-inset-bottom')) {
+$styleFiles = @((Join-Path $root 'apps/web/src/styles.css')) + @(
+    Get-ChildItem -LiteralPath (Join-Path $root 'apps/web/src/styles') -Filter '*.css' -File |
+        ForEach-Object { $_.FullName }
+)
+$styles = ($styleFiles | ForEach-Object { Get-Content -LiteralPath $_ -Raw -Encoding UTF8 }) -join "`n"
+foreach ($token in @('--color-primary:', '--color-danger:', '--color-surface:', 'prefers-reduced-motion', 'forced-colors', 'safe-area-inset-bottom')) {
     if ($styles -notmatch [regex]::Escape($token)) { $failures.Add("Phase 14 CSS is missing: $token") }
 }
 

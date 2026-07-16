@@ -34,7 +34,7 @@ function decodeCursor(cursor: string, from: string, through: string): string {
     }
     return localDate;
   } catch {
-    throw new ApiHttpError(400, 'INVALID_CURSOR', 'Cursor histÃ³rico invÃ¡lido.');
+    throw new ApiHttpError(400, 'INVALID_CURSOR', 'Cursor histórico inválido.');
   }
 }
 
@@ -99,7 +99,7 @@ export function registerHistoryRoutes(app: FastifyInstance, dependencies: ApiDep
     const user = await requireAuthenticatedUser(request, dependencies);
     const parsed = historyQuerySchema.safeParse(request.query);
     if (!parsed.success) {
-      throw new ApiHttpError(400, 'VALIDATION_ERROR', 'Intervalo histÃ³rico invÃ¡lido.');
+      throw new ApiHttpError(400, 'VALIDATION_ERROR', 'Intervalo histórico inválido.');
     }
     const query = parsed.data;
     const pageFrom = query.cursor

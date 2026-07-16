@@ -58,6 +58,25 @@ async function mockToday(page: Page): Promise<void> {
     }),
   );
   await page.route('**/api/v1/sync/push', (route) => route.fulfill({ json: { results: [] } }));
+  await page.route('**/api/v1/history?**', (route) =>
+    route.fulfill({ json: { days: [], habits: [], nextCursor: null } }),
+  );
+}
+
+function progressPayload(from: string, through: string) {
+  return {
+    consistency: {
+      explanation: 'O indicador compara sessões planejadas e realizadas no período.',
+      formulaVersion: 'weekly-consistency/v1',
+      weeks: [],
+    },
+    exercises: [],
+    measurements: [],
+    pain: [],
+    range: { from, through },
+    sessions: { completed: 0, partial: 0 },
+    walks: { distanceMeters: 0, frequencyPerWeek: 0, sessions: 0 },
+  };
 }
 
 for (const viewport of [
@@ -72,3 +91,217 @@ for (const viewport of [
     await expect(page).toHaveScreenshot(`today-${viewport.name}.png`, { animations: 'disabled' });
   });
 }
+
+for (const width of [320, 360, 390, 430]) {
+  test(`phase 15 layout invariants — ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ height: 844, width });
+    await mockToday(page);
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: 'Hoje', exact: true })).toBeVisible();
+
+    const initialGeometry = await page.evaluate(() => ({
+      headerHeight: document.querySelector('.app-header')?.getBoundingClientRect().height ?? 0,
+      innerWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+      sessionsTop: document.querySelector('.sessions-section')?.getBoundingClientRect().top ?? 0,
+      summaryTop: document.querySelector('.today-summary')?.getBoundingClientRect().top ?? 0,
+    }));
+    expect(initialGeometry.scrollWidth).toBeLessThanOrEqual(initialGeometry.innerWidth);
+    expect(initialGeometry.headerHeight).toBeLessThanOrEqual(64);
+    expect(initialGeometry.sessionsTop).toBeLessThan(initialGeometry.summaryTop);
+
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    const bottomGeometry = await page.evaluate(() => {
+      const navigation = document.querySelector('.primary-navigation');
+      const candidates = [
+        ...document.querySelectorAll<HTMLElement>(
+          '.page-outlet main button, .page-outlet main input, .page-outlet main select, .page-outlet main textarea, .page-outlet main summary',
+        ),
+      ].filter((element) => {
+        const box = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        return (
+          box.width > 0 &&
+          box.height > 0 &&
+          style.display !== 'none' &&
+          style.visibility !== 'hidden'
+        );
+      });
+      return {
+        lastControl: candidates.at(-1)?.getBoundingClientRect().toJSON() ?? null,
+        navigation: navigation?.getBoundingClientRect().toJSON() ?? null,
+      };
+    });
+    expect(bottomGeometry.lastControl).not.toBeNull();
+    expect(bottomGeometry.navigation).not.toBeNull();
+    expect(bottomGeometry.lastControl!.bottom).toBeLessThanOrEqual(
+      bottomGeometry.navigation!.top - 8,
+    );
+  });
+}
+
+for (const viewport of [
+  { height: 1024, name: 'tablet-portrait', width: 768 },
+  { height: 768, name: 'tablet-landscape', width: 1024 },
+  { height: 768, name: 'desktop-1366', width: 1366 },
+  { height: 900, name: 'desktop-1440', width: 1440 },
+  { height: 1080, name: 'desktop-1920', width: 1920 },
+]) {
+  test(`phase 15 broad viewport invariants — ${viewport.name}`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await mockToday(page);
+    await page.goto('/');
+    for (const destination of ['Hoje', 'Planejamento', 'Histórico', 'Progresso', 'Conta']) {
+      await page.getByRole('button', { name: destination, exact: true }).click();
+      const heading = page.getByRole('heading', { name: destination, exact: true });
+      await expect(heading).toBeVisible();
+      await expect(page.getByRole('button', { name: destination, exact: true })).toHaveAttribute(
+        'aria-current',
+        'page',
+      );
+      const width = await page.evaluate(() => ({
+        document: document.documentElement.scrollWidth,
+        viewport: innerWidth,
+      }));
+      expect(width.document).toBeLessThanOrEqual(width.viewport);
+      if (destination === 'Hoje' && viewport.width >= 1024) {
+        const complementary = await page.evaluate(() =>
+          [...document.querySelectorAll('.today-complementary-grid > *')].map((element) => {
+            const box = element.getBoundingClientRect();
+            return { top: box.top, width: box.width };
+          }),
+        );
+        expect(complementary).toHaveLength(3);
+        expect(new Set(complementary.map((item) => Math.round(item.top))).size).toBe(1);
+        expect(complementary.every((item) => item.width >= 224)).toBe(true);
+      }
+      if (destination === 'Planejamento') {
+        const gap = await page.evaluate(() => {
+          const heading = document.querySelector('#exercise-heading')!;
+          const list = document.querySelector('.exercise-catalog-list')!;
+          return list.getBoundingClientRect().top - heading.getBoundingClientRect().bottom;
+        });
+        expect(gap).toBeGreaterThanOrEqual(16);
+      }
+      if (destination === 'Conta') {
+        const gap = await page.evaluate(() => {
+          const group = document.querySelector('.account-export-actions')!;
+          const option = group.children[0]!.getBoundingClientRect();
+          const actions = group.children[1]!.getBoundingClientRect();
+          return actions.top - option.bottom;
+        });
+        expect(gap).toBeGreaterThanOrEqual(16);
+      }
+    }
+  });
+}
+
+test('phase 15 route transition resets scroll, focus and active destination together', async ({
+  page,
+}) => {
+  await page.setViewportSize({ height: 844, width: 390 });
+  await mockToday(page);
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Hoje', exact: true })).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+
+  await page.getByRole('button', { name: 'Histórico', exact: true }).click();
+  const heading = page.getByRole('heading', { name: 'Histórico', exact: true });
+  await expect(heading).toBeVisible();
+  await expect(heading).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Histórico', exact: true })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+});
+
+test('phase 15 remains operable with 200% text zoom', async ({ page }) => {
+  await page.setViewportSize({ height: 844, width: 320 });
+  await mockToday(page);
+  await page.goto('/');
+  await page.evaluate(() => {
+    document.documentElement.style.fontSize = '200%';
+  });
+  await expect(page.getByRole('heading', { name: 'Hoje', exact: true })).toBeVisible();
+  const geometry = await page.evaluate(() => ({
+    innerWidth,
+    scrollWidth: document.documentElement.scrollWidth,
+  }));
+  expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.innerWidth);
+  await expect(page.getByRole('button', { name: 'Planejamento', exact: true })).toBeVisible();
+});
+
+test('phase 15 history loading reserves the final calendar geometry', async ({ page }) => {
+  await page.setViewportSize({ height: 844, width: 390 });
+  await mockToday(page);
+  await page.unroute('**/api/v1/history?**');
+  let releaseHistory!: () => void;
+  const historyGate = new Promise<void>((resolve) => {
+    releaseHistory = resolve;
+  });
+  await page.route('**/api/v1/history?**', async (route) => {
+    await historyGate;
+    await route.fulfill({ json: { days: [], habits: [], nextCursor: null } });
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Histórico', exact: true }).click();
+  await expect(page.getByText('Carregando histórico…')).toBeAttached();
+  const before = await page.evaluate(() => ({
+    calendarHeight: document.querySelector('.history-calendar')?.getBoundingClientRect().height,
+    detailTop: document.querySelector('.history-detail')?.getBoundingClientRect().top,
+  }));
+
+  releaseHistory();
+  await expect(page.getByRole('button', { name: /15 de julho de 2026/i })).toBeVisible();
+  const after = await page.evaluate(() => ({
+    calendarHeight: document.querySelector('.history-calendar')?.getBoundingClientRect().height,
+    detailTop: document.querySelector('.history-detail')?.getBoundingClientRect().top,
+    scrollY,
+  }));
+  const calendarShift = Math.abs((after.calendarHeight ?? 0) - (before.calendarHeight ?? 0));
+  const detailShift = Math.abs((after.detailTop ?? 0) - (before.detailTop ?? 0));
+  expect(calendarShift).toBeLessThanOrEqual(8);
+  expect(detailShift).toBeLessThanOrEqual(8);
+  expect(detailShift / 844).toBeLessThanOrEqual(0.01);
+  expect(after.scrollY).toBe(0);
+});
+
+test('phase 15 progress loading keeps heading, toolbar and first result anchored', async ({
+  page,
+}) => {
+  await page.setViewportSize({ height: 844, width: 390 });
+  await mockToday(page);
+  let releaseProgress!: () => void;
+  const progressGate = new Promise<void>((resolve) => {
+    releaseProgress = resolve;
+  });
+  await page.route('**/api/v1/progress?**', async (route) => {
+    const url = new URL(route.request().url());
+    await progressGate;
+    await route.fulfill({
+      json: progressPayload(url.searchParams.get('from')!, url.searchParams.get('through')!),
+    });
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Progresso', exact: true }).click();
+  await expect(page.getByTestId('analytics-loading-grid')).toBeVisible();
+  const before = await page.evaluate(() => ({
+    gridTop: document.querySelector('.analytics-grid')?.getBoundingClientRect().top,
+    headingTop: document.querySelector('.analytics-header h1')?.getBoundingClientRect().top,
+    toolbarTop: document.querySelector('.analytics-filters')?.getBoundingClientRect().top,
+  }));
+
+  releaseProgress();
+  await expect(page.getByRole('heading', { name: 'Resumo do período' })).toBeVisible();
+  const after = await page.evaluate(() => ({
+    gridTop: document.querySelector('.analytics-grid')?.getBoundingClientRect().top,
+    headingTop: document.querySelector('.analytics-header h1')?.getBoundingClientRect().top,
+    scrollY,
+    toolbarTop: document.querySelector('.analytics-filters')?.getBoundingClientRect().top,
+  }));
+  expect(Math.abs((after.headingTop ?? 0) - (before.headingTop ?? 0))).toBeLessThanOrEqual(1);
+  expect(Math.abs((after.toolbarTop ?? 0) - (before.toolbarTop ?? 0))).toBeLessThanOrEqual(1);
+  expect(Math.abs((after.gridTop ?? 0) - (before.gridTop ?? 0))).toBeLessThanOrEqual(2);
+  expect(after.scrollY).toBe(0);
+});

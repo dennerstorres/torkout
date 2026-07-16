@@ -19,6 +19,7 @@ export function AccountScreen({
   onBack,
   onDownload = downloadInBrowser,
   onSignOut,
+  version = import.meta.env.VITE_APP_VERSION ?? 'desenvolvimento',
 }: {
   api: AppApi;
   database?: UserSyncDatabase;
@@ -26,6 +27,7 @@ export function AccountScreen({
   onBack(): void;
   onDownload?(download: PortableDownload): void;
   onSignOut?(removeLocalData: boolean): Promise<void> | void;
+  version?: string;
 }) {
   const [sessions, setSessions] = useState<SessionView[]>([]);
   const [includePending, setIncludePending] = useState(true);
@@ -98,22 +100,24 @@ export function AccountScreen({
             O JSON é versionado. O ZIP contém CSVs UTF-8 normalizados e um guia de datas, unidades e
             relacionamentos. Credenciais, sessões e metadados internos não são incluídos.
           </p>
-          <label className="checkbox-row">
-            <input
-              checked={includePending}
-              disabled={!database}
-              type="checkbox"
-              onChange={(event) => setIncludePending(event.target.checked)}
-            />
-            Incluir alterações locais pendentes, identificadas separadamente
-          </label>
-          <div className="button-row">
-            <button disabled={exporting} type="button" onClick={() => void exportData('json')}>
-              Exportar JSON
-            </button>
-            <button disabled={exporting} type="button" onClick={() => void exportData('csv_zip')}>
-              Exportar CSV (ZIP)
-            </button>
+          <div aria-label="Opções de exportação" className="account-export-actions" role="group">
+            <label className="checkbox-row">
+              <input
+                checked={includePending}
+                disabled={!database}
+                type="checkbox"
+                onChange={(event) => setIncludePending(event.target.checked)}
+              />
+              Incluir alterações locais pendentes, identificadas separadamente
+            </label>
+            <div className="button-row">
+              <button disabled={exporting} type="button" onClick={() => void exportData('json')}>
+                Exportar JSON
+              </button>
+              <button disabled={exporting} type="button" onClick={() => void exportData('csv_zip')}>
+                Exportar CSV (ZIP)
+              </button>
+            </div>
           </div>
         </section>
         <section className="account-section" aria-labelledby="account-sessions-title">
@@ -159,6 +163,17 @@ export function AccountScreen({
               )}
             </div>
           )}
+        </section>
+        <section className="account-section" aria-labelledby="account-app-title">
+          <h2 id="account-app-title">Aplicativo</h2>
+          <p>Versão {version}</p>
+          <details className="account-installation">
+            <summary>Ver instruções de instalação</summary>
+            <p>
+              No iPhone ou iPad, use Compartilhar no Safari e escolha “Adicionar à Tela de Início”.
+            </p>
+            <p>No Android ou computador, abra o menu do Chrome e escolha “Instalar aplicativo”.</p>
+          </details>
         </section>
         <section className="account-section danger-zone" aria-labelledby="account-danger-title">
           <h2 id="account-danger-title">Zona de risco</h2>

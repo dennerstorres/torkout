@@ -105,6 +105,86 @@ export function Card({ className = '', ...props }: HTMLAttributes<HTMLElement>) 
   return <section className={`card ${className}`.trim()} {...props} />;
 }
 
+export function Surface({
+  className = '',
+  density = 'standard',
+  variant = 'default',
+  ...props
+}: HTMLAttributes<HTMLDivElement> & {
+  density?: 'compact' | 'standard' | 'spacious';
+  variant?: 'default' | 'raised' | 'highlighted';
+}) {
+  return (
+    <div
+      className={`surface surface--${density} surface--${variant} ${className}`.trim()}
+      {...props}
+    />
+  );
+}
+
+export function Section({
+  actions,
+  children,
+  className = '',
+  eyebrow,
+  title,
+}: {
+  actions?: ReactNode;
+  children: ReactNode;
+  className?: string;
+  eyebrow?: string;
+  title: string;
+}) {
+  const titleId = useId();
+  return (
+    <section aria-labelledby={titleId} className={`section ${className}`.trim()}>
+      <header className="section__header">
+        <div>
+          {eyebrow && <p className="eyebrow">{eyebrow}</p>}
+          <h2 id={titleId}>{title}</h2>
+        </div>
+        {actions && <div className="section__actions">{actions}</div>}
+      </header>
+      <div className="section__content">{children}</div>
+    </section>
+  );
+}
+
+export function Panel({
+  children,
+  className = '',
+  title,
+}: {
+  children: ReactNode;
+  className?: string;
+  title: string;
+}) {
+  const titleId = useId();
+  return (
+    <aside aria-labelledby={titleId} className={`panel ${className}`.trim()}>
+      <h2 id={titleId}>{title}</h2>
+      {children}
+    </aside>
+  );
+}
+
+export function FormGroup({
+  children,
+  className = '',
+  legend,
+}: {
+  children: ReactNode;
+  className?: string;
+  legend: string;
+}) {
+  return (
+    <fieldset className={`form-group ${className}`.trim()}>
+      <legend>{legend}</legend>
+      <div className="form-group__content">{children}</div>
+    </fieldset>
+  );
+}
+
 export function Field({
   hint,
   label,
@@ -143,10 +223,13 @@ export function EmptyState({
 }
 
 export function MetricCard({ label, value }: { label: string; value: ReactNode }) {
+  const labelId = useId();
   return (
-    <div className="metric-card">
-      <span>{label}</span>
-      <strong>{value}</strong>
+    <div aria-labelledby={labelId} className="metric-card" role="group">
+      <span className="metric-card__label" id={labelId}>
+        {label}
+      </span>
+      <strong className="metric-card__value">{value}</strong>
     </div>
   );
 }

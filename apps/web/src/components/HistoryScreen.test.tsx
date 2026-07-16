@@ -10,6 +10,7 @@ const userId = 'a8000000-0000-4000-8000-000000000001';
 const strengthId = 'a8100000-0000-4000-8000-000000000001';
 const walkId = 'a8100000-0000-4000-8000-000000000002';
 const restId = 'a8100000-0000-4000-8000-000000000003';
+const otherId = 'a8100000-0000-4000-8000-000000000004';
 const habitId = 'a8200000-0000-4000-8000-000000000001';
 const entryId = 'a8200000-0000-4000-8000-000000000002';
 const measurementId = 'a8300000-0000-4000-8000-000000000001';
@@ -62,6 +63,13 @@ async function seed() {
       templateNameSnapshot: 'Descanso',
       type: 'rest',
     }),
+    record('workout_session', otherId, {
+      plannedLocalDate: '2026-07-13',
+      status: 'planned',
+      templateNameSnapshot:
+        'Sessão funcional com um nome deliberadamente longo para validar truncamento',
+      type: 'other',
+    }),
     record('habit_definition', habitId, { active: true, name: 'Proteína', type: 'quantity' }),
     record('habit_entry', entryId, {
       habitDefinitionId: habitId,
@@ -98,12 +106,18 @@ describe('calendar and historical editing', () => {
       />,
     );
 
+    expect(screen.getByRole('group', { name: 'Navegação mensal' })).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Mostrar filtros' }));
+    expect(screen.getByRole('group', { name: 'Filtros do calendário' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Histórico' })).toBeVisible();
     const day13 = await screen.findByRole('button', { name: /13 de julho/i });
     expect(within(day13).getByText('Força')).toBeVisible();
     expect(within(day13).getByText('Caminhada')).toBeVisible();
     expect(within(day13).getByText('Parcial')).toBeVisible();
     expect(within(day13).getByText('Concluído')).toBeVisible();
     expect(within(day13).getByText('Pendente')).toBeVisible();
+    expect(within(day13).getByText('+1 registro')).toBeVisible();
+    expect(within(day13).queryByText('Outro')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /12 de julho/i }));
     expect(screen.getByRole('heading', { name: 'Descanso' })).toBeVisible();
     const details = screen
@@ -162,6 +176,7 @@ describe('calendar and historical editing', () => {
         today="2026-07-14"
       />,
     );
+    fireEvent.click(screen.getByRole('button', { name: 'Mostrar filtros' }));
     fireEvent.change(screen.getByLabelText('Filtrar por atividade'), {
       target: { value: 'strength' },
     });

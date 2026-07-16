@@ -57,6 +57,13 @@ test('plans offline on a mobile viewport and keeps the outbox across reload', as
 
   await page.goto('/');
   await page.getByRole('button', { name: 'Planejamento' }).click();
+  const exerciseGap = await page.evaluate(() => {
+    const heading = document.querySelector('#exercise-heading')!;
+    const list = document.querySelector('.exercise-catalog-list')!;
+    return list.getBoundingClientRect().top - heading.getBoundingClientRect().bottom;
+  });
+  expect(exerciseGap).toBeGreaterThanOrEqual(16);
+  await page.getByRole('button', { name: 'Plano semanal' }).click();
   await expect(page.getByRole('heading', { name: 'Planejamento' })).toBeVisible();
 
   networkAvailable = false;
@@ -70,8 +77,11 @@ test('plans offline on a mobile viewport and keeps the outbox across reload', as
   await page.reload();
   await expect(page.getByText(/Você está offline/i)).toBeVisible();
   await page.getByRole('button', { name: 'Planejamento' }).click();
+  await page.getByRole('button', { name: 'Plano semanal' }).click();
   await expect(page.getByText('Plano sem rede')).toBeVisible();
-  await expect(page.locator('.planning-layout > .sync-note')).toContainText('offline');
+  await expect(page.locator('.planning-layout > .sync-note')).toContainText(
+    'salvas neste dispositivo',
+  );
 
   networkAvailable = true;
   await page.getByRole('button', { name: 'Sincronizar agora' }).click();
