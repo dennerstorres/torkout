@@ -43,7 +43,7 @@ describe('progress analytics', () => {
             {
               exerciseId: '00000000-0000-4000-8000-000000000001',
               metric: 'repetitions',
-              name: 'FlexÃ£o',
+              name: 'Flexão',
               sets: [{ actualRepetitions: 12 }, { actualRepetitions: 10 }],
               status: 'completed',
             },
@@ -64,7 +64,7 @@ describe('progress analytics', () => {
             {
               exerciseId: '00000000-0000-4000-8000-000000000001',
               metric: 'repetitions',
-              name: 'FlexÃ£o',
+              name: 'Flexão',
               sets: [{ actualRepetitions: 8 }, { actualRepetitions: 500, deleted: true }],
               status: 'stopped',
             },
@@ -78,7 +78,7 @@ describe('progress analytics', () => {
 
     expect(result.exercises).toEqual([
       expect.objectContaining({
-        name: 'FlexÃ£o',
+        name: 'Flexão',
         points: [
           { localDate: '2026-07-01', value: 22 },
           { localDate: '2026-07-02', value: 8 },

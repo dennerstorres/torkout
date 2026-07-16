@@ -93,6 +93,19 @@ describe('Today mobile tracking', () => {
     );
 
     expect(screen.getByText(/14 de julho de 2026/i)).toBeVisible();
+    const sessionsRegion = await screen.findByRole('region', { name: 'Sessões de hoje' });
+    const summaryRegion = screen.getByRole('region', { name: 'Resumo de hoje' });
+    const complementaryRegion = screen.getByRole('region', {
+      name: 'Registros complementares',
+    });
+    expect(complementaryRegion).toContainElement(
+      screen.getByRole('heading', { name: 'Hábitos do dia' }),
+    );
+    expect(complementaryRegion).toHaveTextContent('Dor e desconforto');
+    expect(complementaryRegion).toHaveTextContent('Peso e cintura');
+    expect(sessionsRegion.compareDocumentPosition(summaryRegion)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
     fireEvent.click(await screen.findByRole('button', { name: 'Iniciar Treino A' }));
     fireEvent.change(await screen.findByLabelText('Série 1 de Flexão'), {
       target: { value: '10' },
@@ -165,6 +178,48 @@ describe('Today mobile tracking', () => {
     );
     fireEvent.click(await screen.findByRole('button', { name: 'Iniciar Treino A' }));
     expect(await screen.findByLabelText('Série 1 de Flexão')).toHaveValue(11);
+    database.close();
+  });
+
+  it('presents a rest day as one recovery decision instead of a nested workout', async () => {
+    const database = createUserSyncDatabase(userId);
+    await database.records.put({
+      data: {
+        exercises: [],
+        id: sessionId,
+        jointPainStatus: 'unknown',
+        plannedLocalDate: '2026-07-14',
+        status: 'planned',
+        templateNameSnapshot: 'Descanso',
+        type: 'rest',
+        version: 1,
+      },
+      deletedAt: null,
+      entityId: sessionId,
+      entityType: 'workout_session',
+      key: entityKey('workout_session', sessionId),
+      syncStatus: 'synced',
+      updatedAt: '2026-07-14T12:00:00.000Z',
+      version: 1,
+    });
+    const onPlan = vi.fn();
+
+    render(
+      <TodayScreen
+        database={database}
+        now={new Date('2026-07-15T01:00:00.000Z')}
+        onBack={vi.fn()}
+        onPlan={onPlan}
+        onSync={vi.fn()}
+        syncState="synced"
+        timeZone="America/Cuiaba"
+      />,
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Dia de recuperação' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Iniciar Descanso' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Planejar outro treino' }));
+    expect(onPlan).toHaveBeenCalledOnce();
     database.close();
   });
 });

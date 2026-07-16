@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react';
 
+import { syncStateMessage } from '../presentation';
 import type { SyncState } from '../sync/sync-coordinator';
 import { SyncPanel } from './SyncPanel';
 import { Icon, type IconName } from './ui';
 import type { LocalConflict, OutboxEntry } from '../sync/local-database';
+import { BrandMark } from './BrandMark';
 
 export type AuthenticatedView =
   'account' | 'analytics' | 'history' | 'planning' | 'progression' | 'today';
@@ -37,7 +39,7 @@ export function AuthenticatedShell(props: Props) {
     <div className="app-shell">
       <aside className="app-sidebar">
         <button className="brand-lockup" type="button" onClick={() => props.onNavigate('today')}>
-          <span className="brand-mark">T</span>
+          <BrandMark />
           <span>TORKOUT</span>
         </button>
         <button
@@ -57,7 +59,7 @@ export function AuthenticatedShell(props: Props) {
       <div className="app-column">
         <header className="app-header">
           <button className="mobile-brand" type="button" onClick={() => props.onNavigate('today')}>
-            <span className="brand-mark">T</span>
+            <BrandMark />
             <strong>TORKOUT</strong>
           </button>
           <details className={`sync-popover sync-popover--${props.state}`}>
@@ -90,7 +92,7 @@ export function AuthenticatedShell(props: Props) {
               name={props.state === 'conflict' || props.state === 'error' ? 'warning' : 'refresh'}
               size={16}
             />
-            {syncLongLabel(props.state)}
+            {syncStateMessage(props.state)}
           </div>
         )}
         <div className="page-outlet">{props.children}</div>
@@ -127,17 +129,5 @@ function syncShortLabel(state: SyncState): string {
     pending: 'Pendente',
     synced: 'Sincronizado',
     syncing: 'Sincronizando',
-  }[state];
-}
-
-function syncLongLabel(state: SyncState): string {
-  return {
-    'auth-required': 'Entre novamente para enviar alterações. Seus dados locais estão preservados.',
-    conflict: 'Existe um conflito que precisa da sua decisão.',
-    error: 'Não foi possível sincronizar. Nada foi perdido.',
-    offline: 'Você está offline. Alterações serão enviadas após a reconexão.',
-    pending: 'Alterações salvas neste dispositivo aguardam envio.',
-    synced: '',
-    syncing: 'Sincronizando alterações…',
   }[state];
 }

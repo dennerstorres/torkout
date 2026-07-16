@@ -63,7 +63,10 @@ export function PwaExperience({
   };
 
   return (
-    <aside className="pwa-experience" aria-label="Instalação e versão do aplicativo">
+    <aside
+      className={`pwa-experience ${update || installPrompt ? 'pwa-experience--contextual' : 'pwa-experience--quiet'}`}
+      aria-label="Instalação e versão do aplicativo"
+    >
       {update && (
         <section className="pwa-update" role="status">
           <strong>Atualização disponível</strong>
@@ -73,12 +76,14 @@ export function PwaExperience({
           </button>
         </section>
       )}
-      <p className="pwa-version">
-        <span>Versão {version}</span> ·{' '}
-        {installed ? 'Aberto como aplicativo' : 'Aberto no navegador'}
-      </p>
       <details className="pwa-installation">
-        <summary>Como instalar</summary>
+        <summary>
+          <span>Como instalar</span>
+          <small>Versão {version}</small>
+        </summary>
+        <p className="pwa-version">
+          {installed ? 'Aberto como aplicativo' : 'Aberto no navegador'}
+        </p>
         {installPrompt && !installed && (
           <button className="primary" type="button" onClick={() => void install()}>
             Instalar neste dispositivo

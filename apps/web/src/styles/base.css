@@ -1,0 +1,250 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 20rem;
+  background: var(--color-canvas);
+  scroll-padding-top: calc(var(--shell-header-height) + var(--space-4));
+}
+
+body {
+  min-width: 20rem;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0;
+  overflow-x: clip;
+  background: var(--color-canvas);
+  color: var(--color-text);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+h1,
+h2,
+h3,
+p {
+  overflow-wrap: anywhere;
+}
+
+h1,
+h2,
+h3 {
+  font-family: 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
+  text-wrap: balance;
+}
+
+h1 {
+  margin: var(--space-1) 0 var(--space-3);
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 760;
+  letter-spacing: -0.045em;
+  line-height: 1.02;
+}
+
+h2 {
+  margin: 0;
+  font-size: clamp(1.15rem, 2vw, 1.45rem);
+  font-weight: 720;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+
+h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.25;
+}
+
+p {
+  max-width: var(--reading-width);
+  margin-block: var(--space-3);
+  color: var(--color-text-muted);
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+a {
+  color: var(--color-primary-strong);
+}
+
+form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+label,
+.field {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--color-text);
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.85rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-canvas-soft);
+  color: var(--color-text);
+  padding: 0.72rem 0.8rem;
+  transition:
+    border-color var(--duration-fast) ease,
+    box-shadow var(--duration-fast) ease,
+    background var(--duration-fast) ease;
+}
+
+input:hover,
+select:hover,
+textarea:hover {
+  border-color: rgb(202 222 211 / 46%);
+}
+
+textarea {
+  min-height: 6rem;
+  resize: vertical;
+}
+
+input[type='checkbox'],
+input[type='radio'] {
+  width: 1.25rem;
+  min-height: 1.25rem;
+  accent-color: var(--color-primary);
+}
+
+button {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  cursor: pointer;
+  font-weight: 680;
+  padding: 0.65rem 0.95rem;
+  transition:
+    border-color var(--duration-fast) ease,
+    background var(--duration-fast) ease,
+    color var(--duration-fast) ease,
+    transform var(--duration-fast) ease;
+}
+
+button:hover:not(:disabled) {
+  border-color: rgb(202 222 211 / 50%);
+  background: var(--color-surface-highlighted);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+button.primary,
+.button--primary {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-primary-ink);
+}
+
+button.primary:hover:not(:disabled),
+.button--primary:hover:not(:disabled) {
+  border-color: var(--color-primary-strong);
+  background: var(--color-primary-strong);
+}
+
+button.danger,
+.button--danger {
+  border-color: rgb(255 123 115 / 42%);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.button--ghost,
+.back-button {
+  border-color: transparent;
+  background: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+fieldset {
+  min-width: 0;
+  margin: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+legend {
+  padding: 0 var(--space-2);
+  font-weight: 700;
+}
+
+hr {
+  width: 100%;
+  margin: var(--space-6) 0;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+code {
+  border-radius: var(--radius-xs);
+  background: var(--color-canvas-soft);
+  padding: 0.15rem 0.35rem;
+  font-size: 0.88em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (forced-colors: active) {
+  button,
+  input,
+  select,
+  textarea,
+  fieldset {
+    border-color: CanvasText;
+  }
+
+  button.primary,
+  .button--primary,
+  button.danger,
+  .button--danger {
+    border-color: ButtonText;
+    background: ButtonFace;
+    color: ButtonText;
+  }
+}

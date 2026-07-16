@@ -58,16 +58,16 @@ describe('progress analytics API', () => {
     await migrateDatabase(db);
     await pool.query(
       `insert into users (id, name, email, email_verified) values
-       ($1, 'AnalÃ­tica', 'analytics-first@example.invalid', true),
+       ($1, 'Analítica', 'analytics-first@example.invalid', true),
        ($2, 'Privada', 'analytics-second@example.invalid', true),
-       ($3, 'ReferÃªncia', 'analytics-reference@example.invalid', true)`,
+       ($3, 'Referência', 'analytics-reference@example.invalid', true)`,
       [users.first, users.second, users.reference],
     );
     await pool.query(
       `insert into workout_sessions
          (id, user_id, planned_local_date, type, status, source, template_name_snapshot, time_zone)
        values
-         ('c9100000-0000-4000-8000-000000000001', $1, '2026-07-06', 'strength', 'completed', 'ad_hoc', 'ForÃ§a', 'America/Cuiaba'),
+         ('c9100000-0000-4000-8000-000000000001', $1, '2026-07-06', 'strength', 'completed', 'ad_hoc', 'Força', 'America/Cuiaba'),
          ('c9100000-0000-4000-8000-000000000002', $1, '2026-07-07', 'walk', 'partial', 'ad_hoc', 'Caminhada', 'America/Cuiaba'),
          ('c9100000-0000-4000-8000-000000000003', $1, '2026-07-08', 'rest', 'planned', 'ad_hoc', 'Descanso', 'America/Cuiaba'),
          ('c9100000-0000-4000-8000-000000000004', $2, '2026-07-06', 'strength', 'completed', 'ad_hoc', 'Privado', 'America/Cuiaba')`,
@@ -77,7 +77,7 @@ describe('progress analytics API', () => {
       `insert into session_exercises
          (id, user_id, session_id, exercise_id, exercise_name_snapshot, tracking_metric_snapshot, sort_order, status)
        values
-         ('c9200000-0000-4000-8000-000000000001', $1, 'c9100000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000001', 'FlexÃ£o', 'repetitions', 0, 'completed'),
+         ('c9200000-0000-4000-8000-000000000001', $1, 'c9100000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000001', 'Flexão', 'repetitions', 0, 'completed'),
          ('c9200000-0000-4000-8000-000000000002', $1, 'c9100000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000002', 'Agachamento livre', 'repetitions', 1, 'skipped')`,
       [users.first],
     );
@@ -118,7 +118,7 @@ describe('progress analytics API', () => {
          'strength',
          case when day_number % 5 = 0 then 'partial'::workout_status else 'completed'::workout_status end,
          'ad_hoc',
-         'Dataset de referÃªncia',
+         'Dataset de referência',
          'America/Cuiaba'
        from generate_series(date '2025-07-13', date '2026-07-12', interval '1 day')
          with ordinality as days(local_date, day_number)`,
@@ -143,7 +143,7 @@ describe('progress analytics API', () => {
         formulaVersion: 'weekly-consistency/v1',
         weeks: [{ completedEquivalent: 1.5, percentage: 75, plannedExecutable: 2 }],
       },
-      exercises: [{ name: 'FlexÃ£o', total: 22 }],
+      exercises: [{ name: 'Flexão', total: 22 }],
       measurements: [{ waistCm: 91, weightKg: 80 }],
       pain: [{ bodyRegion: 'knee', count: 1, intensity: 'moderate', type: 'joint' }],
       range: { from: '2026-07-06', through: '2026-07-12' },

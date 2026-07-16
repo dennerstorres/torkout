@@ -59,6 +59,7 @@ test('retries a committed batch after a lost response without duplicating local 
 
   await page.goto('/');
   await page.getByRole('button', { name: 'Planejamento' }).click();
+  await page.getByRole('button', { name: 'Plano semanal' }).click();
   await page.getByLabel('Nome do plano').fill('Plano resiliente');
   await page.getByLabel('Nome do treino').fill('Treino resiliente');
   await page.getByLabel('Segunda-feira').check();

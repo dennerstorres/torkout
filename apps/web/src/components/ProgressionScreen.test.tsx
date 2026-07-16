@@ -30,10 +30,14 @@ describe('ProgressionScreen', () => {
       listProgressionSuggestions: vi.fn().mockResolvedValue({ items: [suggestion] }),
     } as unknown as AppApi;
     render(<ProgressionScreen api={api} onBack={() => undefined} />);
+    expect(screen.getByRole('navigation', { name: 'Retorno' })).toHaveClass('progression-toolbar');
     expect(await screen.findByText('Duas sessões atingiram a meta.')).toBeInTheDocument();
     expect(screen.getByText(/Não substitui orientação profissional/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Aceitar' }));
     await waitFor(() => expect(decideProgression).toHaveBeenCalledWith(suggestion.id, 'accepted'));
-    expect(screen.getByText('Decisão: accepted.')).toBeInTheDocument();
+    expect(screen.getByText('Decisão: aceita.')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Como esta sugestão foi calculada'));
+    expect(screen.getByText('Sessão considerada')).toBeInTheDocument();
+    expect(screen.queryByText(/sessionId|accepted/)).not.toBeInTheDocument();
   });
 });

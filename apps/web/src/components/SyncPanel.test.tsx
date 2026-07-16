@@ -45,10 +45,16 @@ describe('SyncPanel', () => {
     );
 
     expect(screen.getByRole('status')).toHaveTextContent('2 alterações pendentes');
-    expect(screen.getByText(/Versão local/)).toBeInTheDocument();
-    expect(screen.getByText(/Versão do servidor/)).toBeInTheDocument();
+    expect(screen.getByText('Medição corporal')).toBeInTheDocument();
+    expect(screen.getByText('Sua versão')).toBeInTheDocument();
+    expect(screen.getByText('71 kg')).toBeInTheDocument();
+    expect(screen.getByText('Versão recebida')).toBeInTheDocument();
+    expect(screen.getByText('70 kg')).toBeInTheDocument();
     fireEvent.click(screen.getByText('Inspecionar pendências'));
-    expect(screen.getByText(/body_measurement.*update/)).toBeInTheDocument();
+    expect(screen.getByRole('listitem')).toHaveTextContent(
+      'Medição corporal · Atualização · Aguardando envio',
+    );
+    expect(screen.queryByText(/body_measurement|network_error/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Sincronizar agora' }));
     fireEvent.click(screen.getByRole('button', { name: 'Exportar pendências' }));
     fireEvent.click(screen.getByRole('button', { name: 'Tentar pendências novamente' }));

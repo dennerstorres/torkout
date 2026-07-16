@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title description">
+  <title id="title">Torkout maskable</title>
+  <desc id="description">Marca Torkout centralizada na área segura para ícones adaptativos.</desc>
+  <rect width="512" height="512" fill="#0b0f0e"/>
+  <g transform="translate(89.6 89.6) scale(.65)">
+    <g transform="translate(256 256) skewX(-6) translate(-256 -256)">
+      <rect x="56" y="56" width="400" height="400" rx="96" fill="#b7df4b"/>
+      <path d="M168 150h200v70h-66l-18 146h-64l18-146h-70z" fill="#101600"/>
+    </g>
+  </g>
+</svg>

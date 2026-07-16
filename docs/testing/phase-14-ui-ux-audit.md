@@ -1,5 +1,9 @@
 # Fase 14 — auditoria UI/UX premium
 
+> **Baseline legado reprovado:** a revisão humana de 15/07/2026 reprovou a qualidade visual deste
+> resultado. As evidências abaixo permanecem históricas e não constituem aceite de design. A
+> recuperação está documentada no inventário e no contrato visual da Fase 15.
+
 Data: 15/07/2026
 
 ## Escopo implementado

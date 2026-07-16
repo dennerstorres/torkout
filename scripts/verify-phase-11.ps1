@@ -6,6 +6,7 @@ $root = Split-Path -Parent $PSScriptRoot
 $failures = [System.Collections.Generic.List[string]]::new()
 $requiredFiles = @(
     'apps/web/public/icons/torkout-source.svg',
+    'apps/web/public/icons/torkout-maskable-source.svg',
     'apps/web/public/icons/torkout-192.png',
     'apps/web/public/icons/torkout-512.png',
     'apps/web/public/icons/torkout-maskable-512.png',

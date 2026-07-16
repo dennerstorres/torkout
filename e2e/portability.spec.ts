@@ -63,7 +63,9 @@ test('exports portable data and erases the account plus its local replica on mob
   await page.getByLabel('Confirme sua senha').fill('correct-password');
   await page.getByRole('button', { name: 'Excluir minha conta' }).click();
 
-  await expect(page.getByRole('heading', { name: 'Entre no Torkout' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Seu treino, claro até nos dias corridos.' }),
+  ).toBeVisible();
   expect(deletionPayload).toEqual({
     confirmation: 'EXCLUIR MINHA CONTA',
     password: 'correct-password',

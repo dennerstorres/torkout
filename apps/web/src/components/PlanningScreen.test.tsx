@@ -28,8 +28,9 @@ describe('mobile-first planning', () => {
     });
     fireEvent.change(screen.getByLabelText('Métrica'), { target: { value: 'duration' } });
     fireEvent.submit(screen.getByRole('button', { name: 'Adicionar exercício' }).closest('form')!);
-    expect(await screen.findByText('Prancha')).toBeVisible();
+    expect(await screen.findByText(/Prancha/)).toBeVisible();
 
+    fireEvent.click(screen.getByRole('button', { name: 'Plano semanal' }));
     fireEvent.change(screen.getByLabelText('Nome do plano'), {
       target: { value: 'Plano semanal' },
     });
@@ -54,6 +55,7 @@ describe('mobile-first planning', () => {
     });
     expect((await screen.findAllByText(/Plano semanal/)).length).toBeGreaterThan(1);
 
+    fireEvent.click(screen.getByRole('button', { name: 'Sessão avulsa' }));
     fireEvent.change(screen.getByLabelText('Nome da sessão avulsa'), {
       target: { value: 'Caminhada extra' },
     });
@@ -66,6 +68,39 @@ describe('mobile-first planning', () => {
       (await database.outbox.toArray()).some((entry) => entry.entityType === 'workout_session'),
     ).toBe(true);
 
+    database.close();
+  });
+
+  it('shows one planning decision area at a time', async () => {
+    const database = createUserSyncDatabase(userId);
+    render(
+      <PlanningScreen database={database} onBack={vi.fn()} onSync={vi.fn()} syncState="synced" />,
+    );
+
+    expect(await screen.findByRole('region', { name: 'Exercícios' })).toBeVisible();
+    expect(screen.getByRole('list', { name: 'Catálogo de exercícios' })).toHaveClass(
+      'exercise-catalog-list',
+    );
+    expect(screen.queryByLabelText('Nome do plano')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Plano semanal' }));
+    expect(screen.getByLabelText('Nome do plano')).toBeVisible();
+    for (const weekday of [
+      'Segunda-feira',
+      'Terça-feira',
+      'Quarta-feira',
+      'Quinta-feira',
+      'Sexta-feira',
+      'Sábado',
+      'Domingo',
+    ]) {
+      expect(screen.getByLabelText(weekday)).toBeVisible();
+    }
+    expect(screen.queryByLabelText('Nome do exercício')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sessão avulsa' }));
+    expect(screen.getByLabelText('Nome da sessão avulsa')).toBeVisible();
+    expect(screen.queryByLabelText('Nome do plano')).not.toBeInTheDocument();
     database.close();
   });
 });

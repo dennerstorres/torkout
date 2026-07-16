@@ -70,11 +70,22 @@ describe('public authentication journey', () => {
     const api = createApi();
     render(<App api={api} />);
 
-    expect(await screen.findByRole('heading', { name: 'Entre no Torkout' })).toBeVisible();
+    expect(
+      await screen.findByRole('heading', { name: 'Seu treino, claro até nos dias corridos.' }),
+    ).toBeVisible();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+    expect(screen.getByRole('dialog', { name: 'Entre no Torkout' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Fechar' })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Tab', shiftKey: true });
+    expect(screen.getByRole('button', { name: 'Esqueci minha senha' })).toHaveFocus();
     expect(screen.getByLabelText('E-mail')).toHaveAttribute('type', 'email');
     expect(screen.getByLabelText('Senha')).toHaveAttribute('type', 'password');
 
+    fireEvent.click(screen.getByRole('button', { name: 'Fechar' }));
     fireEvent.click(screen.getByRole('button', { name: 'Criar conta' }));
+    expect(screen.getByRole('dialog', { name: 'Crie sua conta' })).toBeVisible();
     fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Pessoa Nova' } });
     fireEvent.change(screen.getByLabelText('E-mail'), {
       target: { value: 'new@example.invalid' },
@@ -122,6 +133,7 @@ describe('public authentication journey', () => {
 
 describe('authenticated account journey', () => {
   it('moves focus to the destination heading after in-app navigation', async () => {
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
     const api = createApi({
       getProfile: vi.fn(async () => ({ displayName: 'Pessoa A' })),
       getSession: vi.fn(async () => ({
@@ -132,6 +144,7 @@ describe('authenticated account journey', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Conta' }));
     expect(await screen.findByRole('heading', { name: 'Conta' })).toHaveFocus();
+    expect(scrollTo).toHaveBeenLastCalledWith({ behavior: 'auto', left: 0, top: 0 });
   });
 
   it('offers progress analytics from the authenticated home', async () => {

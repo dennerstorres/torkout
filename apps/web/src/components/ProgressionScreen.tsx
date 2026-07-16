@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import type { AppApi, ProgressionSuggestionView } from '../auth-client';
+import { evidenceLabel, progressionDecisionLabel, recordFieldValue } from '../presentation';
 
 const TYPE_LABELS: Record<ProgressionSuggestionView['type'], string> = {
   increase: 'Aumentar',
@@ -58,9 +59,11 @@ export function ProgressionScreen({ api, onBack }: { api: AppApi; onBack(): void
   return (
     <main className="centered-layout progression-layout">
       <section className="card progression-card">
-        <button type="button" onClick={onBack}>
-          Voltar
-        </button>
+        <nav aria-label="Retorno" className="progression-toolbar">
+          <button type="button" onClick={onBack}>
+            Voltar
+          </button>
+        </nav>
         <p className="eyebrow">Progressão explicável</p>
         <h1>Sugestões</h1>
         <p>Você decide se e quando uma mudança será aplicada. Seu histórico nunca é reescrito.</p>
@@ -87,7 +90,7 @@ export function ProgressionScreen({ api, onBack }: { api: AppApi; onBack(): void
                 <details>
                   <summary>Como esta sugestão foi calculada</summary>
                   <p>
-                    Regra {item.rule.code}, versão {item.rule.version}. Evidências preservadas nesta
+                    Regra de progressão, versão {item.rule.version}. Evidências preservadas nesta
                     avaliação.
                   </p>
                   <EvidenceView evidence={item.evidence} />
@@ -121,7 +124,7 @@ export function ProgressionScreen({ api, onBack }: { api: AppApi; onBack(): void
                     </button>
                   </div>
                 ) : (
-                  <p role="status">Decisão: {item.status}.</p>
+                  <p role="status">Decisão: {progressionDecisionLabel(item.status)}.</p>
                 )}
               </article>
             ))}
@@ -135,21 +138,19 @@ export function ProgressionScreen({ api, onBack }: { api: AppApi; onBack(): void
 function EvidenceView({ evidence }: { evidence: unknown }) {
   if (!evidence || typeof evidence !== 'object')
     return <p>{String(evidence ?? 'Não informada')}</p>;
+  const entries = Array.isArray(evidence)
+    ? evidence.flatMap((item) =>
+        item && typeof item === 'object' ? Object.entries(item as Record<string, unknown>) : [],
+      )
+    : Object.entries(evidence as Record<string, unknown>);
   return (
     <dl className="evidence-list">
-      {Object.entries(evidence as Record<string, unknown>).map(([key, value]) => (
-        <div key={key}>
-          <dt>{humanizeEvidenceKey(key)}</dt>
-          <dd>{typeof value === 'object' ? JSON.stringify(value) : String(value)}</dd>
+      {entries.map(([key, value], index) => (
+        <div key={`${key}-${index}`}>
+          <dt>{evidenceLabel(key)}</dt>
+          <dd>{recordFieldValue(key, value)}</dd>
         </div>
       ))}
     </dl>
   );
-}
-
-function humanizeEvidenceKey(key: string): string {
-  return key
-    .replace(/([A-Z])/g, ' $1')
-    .replaceAll('_', ' ')
-    .replace(/^./, (letter) => letter.toUpperCase());
 }

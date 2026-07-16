@@ -68,7 +68,7 @@ describe('paginated history API', () => {
          (id, user_id, planned_local_date, type, status, source, template_name_snapshot, time_zone)
        values
          ('a9100000-0000-4000-8000-000000000001', $1, '2026-07-12', 'rest', 'planned', 'ad_hoc', 'Descanso', 'America/Cuiaba'),
-         ('a9100000-0000-4000-8000-000000000002', $1, '2026-07-13', 'strength', 'partial', 'ad_hoc', 'ForÃ§a A', 'America/Cuiaba'),
+         ('a9100000-0000-4000-8000-000000000002', $1, '2026-07-13', 'strength', 'partial', 'ad_hoc', 'Força A', 'America/Cuiaba'),
          ('a9100000-0000-4000-8000-000000000003', $1, '2026-07-13', 'walk', 'completed', 'ad_hoc', 'Caminhada', 'America/Cuiaba'),
          ('a9100000-0000-4000-8000-000000000004', $2, '2026-07-13', 'other', 'completed', 'ad_hoc', 'Privado', 'America/Cuiaba')`,
       [users.first, users.second],

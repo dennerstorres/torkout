@@ -1057,3 +1057,127 @@ merge` e o teste no container confirmaram CSP e HSTS.
 - Viewports, axe, teclado, reduced motion, forced colors e safe areas têm cobertura automatizada/CSS,
   mas isso não substitui o checklist em aparelhos físicos. AC-09 continua pendente como gate de
   lançamento, assim como os bloqueadores externos já registrados na Fase 13.
+
+## 2026-07-15 — Fase 15: recuperação UI/UX premium e estabilização visual
+
+**Status:** ajustes implementados, validados e aceitos — AC-09 permanece pendente
+
+**Commit esperado:** `feat(web): rebuild premium responsive experience`
+
+### Preparação da skill obrigatória
+
+- `npx skills list` e `npx skills list -g` confirmaram que `redesign-existing-projects` estava
+  ausente no projeto e no escopo global.
+- `git ls-remote` confirmou que `main` de `Leonxlnx/taste-skill` ainda apontava para a revisão já
+  auditada `b17742737e796305d829b3ad39eda3add0d79060`.
+- Foi instalada somente `redesign-existing-projects`, em escopo global do agente Codex. O CLI
+  descobriu 13 skills no repositório, mas selecionou e copiou uma única skill.
+- O `SKILL.md` instalado foi lido integralmente em 15/07/2026. Recomendações aplicáveis, rejeitadas
+  e pendentes de aceite estão registradas em `docs/testing/phase-15-ui-inventory.md`.
+
+### Auditoria e contrato visual
+
+- A reprovação humana do resultado da Fase 14 foi registrada no documento daquela fase e no README
+  dos snapshots. Os PNGs existentes permanecem como baseline legado, sem serem apagados ou
+  promovidos a aceite.
+- O inventário encontrou um único `styles.css` de 32.235 bytes com estilos legados e o sistema da
+  Fase 14 na mesma cascata. Entre os sinais objetivos estão `.card` em quatro ocorrências,
+  `.today-layout` em sete e `.primary-navigation` em sete.
+- Foram mapeados primitivos, breakpoints sobrepostos, larguras, grids, camadas sticky/fixed,
+  conteúdo técnico exposto e cobertura visual incompleta.
+- `docs/testing/phase-15-visual-contract.md` define budgets de CLS, overflow, alvo, contraste,
+  camadas e movimento; matriz responsiva; hierarquia por feature; e wireframes de baixa fidelidade
+  para Hoje, Planejamento, Histórico, Progresso e Conta.
+- O navegador visual integrado não estava disponível nesta sessão. Portanto, a matriz completa de
+  capturas em quatro viewports e sete estados permanece explicitamente pendente; os dois snapshots
+  de Hoje não foram tratados como substitutos.
+
+### Evidências TDD
+
+- RED — o novo teste do `MetricCard` não encontrou um grupo acessível chamado “Treinos na semana”;
+  o componente possuía apenas `span` e `strong` sem contrato estrutural identificável.
+- GREEN — `MetricCard` passou a relacionar grupo, rótulo e valor por `aria-labelledby`, com classes
+  dedicadas `metric-card__label` e `metric-card__value`. O teste alvo passou com 3/3 cenários.
+- REFACTOR — os seletores CSS genéricos do rótulo e valor foram substituídos pelas classes
+  explícitas, reduzindo acoplamento à ordem das tags.
+
+### Segurança, privacidade e dados
+
+- Nenhuma regra de negócio, contrato, API, IndexedDB, outbox ou dado de saúde foi alterado.
+- Nenhum asset remoto ou pacote runtime foi adicionado. Recomendações incompatíveis com CSP,
+  offline-first, reduced motion e previsibilidade de navegação foram rejeitadas explicitamente.
+
+### Reconstrução e validação concluídas
+
+- A extensão do Chrome foi conectada ao ambiente local autenticado. As cinco áreas principais, o
+  runner e o laboratório `/design-system` foram revisados em mobile, tablet e desktop.
+- A cascata foi separada em tokens, base, layout, componentes e features. Foram adicionados
+  `Surface`, `Section`, `Panel` e `FormGroup`; PWA contextual, shell compacto e navegação estável
+  substituíram as superfícies concorrentes da Fase 14.
+- Hoje ganhou resumo vertical, treino prioritário e disclosure de dor/medidas. Planejamento passou a
+  uma área por vez. Histórico recebeu navegação mensal agrupada e geometria reservada. Progresso
+  integrou o período à toolbar. Conta perdeu nested cards e recebeu instruções PWA sob demanda.
+- Uma camada de apresentação traduz métricas, atividades, status, sincronização, entidades,
+  operações, decisões e evidências. Conflitos não mostram mais JSON e Progressão não expõe enums.
+- RED/GREEN cobriu métrica, primitivas, apresentação, fluxo progressivo, calendário, Conta, scroll,
+  foco, overflow e sobreposição da barra inferior.
+- `pnpm check` passou com 154 testes unitários; integração PostgreSQL passou com 50/50; os 29 E2E
+  funcionais passaram. Os dois snapshots antigos continuam excluídos do aceite por decisão
+  explícita do plano.
+- A auditoria final acrescentou os sete dias no plano semanal, estado de recuperação sem runner,
+  filtros recolhíveis e limite de badges no calendário, meses de 4/5/6 semanas, skeletons medidos,
+  narrativas analíticas e correção de contraste em forced colors. O deslocamento observado no
+  carregamento do calendário ficou abaixo de 1% da viewport, dentro do orçamento de 0,05.
+- `docs/testing/phase-15-acceptance.md` registra a matriz, os gates e os limites da evidência.
+
+### Pendências e próximo passo
+
+- Obter aceite humano explícito das cinco áreas em mobile e desktop; somente então gerar os novos
+  snapshots e executar o E2E visual completo.
+- Executar AC-09 em iPhone, Android/Chrome e desktop físicos. Emulação e automação não substituem
+  esse gate de lançamento.
+
+### Retorno do aceite humano e correções finais
+
+- O retorno humano identificou cinco problemas concretos de composição e ritmo: cartão de Dor
+  órfão em Hoje desktop; lista colada ao título em Planejamento; Voltar colado à eyebrow em
+  Progressão; checkbox colado aos botões em Conta; e autenticação desktop excessivamente dispersa.
+- RED/GREEN adicionou contratos estruturais para o agrupamento de registros complementares, lista
+  do catálogo, barra de retorno, grupo de exportação e landing/modal de autenticação.
+- Hoje agora reúne Hábitos, Dor e Peso numa grade assimétrica de três colunas no desktop e mantém
+  uma coluna no mobile. A medição real em 1440 px confirmou os três elementos no mesmo eixo.
+- Planejamento passou de 0 para 16 px entre título/lista; Progressão, de 0 para 24 px entre
+  Voltar/eyebrow; Conta, de 0 para 16 px entre checkbox/botões. As mesmas medidas foram confirmadas
+  em 390 e 1440 px, sem overflow horizontal.
+- A tela pública virou uma landing curta com proposta clara, preview e duas rotas de ação. Login,
+  cadastro e recuperação usam modal de 480 px no desktop e folha inferior no mobile, com foco
+  inicial, ciclo de Tab, Escape, retorno de foco e fundo bloqueado.
+- Instruções PWA silenciosas deixaram de disputar espaço com a landing; avisos contextuais continuam
+  disponíveis e as instruções completas permanecem em Conta.
+- `DESIGN.md` passou a registrar tokens, cores, tipografia, medidas, escala de 4 px, breakpoints,
+  componentes, estados, linguagem e checklist de mudança. `verify:phase-15` exige o contrato e seus
+  tokens essenciais.
+- A skill de redesign orientou a composição assimétrica, a hierarquia da landing e a remoção de
+  espaçamentos acidentais, preservando stack, regras de negócio e funcionamento offline.
+- A extensão do Chrome validou os ajustes em 390 × 844 e 1440 × 900. Axe da landing/modal, jornadas
+  afetadas, 13 invariantes responsivos e os 29 E2E funcionais passaram.
+- O retorno seguinte identificou hover sem área interna nas ações terciárias dos modais. “Criar
+  conta”, “Esqueci minha senha” e “Voltar para entrar” receberam alvo de 44 px, padding de 8 × 12 px,
+  hover com acento a 8% e alinhamento óptico. Chrome desktop/mobile e E2E confirmaram o estado sem
+  overflow.
+- Favicon e ícones PWA ainda usavam a marca legada verde/branca/laranja. A fonte oficial passou a
+  ser o mesmo quadrado lima inclinado com T escuro exibido no login; login e shell consomem o SVG
+  diretamente, enquanto Apple Touch Icon e PNGs 192/512 são derivados deterministicamente. A
+  variante maskable preserva o símbolo na área segura sobre o canvas escuro.
+- `pnpm check` permaneceu verde com 155 testes unitários e build de produção. Os dois snapshots
+  legados seguem intencionalmente sem promoção automática.
+- O titular aceitou a rodada final em mobile e desktop e autorizou explicitamente o commit e o push
+  em 15/07/2026. A autorização encerra a implementação da Fase 15, mas não substitui AC-09 nem os
+  bloqueadores externos de lançamento.
+
+### Estado atual
+
+- Não há impedimento técnico conhecido e o aceite visual final foi registrado. A promoção dos
+  snapshots permanece uma ação consciente separada, sem reutilizar os baselines reprovados.
+- AC-09 em iPhone, Android/Chrome e desktop físicos continua sendo gate de lançamento e não é
+  substituído pelas validações no Chrome automatizado.

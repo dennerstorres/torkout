@@ -97,6 +97,11 @@ export function HistoryScreen({
   const [activityFilter, setActivityFilter] = useState<HistoryActivityType | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<HistorySessionStatus | 'all'>('all');
   const [painFilter, setPainFilter] = useState<'any' | 'with' | 'without'>('any');
+  const [filtersOpen, setFiltersOpen] = useState(() =>
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? window.matchMedia('(min-width: 48rem)').matches
+      : false,
+  );
   const [message, setMessage] = useState('Histórico disponível neste dispositivo.');
 
   async function refresh(): Promise<void> {
@@ -168,6 +173,11 @@ export function HistoryScreen({
 
   const calendarDays = buildCalendarMonth(month);
   const selected = recordsByDay.get(selectedDate) ?? emptyDay();
+  const activeFilterCount = [
+    activityFilter !== 'all',
+    statusFilter !== 'all',
+    painFilter !== 'any',
+  ].filter(Boolean).length;
 
   function sessionSummary(session: LocalRecord) {
     const type = stringField(session, 'type', 'other') as HistoryActivityType;
@@ -215,13 +225,7 @@ export function HistoryScreen({
       <header className="planning-header history-header">
         <div>
           <p className="eyebrow">Calendário e histórico</p>
-          <h1>
-            {dateLabel(`${month}-01`, {
-              day: undefined,
-              month: 'long',
-              year: 'numeric',
-            })}
-          </h1>
+          <h1>Histórico</h1>
         </div>
         <button type="button" onClick={onBack}>
           Voltar
@@ -233,7 +237,7 @@ export function HistoryScreen({
       </p>
 
       <section className="card history-calendar" aria-label="Calendário mensal">
-        <div className="calendar-actions">
+        <div aria-label="Navegação mensal" className="calendar-actions" role="group">
           <button
             type="button"
             aria-label="Mês anterior"
@@ -241,6 +245,13 @@ export function HistoryScreen({
           >
             ‹
           </button>
+          <h2>
+            {dateLabel(`${month}-01`, {
+              day: undefined,
+              month: 'long',
+              year: 'numeric',
+            })}
+          </h2>
           <button
             type="button"
             aria-label="Próximo mês"
@@ -249,53 +260,84 @@ export function HistoryScreen({
             ›
           </button>
         </div>
-        <div className="history-filters">
-          <label>
-            Filtrar por atividade
-            <select
-              value={activityFilter}
-              onChange={(event) => setActivityFilter(event.target.value as typeof activityFilter)}
-            >
-              <option value="all">Todas</option>
-              {Object.entries(activityLabels).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Filtrar por estado
-            <select
-              value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}
-            >
-              <option value="all">Todos</option>
-              {Object.entries(statusLabels).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Filtrar por dor
-            <select
-              value={painFilter}
-              onChange={(event) => setPainFilter(event.target.value as typeof painFilter)}
-            >
-              <option value="any">Com ou sem dor</option>
-              <option value="with">Com relato de dor</option>
-              <option value="without">Sem relato de dor</option>
-            </select>
-          </label>
-        </div>
+        <button
+          aria-expanded={filtersOpen}
+          className="history-filter-toggle"
+          type="button"
+          onClick={() => setFiltersOpen((current) => !current)}
+        >
+          {filtersOpen ? 'Ocultar filtros' : 'Mostrar filtros'}
+          {activeFilterCount > 0
+            ? ` · ${activeFilterCount} ativo${activeFilterCount > 1 ? 's' : ''}`
+            : ''}
+        </button>
+        {filtersOpen && (
+          <fieldset className="history-filters">
+            <legend>Filtros do calendário</legend>
+            <label>
+              Filtrar por atividade
+              <select
+                value={activityFilter}
+                onChange={(event) => setActivityFilter(event.target.value as typeof activityFilter)}
+              >
+                <option value="all">Todas</option>
+                {Object.entries(activityLabels).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Filtrar por estado
+              <select
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}
+              >
+                <option value="all">Todos</option>
+                {Object.entries(statusLabels).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Filtrar por dor
+              <select
+                value={painFilter}
+                onChange={(event) => setPainFilter(event.target.value as typeof painFilter)}
+              >
+                <option value="any">Com ou sem dor</option>
+                <option value="with">Com relato de dor</option>
+                <option value="without">Sem relato de dor</option>
+              </select>
+            </label>
+          </fieldset>
+        )}
         <div className="calendar-weekdays" aria-hidden="true">
           {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map((day) => (
             <span key={day}>{day}</span>
           ))}
         </div>
-        {!loaded && <p aria-live="polite">Carregando histórico…</p>}
+        {!loaded && (
+          <>
+            <p className="visually-hidden" aria-live="polite">
+              Carregando histórico…
+            </p>
+            <div className="calendar-grid calendar-grid--loading" aria-hidden="true">
+              {calendarDays.map((calendarDay) => (
+                <button
+                  className="calendar-day skeleton-day"
+                  disabled
+                  key={calendarDay.localDate}
+                  tabIndex={-1}
+                  type="button"
+                />
+              ))}
+            </div>
+          </>
+        )}
         {loaded && (
           <div className="calendar-grid">
             {calendarDays.map((calendarDay) => {
@@ -330,7 +372,7 @@ export function HistoryScreen({
                   onClick={() => setSelectedDate(calendarDay.localDate)}
                 >
                   <span className="calendar-number">{Number(calendarDay.localDate.slice(-2))}</span>
-                  {day.sessions.map((session) => {
+                  {day.sessions.slice(0, 2).map((session) => {
                     const summary = sessionSummary(session);
                     return (
                       <span className="calendar-badge-group" key={session.entityId}>
@@ -342,6 +384,12 @@ export function HistoryScreen({
                       </span>
                     );
                   })}
+                  {day.sessions.length > 2 && (
+                    <span className="badge more-badge">
+                      +{day.sessions.length - 2}{' '}
+                      {day.sessions.length - 2 === 1 ? 'registro' : 'registros'}
+                    </span>
+                  )}
                   {day.painReports.length > 0 && (
                     <span className="badge pain-badge">Dor relatada</span>
                   )}

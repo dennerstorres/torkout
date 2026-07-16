@@ -76,6 +76,22 @@ describe('accessible progress analytics', () => {
     expect(screen.getByText('2,5 km')).toBeVisible();
   });
 
+  it('keeps the heading and representative result geometry while indicators load', () => {
+    const database = new UserSyncDatabase(userId);
+    render(
+      <AnalyticsScreen
+        database={database}
+        onBack={vi.fn()}
+        onLoad={vi.fn().mockReturnValue(new Promise(() => undefined))}
+        today="2026-07-14"
+      />,
+    );
+
+    expect(screen.getByRole('heading', { name: 'Progresso' })).toBeVisible();
+    expect(screen.getByRole('status')).toHaveTextContent('Carregando indicadores');
+    expect(screen.getByTestId('analytics-loading-grid').children).toHaveLength(5);
+  });
+
   it('applies 8-week and custom inclusive filters', async () => {
     const database = new UserSyncDatabase(userId);
     const load = vi.fn().mockImplementation(async (from: string, through: string) => ({

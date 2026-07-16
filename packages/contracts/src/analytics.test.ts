@@ -21,7 +21,7 @@ describe('progress analytics contracts', () => {
       progressAnalyticsResponseSchema.safeParse({
         consistency: {
           explanation:
-            'ConcluÃ­da vale 1, parcial vale 0,5 e perdida vale 0; descanso e cancelamento nÃ£o entram.',
+            'Concluída vale 1, parcial vale 0,5 e perdida vale 0; descanso e cancelamento não entram.',
           formulaVersion: 'weekly-consistency/v1',
           weeks: [
             {

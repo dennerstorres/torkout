@@ -163,7 +163,7 @@ export function registerAnalyticsRoutes(app: FastifyInstance, dependencies: ApiD
     const user = await requireAuthenticatedUser(request, dependencies);
     const parsed = progressQuerySchema.safeParse(request.query);
     if (!parsed.success) {
-      throw new ApiHttpError(400, 'VALIDATION_ERROR', 'Intervalo de progresso invÃ¡lido.');
+      throw new ApiHttpError(400, 'VALIDATION_ERROR', 'Intervalo de progresso inválido.');
     }
     const analytics = await loadAnalytics(dependencies.database, user.id, parsed.data);
     return progressAnalyticsResponseSchema.parse({
