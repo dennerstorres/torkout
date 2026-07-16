@@ -60,7 +60,8 @@ if ($rootPackage.scripts.check -notmatch 'verify:phase-13') {
 foreach ($verification in @('scripts/verify-release-rollback.ps1', 'scripts/verify-schema-freeze.ps1')) {
     $path = Join-Path $root $verification
     if (Test-Path -LiteralPath $path) {
-        & powershell -NoProfile -ExecutionPolicy Bypass -File $path
+        $powerShellExecutable = (Get-Process -Id $PID).Path
+        & $powerShellExecutable -NoProfile -ExecutionPolicy Bypass -File $path
         if ($LASTEXITCODE -ne 0) { $failures.Add("Release verification failed: $verification") }
     }
 }
