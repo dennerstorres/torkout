@@ -542,7 +542,7 @@ export async function applySessionExecution(
 ): Promise<Awaited<ReturnType<typeof loadSession>>> {
   await database.transaction(async (transaction) => {
     const [session] = await transaction
-      .select({ id: workoutSessions.id })
+      .select({ id: workoutSessions.id, startedAt: workoutSessions.startedAt })
       .from(workoutSessions)
       .where(
         and(
@@ -641,17 +641,21 @@ export async function applySessionExecution(
       input.execution.exercises.length === 0
         ? 'completed'
         : calculateWorkoutCompletion(input.execution.exercises);
+    const completedAt = input.execution.completedAt
+      ? new Date(input.execution.completedAt)
+      : status === 'completed' || status === 'partial'
+        ? new Date()
+        : null;
+    const startedAt = input.execution.startedAt
+      ? new Date(input.execution.startedAt)
+      : (session.startedAt ?? completedAt ?? new Date());
     await transaction
       .update(workoutSessions)
       .set({
-        completedAt: input.execution.completedAt
-          ? new Date(input.execution.completedAt)
-          : status === 'completed' || status === 'partial'
-            ? new Date()
-            : null,
+        completedAt,
         jointPainStatus: input.execution.jointPainStatus,
         notes: input.notes,
-        startedAt: input.execution.startedAt ? new Date(input.execution.startedAt) : new Date(),
+        startedAt,
         status,
       })
       .where(and(eq(workoutSessions.id, sessionId), eq(workoutSessions.userId, userId)));

@@ -221,6 +221,14 @@ export function TodayScreen({
     await refresh();
   }
 
+  async function startSession(session: LocalRecord): Promise<void> {
+    setRunnerSessionId(session.entityId);
+    if (executionOf(session).startedAt) return;
+    await saveExecution(session, (execution) => {
+      execution.startedAt = new Date().toISOString();
+    });
+  }
+
   function namedExercises(session: LocalRecord): ExerciseView[] {
     const planned = dataArray<ExerciseView>(session.data, 'exercises');
     const execution = executionOf(session);
@@ -465,7 +473,7 @@ export function TodayScreen({
                   <button
                     className="primary start-workout"
                     type="button"
-                    onClick={() => setRunnerSessionId(session.entityId)}
+                    onClick={() => void startSession(session)}
                   >
                     Iniciar {stringValue(session.data, 'templateNameSnapshot', 'sessão')}
                   </button>

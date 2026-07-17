@@ -313,6 +313,7 @@ describe('daily tracking API', () => {
         operationId: 'a6300000-0000-4000-8000-000000000010',
         payload: {
           execution: {
+            completedAt: '2026-07-14T20:00:00.000Z',
             exercises: [
               {
                 id: ids.exercise,

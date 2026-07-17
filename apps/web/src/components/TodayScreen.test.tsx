@@ -118,6 +118,7 @@ describe('Today mobile tracking', () => {
             }),
           ],
           jointPainStatus: 'unknown',
+          startedAt: expect.any(String),
         },
       });
     });
