@@ -116,7 +116,7 @@ test('tracks Today offline on mobile and survives reload', async ({ page }) => {
   await page.reload();
   await expect(page.getByText(/Você está offline/i)).toBeVisible();
   await page.getByRole('button', { name: 'Hoje' }).click();
-  await page.getByRole('button', { name: 'Iniciar Treino móvel' }).click();
+  await expect(page.getByRole('button', { name: 'Iniciar Treino móvel' })).toHaveCount(0);
   await expect(page.getByLabel('Série 1 de Flexão')).toHaveValue('10');
   await page.getByLabel('Confirmo que não houve dor articular').check();
 

@@ -116,6 +116,24 @@ function stringValue(data: Record<string, unknown>, key: string, fallback = ''):
   return typeof data[key] === 'string' ? data[key] : fallback;
 }
 
+const sessionOutcomes: Record<string, string> = {
+  cancelled: 'Treino cancelado.',
+  completed: 'Treino concluído.',
+  missed: 'Treino marcado como perdido.',
+  partial: 'Treino concluído parcialmente.',
+};
+
+function sessionOutcome(session: LocalRecord): string | null {
+  return sessionOutcomes[stringValue(session.data, 'status', 'planned')] ?? null;
+}
+
+function isRunning(session: LocalRecord): boolean {
+  if (sessionOutcome(session) || session.data.type === 'rest') return false;
+  return (
+    stringValue(session.data, 'status') === 'in_progress' || Boolean(executionOf(session).startedAt)
+  );
+}
+
 const syncMessages: Record<SyncState, string> = {
   'auth-required': 'Autenticação necessária; alterações preservadas.',
   conflict: 'Há um conflito que precisa da sua decisão.',
@@ -150,7 +168,8 @@ export function TodayScreen({
   const [painCustomRegion, setPainCustomRegion] = useState('');
   const [painMoment, setPainMoment] = useState('after');
   const [painNotes, setPainNotes] = useState('');
-  const [runnerSessionId, setRunnerSessionId] = useState<string | null>(null);
+  const [selectedRunnerId, setSelectedRunnerId] = useState<string | null>(null);
+  const [summaryRequested, setSummaryRequested] = useState(false);
 
   async function refresh(): Promise<void> {
     setRecords(await database.records.toArray());
@@ -179,6 +198,10 @@ export function TodayScreen({
       ),
     [date, records],
   );
+  // A execução é retomada a partir da réplica local; o estado em memória apenas registra a escolha
+  // de voltar ao resumo dentro desta visita à tela.
+  const resumableSessionId = sessions.find(isRunning)?.entityId ?? null;
+  const runnerSessionId = selectedRunnerId ?? (summaryRequested ? null : resumableSessionId);
   const habits = records.filter(
     (record) =>
       record.entityType === 'habit_definition' &&
@@ -201,13 +224,14 @@ export function TodayScreen({
   async function saveExecution(
     session: LocalRecord,
     change: (execution: ExecutionView) => void,
+    patch: Record<string, unknown> = {},
   ): Promise<void> {
     const execution = executionOf(session);
     change(execution);
     setRecords((current) =>
       current.map((record) =>
         record.key === session.key
-          ? { ...record, data: { ...record.data, execution }, syncStatus: 'pending' }
+          ? { ...record, data: { ...record.data, ...patch, execution }, syncStatus: 'pending' }
           : record,
       ),
     );
@@ -215,18 +239,23 @@ export function TodayScreen({
       entityId: session.entityId,
       entityType: 'workout_session',
       operation: 'update',
-      payload: { execution },
+      payload: { execution, ...patch },
     });
     setMessage('Salvo localmente e pendente de sincronização.');
     await refresh();
   }
 
   async function startSession(session: LocalRecord): Promise<void> {
-    setRunnerSessionId(session.entityId);
-    if (executionOf(session).startedAt) return;
-    await saveExecution(session, (execution) => {
-      execution.startedAt = new Date().toISOString();
-    });
+    setSelectedRunnerId(session.entityId);
+    setSummaryRequested(false);
+    if (isRunning(session)) return;
+    await saveExecution(
+      session,
+      (execution) => {
+        execution.startedAt = new Date().toISOString();
+      },
+      { status: 'in_progress' },
+    );
   }
 
   function namedExercises(session: LocalRecord): ExerciseView[] {
@@ -384,7 +413,8 @@ export function TodayScreen({
       payload: { execution, status: forcedStatus ?? (complete ? 'completed' : 'partial') },
     });
     setMessage('Treino salvo localmente e pendente de sincronização.');
-    setRunnerSessionId(null);
+    setSelectedRunnerId(null);
+    setSummaryRequested(false);
     await refresh();
   }
 
@@ -415,7 +445,13 @@ export function TodayScreen({
             </h2>
           </div>
           {runnerSessionId && (
-            <button type="button" onClick={() => setRunnerSessionId(null)}>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedRunnerId(null);
+                setSummaryRequested(true);
+              }}
+            >
               Voltar ao resumo
             </button>
           )}
@@ -470,13 +506,21 @@ export function TodayScreen({
                   </StatusBadge>
                 </div>
                 {runnerSessionId === null ? (
-                  <button
-                    className="primary start-workout"
-                    type="button"
-                    onClick={() => void startSession(session)}
-                  >
-                    Iniciar {stringValue(session.data, 'templateNameSnapshot', 'sessão')}
-                  </button>
+                  sessionOutcome(session) ? (
+                    <div className="session-outcome">
+                      <p className="session-outcome-headline">{sessionOutcome(session)}</p>
+                      <p>Para corrigir algum registro, edite este dia no Histórico.</p>
+                    </div>
+                  ) : (
+                    <button
+                      className="primary start-workout"
+                      type="button"
+                      onClick={() => void startSession(session)}
+                    >
+                      {isRunning(session) ? 'Continuar' : 'Iniciar'}{' '}
+                      {stringValue(session.data, 'templateNameSnapshot', 'sessão')}
+                    </button>
+                  )
                 ) : (
                   <>
                     <ProgressBar

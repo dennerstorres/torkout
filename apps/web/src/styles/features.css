@@ -166,6 +166,23 @@
   width: 100%;
 }
 
+.session-outcome {
+  display: grid;
+  gap: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: rgb(255 255 255 / 2.5%);
+  padding: var(--space-3);
+}
+
+.session-outcome p {
+  margin: 0;
+}
+
+.session-outcome-headline {
+  color: var(--color-text);
+  font-weight: 680;
+}
+
 .planning-section form {
   margin-top: var(--space-4);
 }

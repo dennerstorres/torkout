@@ -168,6 +168,8 @@ a coluna final de uma linha.
 ### 5.2 Campos e formulários
 
 - altura mínima 45,6 px; borda forte; raio pequeno; padding 11,5 × 12,8 px;
+- o texto do controle usa no mínimo 16 px, independentemente do tamanho da label; abaixo disso o
+  Safari no iOS amplia a página ao focar o campo. Reduzir o zoom pela viewport é proibido;
 - cada `label` agrupa seu controle com gap de 8 px;
 - formulários e agrupadores de campos usam grade ou flex com gap de 16 px entre campos completos;
 - é proibido deixar labels consecutivas no fluxo normal sem gap explícito;

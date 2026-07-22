@@ -253,6 +253,13 @@ domingos, usando numeração ISO de segunda `1` a domingo `7`.
 
 **TODAY-012:** mostrar mensagens distintas para salvo localmente, pendente, sincronizando, sincronizado e conflito.
 
+**TODAY-013:** uma sessão já iniciada e ainda não encerrada é retomada automaticamente no mesmo
+estado ao reabrir a tela Hoje, inclusive depois de navegar para outra área ou recarregar o
+aplicativo; a retomada é derivada da réplica local, nunca de estado apenas em memória.
+
+**TODAY-014:** uma sessão em estado terminal não oferece a ação de iniciar nem de reexecutar na tela
+Hoje; a tela apresenta o desfecho registrado e direciona correções ao Histórico.
+
 ### 7.6 Sessões, séries e caminhadas
 
 **WORKOUT-001:** estados da sessão: `planned`, `in_progress`, `completed`, `partial`, `missed`, `cancelled`.
@@ -272,6 +279,10 @@ domingos, usando numeração ISO de segunda `1` a domingo `7`.
 **WORKOUT-008:** caminhada registra distância, duração e observação; GPS não é obrigatório.
 
 **WORKOUT-009:** calcular volume simples por exercício baseado na métrica aplicável.
+
+**WORKOUT-010:** iniciar a execução registra `in_progress` junto com o início real; encerrar registra
+o estado terminal correspondente. `completed`, `partial`, `missed` e `cancelled` são terminais para a
+execução do dia e só mudam por edição histórica explícita.
 
 ### 7.7 Dor
 
@@ -492,6 +503,11 @@ Política inicial de tombstone: retenção mínima de 90 dias, revisável confor
 **PWA-007:** suportar safe areas, teclado móvel, orientação e modo standalone.
 
 **PWA-008:** mostrar versão instalada e permitir recarregar atualização disponível.
+
+**PWA-009:** focar um campo não pode alterar a escala da página. Campos de texto, seletores e áreas
+de texto usam no mínimo 16 px de fonte, tamanho abaixo do qual o Safari no iOS aplica zoom
+automático. É proibido resolver isso desativando o zoom do usuário com `user-scalable=no` ou
+`maximum-scale`.
 
 ## 8. Modelo de dados
 

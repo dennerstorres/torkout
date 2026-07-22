@@ -1540,3 +1540,79 @@ merge` e o teste no container confirmaram CSP e HSTS.
 - Titularidade obrigatória elimina o caminho global e mantém isolamento horizontal na API e no sync.
 - Snapshots históricos continuam preservados quando um exercício é editado, desativado ou excluído.
 - Permanece apenas o aviso conhecido de chunk principal acima de 500 kB, sem regressão bloqueante.
+
+## Fase 21 — Estabilidade de foco no iOS e ciclo de vida da sessão
+
+**Status:** concluída
+
+**Commit de encerramento:** `fix(phase-21): stabilize ios focus and session lifecycle`
+
+### Escopo planejado
+
+- Impedir o zoom automático do Safari no iOS ao focar qualquer campo, sem desativar o zoom manual.
+- Persistir e retomar a execução da sessão de treino a partir da réplica local.
+- Remover a ação de iniciar de sessões já encerradas e apresentar o desfecho registrado.
+
+### Origem
+
+- Uso real da PWA instalada em iPhone, relatado pelo titular: cada foco em campo ampliava a página,
+  exigindo pinça para voltar, e a tela Hoje continuava oferecendo iniciar um treino já finalizado,
+  perdendo a execução em andamento ao navegar para outra área.
+
+### Evidências TDD
+
+- RED de componente — 6 testes falharam: a réplica local não registrava `in_progress` ao iniciar; a
+  execução não era retomada após remontar a tela; e os quatro estados terminais continuavam expondo
+  o botão `Iniciar Treino A` em vez do desfecho.
+- RED de geometria E2E — `phase 21 keeps focusing a field from zooming the page on iOS` listou nove
+  controles visíveis a 14,08 px na tela Hoje, exatamente o `0.88rem` herdado da `label`.
+- GREEN direcionado — os 10 testes de `TodayScreen` passaram, incluindo retomada, desfecho por
+  estado terminal e permanência do desfecho após reabrir a tela.
+- GREEN de geometria — o teste de zoom passou em Hoje, Planejamento, Histórico, Progresso e Conta,
+  com a viewport ainda sem `user-scalable=no` nem `maximum-scale`.
+- Regressão — 39 arquivos e 176 testes unitários, 31 jornadas E2E, formatação, lint, typecheck e
+  build verdes. As duas baselines visuais legadas seguem intencionalmente ignoradas.
+
+### Alterações técnicas
+
+- `input`, `select` e `textarea` passam a declarar `font-size: 1rem` em `base.css`. Antes herdavam
+  `0.88rem` da `label`, abaixo do limiar de 16 px que dispara o zoom automático do Safari no iOS.
+  A correção é em `rem`, então o zoom de 200% continua escalando os controles.
+- `TodayScreen` deriva a execução ativa da réplica local em vez de manter o runner apenas em estado
+  de componente. O estado em memória guarda somente a escolha de voltar ao resumo dentro da visita.
+- Iniciar a execução agora grava `status: 'in_progress'` junto com `startedAt`, em uma única mutação
+  local-first. `saveExecution` aceita um patch adicional para manter dado local e outbox atômicos.
+- Sessões em `completed`, `partial`, `missed` ou `cancelled` exibem o desfecho e o encaminhamento ao
+  Histórico, sem qualquer ação de iniciar ou reexecutar.
+- Sessão iniciada e não encerrada exibe `Continuar` quando o usuário optou por ver o resumo.
+- `SPEC.md` ganhou TODAY-013, TODAY-014, WORKOUT-010 e PWA-009; `DESIGN.md` fixou o mínimo de 16 px
+  no texto dos controles; o guia do usuário descreve retomada e encerramento definitivo.
+
+### Instabilidade de suíte corrigida
+
+- Durante a regressão, `HistoryScreen` e `AnalyticsScreen` reprovaram de forma intermitente no
+  `pnpm test`, mas passaram isoladamente. Com as alterações da fase guardadas em stash, o defeito
+  reproduziu em 3 de 4 execuções do `HEAD` limpo: era instabilidade anterior, não regressão.
+- Causa: com os arquivos de teste em paralelo, abrir a réplica sobre `fake-indexeddb` ultrapassava o
+  padrão de 1 s do Testing Library e, depois, o de 5 s do Vitest. Nenhuma assertiva estava errada.
+- Correção: `asyncUtilTimeout` de 5 s no setup web e `testTimeout` de 15 s no projeto `unit-web`.
+  Nenhuma assertiva foi enfraquecida, nenhum teste foi ignorado e nenhum retry foi introduzido.
+- Evidência: cinco execuções consecutivas de `unit-web` verdes depois do ajuste, mais `pnpm check`
+  completo verde.
+
+### Dívida anterior regularizada
+
+- O commit `e71853b` acrescentou `markdown` aos formatos de exportação em
+  `packages/contracts/src/portability.ts` sem atualizar o freeze, deixando
+  `pnpm verify:schema-freeze` vermelho desde então e o `dist` de contratos defasado localmente.
+- Por decisão explícita do titular, o freeze foi promovido para `2.1.0` neste mesmo commit. A
+  mudança é aditiva: nenhum formato anterior foi removido ou renomeado e o schema não mudou.
+
+### Segurança, privacidade e riscos
+
+- Nenhuma mudança de contrato de saúde, autorização, exportação ou sincronização.
+- O zoom do usuário permanece disponível; a correção não usa `user-scalable=no` nem `maximum-scale`,
+  preservando o critério WCAG 2.2 AA de redimensionamento de texto.
+- A retomada lê apenas a réplica local do titular autenticado, particionada por usuário.
+- Pendência: a confirmação em iPhone físico do fim do zoom e da retomada depende do titular; os
+  gates automatizados cobrem a geometria e o ciclo de vida, não o aparelho real.

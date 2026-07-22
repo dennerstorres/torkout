@@ -348,6 +348,59 @@ test('phase 15 remains operable with 200% text zoom', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Planejamento', exact: true })).toBeVisible();
 });
 
+async function controlsBelowIosZoomThreshold(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const zoomingControls = [
+      ...document.querySelectorAll<HTMLElement>('input, select, textarea'),
+    ].filter((control) => {
+      if (control instanceof HTMLInputElement && ['checkbox', 'radio'].includes(control.type)) {
+        return false;
+      }
+      const box = control.getBoundingClientRect();
+      const style = getComputedStyle(control);
+      return box.width > 0 && style.visibility !== 'hidden';
+    });
+    return zoomingControls
+      .map((control) => ({
+        control,
+        size: Number.parseFloat(getComputedStyle(control).fontSize || '0'),
+      }))
+      .filter(({ size }) => size < 16)
+      .map(
+        ({ control, size }) =>
+          `${control.tagName.toLowerCase()}[${control.getAttribute('type') ?? 'text'}] ${
+            control.getAttribute('aria-label') ?? control.id ?? ''
+          } (${size}px)`,
+      );
+  });
+}
+
+test('phase 21 keeps focusing a field from zooming the page on iOS', async ({ page }) => {
+  await page.setViewportSize({ height: 844, width: 390 });
+  await mockToday(page);
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Hoje', exact: true })).toBeVisible();
+
+  const viewport = await page.evaluate(
+    () => document.querySelector('meta[name="viewport"]')?.getAttribute('content') ?? '',
+  );
+  expect(viewport).not.toContain('user-scalable=no');
+  expect(viewport).not.toContain('maximum-scale');
+
+  for (const disclosure of await page.getByRole('group').all()) {
+    if (await disclosure.evaluate((element) => element.tagName === 'DETAILS')) {
+      await disclosure.evaluate((element) => element.setAttribute('open', ''));
+    }
+  }
+  expect(await controlsBelowIosZoomThreshold(page)).toEqual([]);
+
+  for (const destination of ['Planejamento', 'Histórico', 'Progresso', 'Conta']) {
+    await page.getByRole('button', { name: destination, exact: true }).click();
+    await expect(page.getByRole('heading', { name: destination, exact: true })).toBeVisible();
+    expect(await controlsBelowIosZoomThreshold(page)).toEqual([]);
+  }
+});
+
 test('phase 15 history loading reserves the final calendar geometry', async ({ page }) => {
   await page.setViewportSize({ height: 844, width: 390 });
   await mockToday(page);

@@ -6,7 +6,7 @@
 
 **Unidade de entrega:** fase completa com commit de encerramento
 
-**Status geral:** Fases 0–18 implementadas; validação física concluída, e lançamento público ainda aguarda validações externas
+**Status geral:** Fases 0–20 implementadas e Fase 21 ativa; validação física concluída, e lançamento público ainda aguarda validações externas
 
 ## 1. Regras de execução
 
@@ -1277,10 +1277,45 @@ permitindo o mesmo CRUD local-first aplicado aos exercícios cadastrados posteri
 - Testes afetados, integração, E2E, typecheck, lint, formatação e build verdes.
 - `HISTORY.md` atualizado e fase encerrada em commit próprio.
 
+### Fase 21 — Estabilidade de foco no iOS e ciclo de vida da sessão
+
+**Status:** implementação concluída — confirmação em iPhone físico pendente do titular
+
+**Commit esperado:** `fix(phase-21): stabilize ios focus and session lifecycle`
+
+**Objetivo:** eliminar dois defeitos observados no uso real da PWA instalada em iPhone: o zoom
+automático do Safari ao focar qualquer campo e a ausência de estado persistente da sessão de treino,
+que continua oferecendo iniciar um treino já encerrado e perde a execução ao sair da tela.
+
+#### Escopo
+
+- [x] Garantir 16 px de fonte em campos, seletores e áreas de texto, sem desativar o zoom do usuário.
+- [x] Registrar `in_progress` ao iniciar a execução, junto com o início real.
+- [x] Retomar automaticamente a sessão iniciada e não encerrada ao reabrir a tela Hoje.
+- [x] Remover a ação de iniciar de sessões em estado terminal e apresentar o desfecho registrado.
+- [x] Atualizar `SPEC.md`, `DESIGN.md` e o guia do usuário com as regras novas.
+
+#### Testes primeiro
+
+- [x] RED de componente: sessão iniciada, tela remontada, execução precisa reabrir sozinha.
+- [x] RED de componente: sessão finalizada não pode expor ação de iniciar e precisa mostrar desfecho.
+- [x] RED de componente: iniciar precisa registrar `in_progress` na réplica local e na outbox.
+- [x] RED de geometria E2E: nenhum campo visível pode ter fonte abaixo de 16 px nas páginas
+      autenticadas e públicas, e a viewport não pode bloquear zoom.
+- [x] Regressão de Hoje, Histórico, offline, typecheck, lint, formatação e build.
+
+#### Critérios de saída
+
+- Focar qualquer campo no iOS mantém a escala da página e o zoom manual continua disponível.
+- A execução sobrevive à troca de área e ao reload sem depender de estado em memória.
+- Sessão encerrada não oferece iniciar novamente em nenhum dos quatro estados terminais.
+- Testes afetados, E2E, typecheck, lint, formatação e build verdes.
+- `HISTORY.md` atualizado e fase encerrada em commit próprio.
+
 ## 5. Dependências entre fases
 
 ```text
-0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20
+0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21
 ```
 
 Trabalhos internos de uma mesma fase podem ser paralelos somente quando não compartilham arquivos ou contratos instáveis. O encerramento continua único.

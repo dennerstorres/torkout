@@ -224,8 +224,115 @@ describe('Today mobile tracking', () => {
         timeZone="America/Cuiaba"
       />,
     );
-    fireEvent.click(await screen.findByRole('button', { name: 'Iniciar Treino A' }));
     expect(await screen.findByLabelText('Série 1 de Flexão')).toHaveValue(11);
+    database.close();
+  });
+
+  it('records in_progress and resumes the running session when the screen is reopened', async () => {
+    const database = await seed();
+    const first = render(
+      <TodayScreen
+        database={database}
+        now={new Date('2026-07-15T01:00:00.000Z')}
+        onBack={vi.fn()}
+        syncState="offline"
+        timeZone="America/Cuiaba"
+      />,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Iniciar Treino A' }));
+    fireEvent.change(await screen.findByLabelText('Série 1 de Flexão'), {
+      target: { value: '11' },
+    });
+    await waitFor(async () => {
+      const session = await database.records.get(entityKey('workout_session', sessionId));
+      expect(session?.data).toMatchObject({ status: 'in_progress' });
+    });
+    first.unmount();
+
+    render(
+      <TodayScreen
+        database={database}
+        now={new Date('2026-07-15T01:00:00.000Z')}
+        onBack={vi.fn()}
+        syncState="offline"
+        timeZone="America/Cuiaba"
+      />,
+    );
+
+    expect(await screen.findByLabelText('Série 1 de Flexão')).toHaveValue(11);
+    expect(screen.queryByRole('button', { name: 'Iniciar Treino A' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Finalizar Treino A' })).toBeVisible();
+    database.close();
+  });
+
+  it.each([
+    ['completed', 'Treino concluído.'],
+    ['partial', 'Treino concluído parcialmente.'],
+    ['missed', 'Treino marcado como perdido.'],
+    ['cancelled', 'Treino cancelado.'],
+  ])('never offers to start a session already in %s', async (status, outcome) => {
+    const database = await seed();
+    const key = entityKey('workout_session', sessionId);
+    const stored = await database.records.get(key);
+    await database.records.put({
+      ...stored!,
+      data: {
+        ...stored!.data,
+        execution: {
+          completedAt: '2026-07-14T22:00:00.000Z',
+          exercises: [],
+          jointPainStatus: 'none',
+          startedAt: '2026-07-14T21:00:00.000Z',
+        },
+        status,
+      },
+    });
+
+    render(
+      <TodayScreen
+        database={database}
+        now={new Date('2026-07-15T01:00:00.000Z')}
+        onBack={vi.fn()}
+        syncState="synced"
+        timeZone="America/Cuiaba"
+      />,
+    );
+
+    expect(await screen.findByText(outcome)).toBeVisible();
+    expect(screen.queryByRole('button', { name: /^Iniciar/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Continuar/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Finalizar Treino A' })).not.toBeInTheDocument();
+    database.close();
+  });
+
+  it('closes the runner after finishing and keeps it closed on reopen', async () => {
+    const database = await seed();
+    const first = render(
+      <TodayScreen
+        database={database}
+        now={new Date('2026-07-15T01:00:00.000Z')}
+        onBack={vi.fn()}
+        syncState="offline"
+        timeZone="America/Cuiaba"
+      />,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Iniciar Treino A' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Finalizar Treino A' }));
+    expect(await screen.findByText('Treino concluído parcialmente.')).toBeVisible();
+    first.unmount();
+
+    render(
+      <TodayScreen
+        database={database}
+        now={new Date('2026-07-15T01:00:00.000Z')}
+        onBack={vi.fn()}
+        syncState="offline"
+        timeZone="America/Cuiaba"
+      />,
+    );
+
+    expect(await screen.findByText('Treino concluído parcialmente.')).toBeVisible();
+    expect(screen.queryByRole('button', { name: /^Iniciar/ })).not.toBeInTheDocument();
     database.close();
   });
 

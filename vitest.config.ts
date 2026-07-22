@@ -23,6 +23,9 @@ export default defineConfig({
           include: ['apps/web/src/**/*.test.tsx'],
           name: 'unit-web',
           setupFiles: ['./apps/web/src/test/setup.ts'],
+          // jsdom com fake-indexeddb em paralelo pode ultrapassar o padrão de 5 s sem que haja
+          // erro de comportamento; o limite maior evita reprovação por saturação de máquina.
+          testTimeout: 15_000,
         },
       },
       {

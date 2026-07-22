@@ -298,6 +298,16 @@ Na tela **Hoje**:
 Se a sessão não aconteceu, use **Marcar como perdido**. Use **Cancelar treino** quando a sessão não
 dever mais contar como uma sessão esperada.
 
+### O treino continua de onde você parou
+
+Depois de iniciar, a sessão fica em andamento no próprio aparelho. Se você sair para outra área,
+fechar o aplicativo ou recarregar a página, a tela **Hoje** reabre a execução exatamente no ponto em
+que estava, com todos os valores já digitados. Enquanto a execução estiver aberta, o botão volta a
+aparecer como **Continuar** caso você use **Voltar ao resumo**.
+
+Depois de finalizar, marcar como perdido ou cancelar, a tela **Hoje** mostra apenas o desfecho do
+dia e não oferece mais iniciar o mesmo treino. Correções são feitas pelo **Histórico**.
+
 ### Caminhada
 
 Na execução de caminhada você pode informar:
