@@ -1,6 +1,8 @@
 # Contribuindo com o Torkout
 
-Este é atualmente um projeto proprietário. Contribuições exigem autorização do titular e concordância com a [licença](LICENSE).
+O Torkout é um projeto pessoal, publicado sob a [licença MIT](LICENSE). Contribuições são bem-vindas dentro do escopo definido no `SPEC.md`. Ao enviar um PR, você concorda em licenciar sua contribuição sob os mesmos termos.
+
+Antes de investir tempo em uma mudança grande, abra uma issue descrevendo o problema ou a proposta. Itens listados como fora de escopo no `SPEC.md` só entram no produto mediante revisão da especificação; um PR que os implemente será recusado mesmo se estiver correto.
 
 ## Fontes de verdade
 
@@ -16,7 +18,7 @@ Em caso de conflito, requisitos explícitos do titular têm precedência. A docu
 
 1. Verificar que o worktree está limpo e ler os documentos relevantes.
 2. Identificar a fase e a tarefa ativa no `PLAN.md`.
-3. Criar branch curta `phase/<numero>-<descricao>` quando o trabalho ocorrer em colaboração ou precisar de revisão isolada. No fluxo pessoal local, trabalho direto em `main` é permitido desde que cada fase continue atômica.
+3. Criar branch curta `phase/<numero>-<descricao>` quando o trabalho ocorrer em colaboração ou precisar de revisão isolada. Contribuições externas partem de um fork e de uma branch curta. No fluxo pessoal local do mantenedor, trabalho direto em `main` é permitido desde que cada fase continue atômica.
 4. Aplicar TDD Red → Green → Refactor conforme `CLAUDE.md`.
 5. Atualizar contratos, ADRs e histórico na mesma fase.
 6. Executar todos os gates.
@@ -81,4 +83,4 @@ Uma revisão deve confirmar:
 
 ## Relato de vulnerabilidades
 
-Não abrir publicamente detalhes exploráveis ou dados reais. Comunicar diretamente ao titular do projeto por canal privado definido antes da abertura pública.
+Não abrir issue pública com detalhes exploráveis ou dados reais. O processo está em [`SECURITY.md`](SECURITY.md).

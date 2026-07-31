@@ -6,7 +6,7 @@
 
 **Unidade de entrega:** fase completa com commit de encerramento
 
-**Status geral:** Fases 0–20 implementadas e Fase 21 ativa; validação física concluída, e lançamento público ainda aguarda validações externas
+**Status geral:** Fases 0–25 concluídas e validação física aprovada; a instância de produção está no ar em <https://torkout.dennerstorres.dev>. Restam as Fases 26 (backup externo comprovado) e 27 (CI de segurança verde), abertas na preparação do repositório para uso público.
 
 ## 1. Regras de execução
 
@@ -1499,12 +1499,88 @@ ponto de colar rótulos vizinhos.
 - Lint, formatação, typecheck, testes unitários, E2E e build verdes.
 - `HISTORY.md` atualizado e fase encerrada em commit próprio.
 
+### Fase 26 — Backup externo comprovado
+
+**Status:** pendente
+
+**Commit esperado:** `chore(phase-26): prove external backup and restore`
+
+**Objetivo:** fazer o backup da instância de produção sair da máquina que hospeda o banco e provar,
+com restauração real, que ele volta.
+
+**Motivação:** o job de backup, o `compose.restore-test.yml` e o runbook
+[`docs/operations/backup-restore.md`](docs/operations/backup-restore.md) existem desde a Fase 12, mas
+o ensaio aprovado em 15/07/2026 usou um archive local. Nunca foi provisionado bucket externo, nunca
+foi aplicado o lifecycle 7/5/12 e nunca houve restauração a partir de um objeto realmente enviado.
+Enquanto isso, a instância de produção acumula dados sem backup verificável fora do host.
+
+#### Escopo
+
+- [ ] Bucket S3-compatível externo, com credencial restrita ao prefixo de backup e TLS/SSE.
+- [ ] Job diário enviando dump em formato custom mais checksum SHA-256.
+- [ ] Lifecycle 7 diários, 5 semanais e 12 mensais aplicado e comprovado no provedor.
+- [ ] Restauração isolada a partir de um objeto baixado do bucket, dentro de RPO/RTO.
+- [ ] A API continua sem qualquer credencial do bucket.
+
+#### Testes primeiro
+
+- [ ] RED: `pnpm test:restore` falha enquanto a origem do archive for local, apontando ausência do
+      objeto externo. A verificação só passa quando restaura um objeto baixado do bucket.
+- [ ] RED: verificação de configuração falha enquanto o lifecycle 7/5/12 não estiver comprovado.
+- [ ] RED negativo: a credencial da API não consegue ler nem escrever no prefixo de backup.
+
+#### Critérios de saída
+
+- Restauração externa executada com contagem de tabelas e linhas registrada, sem dado real de
+  usuário no `HISTORY.md`.
+- Nenhuma credencial de bucket em código, fixture, log ou commit.
+- Runbook e checklist de lançamento atualizados com o resultado e a data do ensaio.
+- `HISTORY.md` atualizado e fase encerrada em commit próprio.
+
+### Fase 27 — CI de segurança verde no repositório público
+
+**Status:** pendente
+
+**Commit esperado:** `chore(phase-27): make the security workflow green`
+
+**Objetivo:** garantir que os workflows `ci.yml` e `security.yml` fiquem verdes no GitHub Actions do
+repositório público, incluindo os dois scans Trivy 0.72.0 de imagem.
+
+**Motivação:** o job de imagem já está declarado em `.github/workflows/security.yml`, e o Trivy
+0.72.0 passou localmente na Fase 13, mas nunca houve execução verde confirmada no GitHub no SHA
+candidato. Em repositório público o resultado desses workflows passa a ser visível, e um scan
+vermelho ou nunca executado é sinal ruim tanto para quem lê quanto para a operação.
+
+#### Escopo
+
+- [ ] Execução verde de `ci.yml` e `security.yml` em `main` após a abertura do repositório.
+- [ ] Ambos os scans Trivy sem HIGH/CRITICAL corrigível nas imagens de produção.
+- [ ] Dependências com `pnpm audit --prod --audit-level high` limpo, ou exceção justificada e datada.
+- [ ] Badges de CI e segurança no `README.md` apontando para os workflows.
+
+#### Testes primeiro
+
+- [ ] RED: o workflow é executado no SHA atual e o resultado real é observado antes de qualquer
+      correção. Vulnerabilidade encontrada vira correção de dependência ou de imagem base, nunca
+      afrouxamento de severidade ou `--exit-code 0`.
+- [ ] RED: o badge adicionado ao `README.md` aponta para um workflow existente e reflete o estado
+      real da branch `main`.
+
+#### Critérios de saída
+
+- Nenhum gate foi enfraquecido para obter verde.
+- Qualquer vulnerabilidade não corrigível está registrada com motivo, severidade e data de revisão.
+- `HISTORY.md` atualizado e fase encerrada em commit próprio.
+
 ## 5. Dependências entre fases
 
 ```text
 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21
-  → 22 → 23 → 24 → 25
+  → 22 → 23 → 24 → 25 → 26 → 27
 ```
+
+As Fases 26 e 27 são independentes entre si e podem ser executadas em qualquer ordem; ambas dependem
+apenas da instância de produção já existente.
 
 Trabalhos internos de uma mesma fase podem ser paralelos somente quando não compartilham arquivos ou contratos instáveis. O encerramento continua único.
 

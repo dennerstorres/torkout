@@ -10,13 +10,19 @@
 
 ## Produção
 
-- [ ] Coolify saudável e expõe somente web por HTTPS.
-- [ ] Certificado, redirecionamento HTTP→HTTPS, HSTS e cookies seguros confirmados externamente.
-- [ ] PostgreSQL/API sem portas públicas; usuário da aplicação continua mínimo.
-- [ ] Domínio, DNS reverso quando aplicável, SMTP e remetente verificado funcionando.
+Os quatro primeiros itens foram atestados pelo titular em 31/07/2026, com a instância no ar em
+<https://torkout.dennerstorres.dev>. A evidência é a declaração do titular, não uma captura do painel.
+
+- [x] Coolify saudável e expõe somente web por HTTPS.
+- [x] Certificado, redirecionamento HTTP→HTTPS, HSTS e cookies seguros confirmados externamente.
+- [x] PostgreSQL/API sem portas públicas; usuário da aplicação continua mínimo.
+- [x] Domínio, DNS reverso quando aplicável, SMTP e remetente verificado funcionando.
 - [ ] Métricas/alertas e contato de incidente testados sem conteúdo pessoal.
 
 ## Backup e privacidade
+
+Os três primeiros itens são o escopo da Fase 26 do `PLAN.md` e seguem abertos: o ensaio aprovado em
+15/07/2026 restaurou um archive local, não um objeto vindo de bucket externo.
 
 - [ ] Bucket externo recebeu archive/checksum com credencial restrita.
 - [ ] Lifecycle 7 diários, 5 semanais e 12 mensais comprovado.
