@@ -1314,8 +1314,7 @@ que continua oferecendo iniciar um treino já encerrado e perde a execução ao 
 
 ### Fase 22 — Refinamento de acompanhamento, nutrição e evolução corporal
 
-**Status:** implementação concluída — testes de integração e E2E pendentes de ambiente com Docker;
-confirmação em iPhone físico pendente do titular
+**Status:** concluída e em produção — confirmação em iPhone físico pendente do titular
 
 **Commit esperado:** `feat(phase-22): refine tracking, nutrition and body evolution`
 
@@ -1349,8 +1348,10 @@ não contar sessões futuras.
 - [x] RED de autorização: rotas novas negam requisição anônima por padrão.
 - [x] RED de exportação: período avaliado, aderência sem sessão futura, café real e metadados de foto.
 - [x] RED de componente: café com três estados, whey, recuperação, painel, níveis e fotos.
-- [ ] Integração de fotos com PostgreSQL efêmero (requer Docker).
-- [ ] E2E e verificação geométrica das telas novas (requer navegadores do Playwright).
+- [x] Integração de fotos com PostgreSQL efêmero: 13 arquivos e 61 testes verdes.
+- [x] E2E e verificação geométrica das telas novas: 31 testes verdes em `chromium-mobile`.
+- [x] RED de empacotamento: a imagem da API precisa preparar o diretório de objetos antes de trocar
+      de usuário, senão o volume nomeado nasce como root e nenhuma foto pode ser gravada.
 
 #### Critérios de saída
 
@@ -1361,10 +1362,65 @@ não contar sessões futuras.
 - Lint, formatação, typecheck, testes unitários e build verdes.
 - `HISTORY.md` atualizado e fase encerrada em commit próprio.
 
+### Fase 23 — Lançamento retroativo de treino
+
+**Status:** não iniciada
+
+**Commit esperado:** `feat(phase-23): allow retroactive workout logging`
+
+**Objetivo:** permitir que o titular lance a execução de um treino depois da data, preservando a
+distinção entre o que foi registrado no dia e o que foi lançado em seguida.
+
+**Motivação:** o app pode ficar indisponível justamente no dia do treino. Quando isso acontece, nem o
+modo offline ajuda, porque a réplica local também está fora de alcance. Hoje a tela Hoje só edita a
+sessão da data corrente e o Histórico só permite trocar o estado e escrever observação — não há como
+lançar séries e repetições. Em 27/07 e 29/07 de 2026 isso obrigou a uma escrita manual no banco de
+produção, fora do modelo de sincronização, com `change_log` construído à mão. Essa rota não pode se
+repetir.
+
+#### Escopo
+
+- [ ] Abrir uma sessão passada a partir do Histórico e lançar séries, repetições e estado terminal.
+- [ ] Criar sessão avulsa em data passada quando não existir sessão na data (WORKOUT-012).
+- [ ] Aceitar série além da planejada, com alvo nulo, sem alterar o template (WORKOUT-015).
+- [ ] Coluna de instante do lançamento retroativo em `workout_sessions`, com migração reversível.
+- [ ] Marca persistente de "lançado depois" no Histórico, no detalhe da sessão e no relatório.
+- [ ] Contagem de conclusões lançadas retroativamente no relatório de evolução (WORKOUT-017).
+- [ ] Etapa de recuperação e esforço percebido disponíveis também no lançamento retroativo.
+- [ ] Bloqueio de data futura no contrato, no domínio e na API.
+
+#### Testes primeiro
+
+- [ ] RED de domínio: data futura é recusada; data passada é aceita; a marca de retroativo nunca é
+      removida depois de gravada.
+- [ ] RED de domínio: aderência conta a sessão retroativa como realizada e o resumo informa quantas
+      conclusões foram lançadas depois da data.
+- [ ] RED de contrato: payload de lançamento retroativo com séries além do planejado e alvo nulo.
+- [ ] RED de API: sessão de outro usuário responde 404; data futura responde erro de validação
+      distinto de conflito; versão desatualizada responde conflito.
+- [ ] RED de migração: a coluna nova aceita nulo para registro feito no dia e rejeita voltar a nulo.
+- [ ] RED de sincronização: o lançamento retroativo gera entrada de `change_log` e converge na
+      réplica; repetição da mesma operação é idempotente.
+- [ ] RED de componente: o Histórico abre a edição, salva séries e mostra a marca de retroativo.
+- [ ] RED de exportação: o relatório distingue conclusão no dia de conclusão lançada depois.
+- [ ] RED geométrica: a tela de lançamento retroativo respeita o ritmo do `DESIGN.md` em viewport
+      móvel e nas demais larguras auditadas.
+
+#### Critérios de saída
+
+- Nenhum lançamento retroativo é aceito para data local futura.
+- Sessão lançada depois nunca aparece como registrada no dia, em nenhuma tela ou relatório.
+- Nenhuma correção de histórico exige escrita direta no banco; tudo percorre fila local, versão e
+  `change_log`.
+- Editar template continua sem alterar sessão histórica.
+- Lint, formatação, typecheck, testes unitários, integração, E2E e build verdes.
+- `HISTORY.md` atualizado e fase encerrada em commit próprio.
+
 ## 5. Dependências entre fases
 
 ```text
 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21
+  → 22 → 23
 ```
 
 Trabalhos internos de uma mesma fase podem ser paralelos somente quando não compartilham arquivos ou contratos instáveis. O encerramento continua único.

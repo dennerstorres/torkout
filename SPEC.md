@@ -284,6 +284,30 @@ Hoje; a tela apresenta o desfecho registrado e direciona correções ao Históri
 o estado terminal correspondente. `completed`, `partial`, `missed` e `cancelled` são terminais para a
 execução do dia e só mudam por edição histórica explícita.
 
+**WORKOUT-011:** o titular pode lançar retroativamente a execução de uma sessão em data local já
+encerrada, incluindo sessão em qualquer estado não terminal e sessão já marcada como perdida. O
+lançamento nunca é permitido para data local futura.
+
+**WORKOUT-012:** quando não existir sessão na data, o lançamento retroativo pode criar uma sessão
+avulsa passada, com a mesma exigência de tipo, exercícios e séries de uma sessão normal.
+
+**WORKOUT-013:** o lançamento retroativo registra o instante em que foi lançado, separado de início e
+conclusão reais. O instante do lançamento é dado do sistema e não é editável.
+
+**WORKOUT-014:** sessão lançada ou corrigida retroativamente é marcada como tal de forma persistente.
+A marca aparece na tela de histórico e no relatório de evolução, e nunca é apresentada como registro
+feito no dia. Remover a marca não é possível.
+
+**WORKOUT-015:** o lançamento retroativo aceita séries além das planejadas. Série não planejada
+preserva o alvo nulo, para que o dado deixe explícito que foi trabalho fora do plano.
+
+**WORKOUT-016:** o lançamento retroativo percorre o mesmo caminho de sincronização de qualquer outra
+mutação: fila local, versão explícita, `change_log` e resolução de conflito. Escrita direta em banco
+não é caminho suportado.
+
+**WORKOUT-017:** a aderência conta a sessão lançada retroativamente como realizada, e o relatório
+informa quantas conclusões do período foram lançadas depois da data.
+
 ### 7.7 Dor
 
 **PAIN-001:** tipos: muscular e articular.
@@ -667,7 +691,9 @@ Todas as tabelas de domínio incluem `id uuid`, `user_id uuid` quando aplicável
 
 ### 8.3 Execução
 
-- `workout_sessions`: data planejada, horário sugerido, tipo, estado, origem, início, fim e observação.
+- `workout_sessions`: data planejada, horário sugerido, tipo, estado, origem, início, fim, instante do
+  lançamento retroativo quando houver e observação. O instante do lançamento retroativo é nulo para
+  registro feito no próprio dia e nunca volta a ser nulo depois de preenchido.
 - `session_exercises`: snapshot de nome/métrica, ordem, estado e observação.
 - `exercise_sets`: número, alvos e valores reais.
 - `walking_details`: distância planejada/real, duração e origem da medição.
