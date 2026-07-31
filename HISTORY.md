@@ -1890,6 +1890,20 @@ continuava.
 - Os testes de integração com PostgreSQL não foram executados nesta fase: a mudança é restrita ao
   frontend e não toca API, schema nem contratos.
 
+### Correção: ritmo dos registros complementares no desktop
+
+Com vários hábitos ativos, o cartão "Hábitos do dia" ficava muito mais alto que os vizinhos. A grade
+por linhas dava à linha inteira a altura do cartão mais alto, então café, whey, dor e medidas ficavam
+soltos no meio de um vão — o efeito relatado pelo titular como tela quebrada no desktop.
+
+- RED — 1 teste geométrico falhou em `visual.spec.ts`: com quatro hábitos de escolha, o vão vertical
+  entre cartões da mesma coluna chegava a centenas de pixels, contra o limite de 24 px.
+- GREEN — a partir de 64rem os registros complementares passam a fluir em três colunas
+  (`columns: 3`), com `break-inside: avoid` e margem igual ao gap. Cada cartão fica colado no
+  seguinte e a área termina equilibrada.
+- O invariante da fase 15 foi reescrito de linhas para colunas: mesma largura, largura mínima
+  utilizável e nenhum vão maior que o gap. 32 E2E verdes, 2 ignorados pelo próprio conjunto.
+
 ### Commit de encerramento
 
 `fix(phase-24): keep authenticated screens in sync with the local replica`

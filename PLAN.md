@@ -1438,6 +1438,7 @@ chegavam à interface.
 - [x] Contador de pendências locais acompanha a sincronização sem recarregar a tela.
 - [x] Planejamento e Histórico acompanham mudanças vindas de fora da tela.
 - [x] Falha de escrita local nas ações de planejamento passa a ser informada em vez de silenciada.
+- [x] Registros complementares da tela Hoje distribuídos em colunas no desktop, sem vão vertical.
 
 #### Testes primeiro
 
@@ -1446,11 +1447,14 @@ chegavam à interface.
       da tela.
 - [x] RED de componente: exercício que chega à réplica aparece no Planejamento com a tela aberta.
 - [x] RED de componente: a marca "Pendente" some do Histórico quando a réplica é sincronizada.
+- [x] RED geométrica: com vários hábitos de escolha, nenhum cartão complementar da tela Hoje abre vão
+      vertical maior que o gap em viewport de desktop.
 
 #### Critérios de saída
 
 - Nenhuma tela autenticada exige navegação de ida e volta para mostrar dado já gravado localmente.
 - Nenhuma consulta interrompida pelo fechamento da réplica escapa como rejeição sem dono.
+- Nenhum cartão da tela Hoje fica solto no meio de um vão por causa da altura de outro cartão.
 - Lint, formatação, typecheck, testes unitários, E2E e build verdes.
 - `HISTORY.md` atualizado e fase encerrada em commit próprio.
 

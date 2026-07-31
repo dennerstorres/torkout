@@ -284,24 +284,30 @@ for (const viewport of [
         const complementary = await page.evaluate(() =>
           [...document.querySelectorAll('.today-complementary-grid > *')].map((element) => {
             const box = element.getBoundingClientRect();
-            return { top: box.top, width: box.width };
+            return { bottom: box.bottom, left: box.left, top: box.top, width: box.width };
           }),
         );
-        // A grade tem 3 colunas explícitas; a partir da fase 22 são 5 cards
-        // complementares (café, whey, hábitos, dores, medidas), que ocupam duas
-        // linhas. O invariante é a grade explícita, não a contagem de colunas:
-        // cada linha alinha seus cards e nenhum card fica estreito demais.
+        // A partir da fase 24 os 5 cards complementares (café, whey, hábitos, dores, medidas) são
+        // distribuídos em 3 colunas por fluxo, e não em linhas: cartões de alturas diferentes
+        // deixavam vãos verticais quando a linha herdava a altura do cartão de hábitos. O invariante
+        // é a coluna: mesma largura, largura mínima utilizável e nenhum vão maior que o gap.
         expect(complementary).toHaveLength(5);
-        const rows = new Map<number, number[]>();
+        const columns = new Map<number, typeof complementary>();
         for (const item of complementary) {
-          const top = Math.round(item.top);
-          rows.set(top, [...(rows.get(top) ?? []), Math.round(item.width)]);
+          const left = Math.round(item.left);
+          columns.set(left, [...(columns.get(left) ?? []), item]);
         }
-        expect(rows.size).toBe(2);
-        for (const widths of rows.values()) {
-          expect(new Set(widths).size).toBe(1);
-        }
+        expect(columns.size).toBe(3);
+        expect(new Set(complementary.map((item) => Math.round(item.width))).size).toBe(1);
         expect(complementary.every((item) => item.width >= 224)).toBe(true);
+        for (const column of columns.values()) {
+          const ordered = [...column].sort((first, second) => first.top - second.top);
+          for (let index = 1; index < ordered.length; index += 1) {
+            expect(
+              Math.round(ordered[index]!.top - ordered[index - 1]!.bottom),
+            ).toBeLessThanOrEqual(24);
+          }
+        }
       }
       if (destination === 'Planejamento') {
         const gap = await page.evaluate(() => {
@@ -485,4 +491,69 @@ test('phase 15 progress loading keeps heading, toolbar and first result anchored
   expect(Math.abs((after.toolbarTop ?? 0) - (before.toolbarTop ?? 0))).toBeLessThanOrEqual(1);
   expect(Math.abs((after.gridTop ?? 0) - (before.gridTop ?? 0))).toBeLessThanOrEqual(2);
   expect(after.scrollY).toBe(0);
+});
+
+test('phase 24 keeps Today inside the viewport with several choice habits on desktop', async ({
+  page,
+}) => {
+  await page.setViewportSize({ height: 1080, width: 1920 });
+  await mockToday(page);
+  // A conta real tem vários hábitos de escolha; o catálogo mockado tinha um único hábito booleano.
+  await page.route('**/api/v1/habits', (route) =>
+    route.fulfill({
+      json: {
+        items: ['Café', 'Proteína', 'Arroz', 'Salada'].map((name, index) => ({
+          active: true,
+          id: `d620000${index}-0000-4000-8000-00000000000${index + 1}`,
+          name,
+          options: [
+            { id: `d630000${index}-0000-4000-8000-000000000001`, label: 'Sim', sortOrder: 0 },
+            { id: `d630000${index}-0000-4000-8000-000000000002`, label: 'Não', sortOrder: 1 },
+          ],
+          sortOrder: index,
+          type: 'choice',
+          version: 1,
+        })),
+      },
+    }),
+  );
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Hoje', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Hábitos do dia' })).toBeVisible();
+
+  const geometry = await page.evaluate(() => {
+    const outlet = document.querySelector('.page-outlet')!.getBoundingClientRect();
+    const overflowing = [...document.querySelectorAll<HTMLElement>('main *')]
+      .filter((element) => element.getBoundingClientRect().right > outlet.right + 1)
+      .map((element) => `${element.tagName.toLowerCase()}.${element.className}`);
+    return {
+      innerWidth,
+      overflowing: overflowing.slice(0, 5),
+      scrollWidth: document.documentElement.scrollWidth,
+    };
+  });
+  expect(geometry.overflowing).toEqual([]);
+  expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.innerWidth);
+
+  // Cartões de alturas diferentes não podem abrir vão vertical maior que o próprio gap: o cartão de
+  // hábitos é o mais alto e não pode empurrar café, whey, dor e medidas para longe do cartão seguinte.
+  const columnGaps = await page.evaluate(() => {
+    const cards = [...document.querySelectorAll<HTMLElement>('.today-complementary-grid > *')].map(
+      (element) => element.getBoundingClientRect(),
+    );
+    const columns = new Map<number, DOMRect[]>();
+    for (const card of cards) {
+      const left = Math.round(card.left);
+      columns.set(left, [...(columns.get(left) ?? []), card]);
+    }
+    const gaps: number[] = [];
+    for (const column of columns.values()) {
+      const ordered = [...column].sort((first, second) => first.top - second.top);
+      for (let index = 1; index < ordered.length; index += 1) {
+        gaps.push(Math.round(ordered[index]!.top - ordered[index - 1]!.bottom));
+      }
+    }
+    return gaps;
+  });
+  expect(Math.max(0, ...columnGaps)).toBeLessThanOrEqual(24);
 });

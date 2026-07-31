@@ -1154,8 +1154,23 @@ body:has(.auth-dialog-backdrop) {
     grid-column: auto;
   }
 
+  /* Os registros complementares têm alturas muito diferentes: o cartão de hábitos cresce com a
+     quantidade de hábitos ativos e, em grade por linhas, definia a altura da linha inteira, deixando
+     café, whey, dor e medidas soltos no meio de um vão. Em colunas, cada cartão fica colado no
+     seguinte e a área termina equilibrada. */
   .today-complementary-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    display: block;
+    columns: 3;
+    column-gap: var(--space-4);
+  }
+
+  .today-complementary-grid > * {
+    break-inside: avoid;
+    margin-bottom: var(--space-4);
+  }
+
+  .today-complementary-grid > :last-child {
+    margin-bottom: 0;
   }
 
   .history-detail {
