@@ -2,7 +2,13 @@ import { z } from 'zod';
 
 export const jointPainStatusSchema = z.enum(['unknown', 'none', 'reported']);
 export const sessionExerciseStatusSchema = z.enum(['planned', 'completed', 'skipped', 'stopped']);
-export const painTypeSchema = z.enum(['muscular', 'joint']);
+/**
+ * `other` cobre desconfortos que não são musculares nem articulares. Registros antigos continuam
+ * válidos porque os dois valores originais foram preservados na mesma posição.
+ */
+export const painTypeSchema = z.enum(['muscular', 'joint', 'other']);
+/** Resposta explícita da etapa de recuperação; `not_answered` significa ausência de resposta. */
+export const recoveryStatusSchema = z.enum(['not_answered', 'none', 'reported']);
 export const painIntensitySchema = z.enum(['not_informed', 'light', 'moderate', 'strong']);
 export const painMomentSchema = z.enum(['before', 'during', 'after', 'next_day']);
 export const bodyRegionSchema = z.enum([
@@ -60,10 +66,15 @@ export const walkingExecutionSchema = z.strictObject({
   notes: nullableNotes,
 });
 
+/** Escala de esforço percebido de 0 a 10; sempre opcional para manter o fechamento rápido. */
+export const perceivedExertionSchema = z.number().int().min(0).max(10);
+
 export const workoutExecutionSchema = z.strictObject({
   completedAt: z.iso.datetime({ offset: true }).nullable().optional(),
   exercises: z.array(executionExerciseSchema).max(100),
   jointPainStatus: jointPainStatusSchema.default('unknown'),
+  perceivedExertion: perceivedExertionSchema.nullable().optional(),
+  recoveryStatus: recoveryStatusSchema.default('not_answered'),
   startedAt: z.iso.datetime({ offset: true }).nullable().optional(),
   walking: walkingExecutionSchema.nullable().optional(),
 });
@@ -75,11 +86,15 @@ const painFields = {
   exerciseSetId: z.uuid().nullable().optional(),
   exerciseStopped: z.boolean().default(false),
   intensity: painIntensitySchema.default('not_informed'),
+  /** Escala numérica de 0 a 10; convive com a escala qualitativa herdada. */
+  intensityScore: z.number().int().min(0).max(10).nullable().optional(),
   localDate: z.iso.date(),
   moment: painMomentSchema,
   notes: nullableNotes,
   occurredAt: z.iso.datetime({ offset: true }).nullable().optional(),
   sessionId: z.uuid().nullable().optional(),
+  supportDifficulty: z.boolean().nullable().optional(),
+  swelling: z.boolean().nullable().optional(),
   type: painTypeSchema,
 };
 
@@ -102,6 +117,35 @@ export const painReportCreateSchema = z
   .strictObject({ id: z.uuid().optional(), ...painFields })
   .superRefine(validateCustomRegion);
 export const painReportUpdateSchema = z.strictObject(painFields).partial();
+
+/**
+ * Etapa opcional de recuperação exibida ao concluir um treino. A resposta "não" é armazenada de
+ * forma explícita e nunca exige detalhes.
+ */
+export const sessionRecoverySchema = z
+  .strictObject({
+    reports: z
+      .array(z.strictObject(painFields).superRefine(validateCustomRegion))
+      .max(20)
+      .default([]),
+    status: recoveryStatusSchema,
+  })
+  .superRefine((value, context) => {
+    if (value.status === 'reported' && value.reports.length === 0) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Informe ao menos um desconforto.',
+        path: ['reports'],
+      });
+    }
+    if (value.status !== 'reported' && value.reports.length > 0) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Não registre desconfortos quando a resposta foi "não".',
+        path: ['reports'],
+      });
+    }
+  });
 
 export const habitOptionSchema = z.strictObject({
   id: z.uuid().optional(),
@@ -174,4 +218,7 @@ export const habitEntryUpdateSchema = z
 
 export type HabitDefinitionCreate = z.infer<typeof habitDefinitionCreateSchema>;
 export type PainReportCreate = z.infer<typeof painReportCreateSchema>;
+export type PainType = z.infer<typeof painTypeSchema>;
+export type RecoveryStatus = z.infer<typeof recoveryStatusSchema>;
+export type SessionRecovery = z.infer<typeof sessionRecoverySchema>;
 export type WorkoutExecution = z.infer<typeof workoutExecutionSchema>;

@@ -12,6 +12,8 @@ const environmentSchema = z
       .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
       .default('info'),
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+    /** Diretório do driver local de armazenamento de objetos; use um volume persistente. */
+    OBJECT_STORAGE_DIR: z.string().min(1).default('./var/object-storage'),
     PORT: z.coerce.number().int().min(1).max(65_535).default(3000),
     SMTP_FROM: z.string().min(3),
     SMTP_HOST: z.string().min(1),
@@ -47,6 +49,7 @@ export function parseEnvironment(
     HOST: input.HOST,
     LOG_LEVEL: input.LOG_LEVEL,
     NODE_ENV: input.NODE_ENV,
+    OBJECT_STORAGE_DIR: input.OBJECT_STORAGE_DIR,
     PORT: input.PORT,
     SMTP_FROM: input.SMTP_FROM,
     SMTP_HOST: input.SMTP_HOST,

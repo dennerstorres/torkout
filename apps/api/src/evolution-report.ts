@@ -1,23 +1,132 @@
 import type { DataExport, PendingExportChange } from '@torkout/contracts';
+import {
+  ADHERENCE_EXPLANATION,
+  calculateAdherence,
+  coffeeStatusLabel,
+  evaluateLevels,
+  recoveryDeservesAttention,
+  RECOVERY_ATTENTION_NOTICE,
+  type AdherenceBreakdown,
+  type AdherenceSessionInput,
+  type CoffeeStatus,
+} from '@torkout/domain';
 
 type Row = Record<string, unknown>;
 type CollectionName = keyof DataExport['entities'];
 
 const NOT_RECORDED = 'não registrado';
+const DAY_MS = 86_400_000;
 
 const pendingCollections: Partial<Record<PendingExportChange['entityType'], CollectionName>> = {
   body_measurement: 'bodyMeasurements',
+  coffee_intake: 'coffeeIntakes',
   exercise: 'exercises',
   habit_definition: 'habitDefinitions',
   habit_entry: 'habitEntries',
   pain_report: 'painReports',
   training_plan: 'trainingPlans',
+  whey_intake: 'wheyIntakes',
   workout_session: 'workoutSessions',
   workout_template: 'workoutTemplates',
 };
 
+const WEEKDAY_LABELS = [
+  'Segunda-feira',
+  'Terça-feira',
+  'Quarta-feira',
+  'Quinta-feira',
+  'Sexta-feira',
+  'Sábado',
+  'Domingo',
+];
+
+const BODY_REGION_LABELS: Record<string, string> = {
+  abdomen: 'Abdômen',
+  ankle: 'Tornozelo',
+  arm: 'Braço',
+  back: 'Costas',
+  chest: 'Peito',
+  elbow: 'Cotovelo',
+  foot: 'Pé',
+  hand: 'Mão',
+  hip: 'Quadril',
+  knee: 'Joelho',
+  leg: 'Perna',
+  neck: 'Pescoço',
+  shoulder: 'Ombro',
+  thigh: 'Coxa',
+  wrist: 'Punho',
+};
+
+const PAIN_MOMENT_LABELS: Record<string, string> = {
+  after: 'Depois do exercício',
+  before: 'Antes do exercício',
+  during: 'Durante o exercício',
+  next_day: 'No dia seguinte',
+};
+
+const PAIN_INTENSITY_LABELS: Record<string, string> = {
+  light: 'Leve',
+  moderate: 'Moderada',
+  not_informed: 'Não informada',
+  strong: 'Forte',
+};
+
+const WHEY_MIX_LABELS: Record<string, string> = {
+  other: 'Outro',
+  semi_skimmed_milk: 'Leite semidesnatado',
+  skimmed_milk: 'Leite desnatado',
+  water: 'Água',
+  whole_milk: 'Leite integral',
+};
+
+const WHEY_MOMENT_LABELS: Record<string, string> = {
+  morning: 'Manhã',
+  night: 'Noite',
+  other: 'Outro',
+  post_workout: 'Depois do treino',
+  pre_workout: 'Antes do treino',
+};
+
+const WHEY_TOLERANCE_LABELS: Record<string, string> = {
+  bloating: 'Estufamento',
+  cramp: 'Cólica',
+  diarrhea: 'Diarreia',
+  gas: 'Gases',
+  nausea: 'Náusea',
+  none: 'Sem desconforto',
+  other: 'Outro',
+};
+
+const PHOTO_POSE_LABELS: Record<string, string> = {
+  back: 'Costas',
+  front: 'Frente',
+  side: 'Lado',
+};
+
+const ACTIVITY_LABELS: Record<string, string> = {
+  other: 'Outra atividade',
+  rest: 'Descanso',
+  strength: 'Força',
+  walk: 'Caminhada',
+};
+
+const SESSION_STATUS_LABELS: Record<string, string> = {
+  cancelled: 'Cancelada',
+  completed: 'Concluída',
+  in_progress: 'Em andamento',
+  missed: 'Perdida',
+  partial: 'Parcial',
+  planned: 'Planejada',
+};
+
 function text(value: unknown): string {
   return value === null || value === undefined || value === '' ? NOT_RECORDED : String(value);
+}
+
+function label(dictionary: Record<string, string>, value: unknown): string {
+  const key = typeof value === 'string' ? value : '';
+  return dictionary[key] ?? (key ? key : NOT_RECORDED);
 }
 
 function cell(value: unknown): string {
@@ -30,19 +139,35 @@ function number(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function value(value: unknown, unit?: string): string {
-  const parsed = number(value);
+function value(input: unknown, unit?: string): string {
+  const parsed = number(input);
   return parsed === null ? NOT_RECORDED : `${parsed}${unit ? ` ${unit}` : ''}`;
 }
 
-function date(value: unknown): string | null {
-  if (typeof value !== 'string') return null;
-  const match = /^(\d{4}-\d{2}-\d{2})/.exec(value);
+function decimal(input: number): string {
+  return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 }).format(input);
+}
+
+function date(input: unknown): string | null {
+  if (typeof input !== 'string') return null;
+  const match = /^(\d{4}-\d{2}-\d{2})/.exec(input);
   return match?.[1] ?? null;
 }
 
-function normalized(value: unknown): string {
-  return String(value ?? '')
+function clock(input: unknown): string {
+  if (typeof input !== 'string') return NOT_RECORDED;
+  const match = /^([01]\d|2[0-3]):([0-5]\d)/.exec(input);
+  return match ? `${match[1]}:${match[2]}` : NOT_RECORDED;
+}
+
+function boolText(input: unknown): string {
+  if (input === true) return 'sim';
+  if (input === false) return 'não';
+  return NOT_RECORDED;
+}
+
+function normalized(input: unknown): string {
+  return String(input ?? '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLocaleLowerCase('pt-BR');
@@ -178,6 +303,27 @@ function exerciseRowsForSession(
     }));
 }
 
+function daysBetween(from: string, through: string): number {
+  if (through < from) return 0;
+  return (
+    Math.round((Date.parse(`${through}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY_MS) + 1
+  );
+}
+
+function adherenceLines(breakdown: AdherenceBreakdown): string[] {
+  return [
+    `- Aderência: ${breakdown.percentage === null ? NOT_RECORDED : `${breakdown.percentage}%`}`,
+    `- Sessões vencidas: ${breakdown.due}`,
+    `- Denominador: ${breakdown.denominator}`,
+    `- Concluídas: ${breakdown.completed}`,
+    `- Parciais: ${breakdown.partial}`,
+    `- Perdidas: ${breakdown.missed}`,
+    `- Vencidas sem conclusão: ${breakdown.overdue}`,
+    `- Canceladas: ${breakdown.cancelled}`,
+    `- Futuras (fora do denominador): ${breakdown.future}`,
+  ];
+}
+
 export function buildEvolutionReport(data: DataExport): string {
   const entities = applyPending(data);
   const profile = current(entities.userProfiles)[0];
@@ -193,6 +339,17 @@ export function buildEvolutionReport(data: DataExport): string {
   const pains = current(entities.painReports).sort((left, right) =>
     String(left.localDate).localeCompare(String(right.localDate)),
   );
+  const coffee = current(entities.coffeeIntakes).sort((left, right) =>
+    String(left.localDate).localeCompare(String(right.localDate)),
+  );
+  const whey = current(entities.wheyIntakes).sort((left, right) =>
+    String(left.localDate).localeCompare(String(right.localDate)),
+  );
+  const photos = current(entities.progressPhotos).sort((left, right) =>
+    String(left.localDate).localeCompare(String(right.localDate)),
+  );
+  const rules = current(entities.scheduleRules);
+  const templates = current(entities.workoutTemplates);
   const definitions = current(entities.habitDefinitions);
   const entries = current(entities.habitEntries).sort((left, right) =>
     String(left.localDate).localeCompare(String(right.localDate)),
@@ -205,26 +362,39 @@ export function buildEvolutionReport(data: DataExport): string {
     for (const option of definition.options as Row[]) options.set(option.id, text(option.label));
   }
   const definitionById = new Map(definitions.map((definition) => [definition.id, definition]));
+
+  const timeZone = data.timeZone;
+  const generatedAt = date(data.exportedAt) ?? NOT_RECORDED;
   const allDates = [
     ...sessions.map((row) => date(row.plannedLocalDate)),
     ...measurements.map((row) => date(row.localDate)),
     ...pains.map((row) => date(row.localDate)),
     ...entries.map((row) => date(row.localDate)),
+    ...coffee.map((row) => date(row.localDate)),
+    ...whey.map((row) => date(row.localDate)),
+    ...photos.map((row) => date(row.localDate)),
   ]
     .filter((item): item is string => item !== null)
     .sort();
-  const periodFrom = allDates[0] ?? NOT_RECORDED;
-  const periodThrough = allDates.at(-1) ?? NOT_RECORDED;
+  const requestedFrom = data.requestedRange?.from ?? allDates[0] ?? generatedAt;
+  const requestedThrough = data.requestedRange?.through ?? allDates.at(-1) ?? generatedAt;
 
-  const executable = sessions.filter(
-    (session) => session.type === 'strength' && session.status !== 'cancelled',
-  );
-  const completed = executable.filter((session) => session.status === 'completed').length;
-  const partial = executable.filter((session) => session.status === 'partial').length;
-  const adherence =
-    executable.length === 0
-      ? NOT_RECORDED
-      : `${Math.round(((completed + partial * 0.5) / executable.length) * 10_000) / 100}%`;
+  const adherenceSessions: AdherenceSessionInput[] = sessions.map((session) => ({
+    localDate: date(session.plannedLocalDate) ?? requestedFrom,
+    plannedLocalTime:
+      typeof session.suggestedLocalTime === 'string' ? session.suggestedLocalTime : null,
+    status: String(session.status ?? 'planned') as AdherenceSessionInput['status'],
+    type: String(session.type ?? 'other') as AdherenceSessionInput['type'],
+  }));
+  const adherence = calculateAdherence({
+    from: requestedFrom,
+    now: data.exportedAt,
+    sessions: adherenceSessions,
+    through: requestedThrough,
+    timeZone,
+  });
+  const evaluatedFrom = adherence.evaluatedFrom;
+  const evaluatedThrough = adherence.evaluatedThrough;
 
   const setHistory: unknown[][] = [];
   const exerciseByDate = new Map<string, Map<string, number>>();
@@ -258,27 +428,16 @@ export function buildEvolutionReport(data: DataExport): string {
     }
   }
 
-  const habitRows = (filter: (name: string) => boolean): unknown[][] =>
-    entries
-      .filter((entry) => filter(normalized(definitionById.get(entry.habitDefinitionId)?.name)))
-      .map((entry) => {
-        const definition = definitionById.get(entry.habitDefinitionId);
-        return [
-          date(entry.localDate) ?? NOT_RECORDED,
-          definition?.name,
-          habitValue(entry, options),
-          definition?.unit,
-          entry.notes,
-        ];
-      });
-  const isWhey = (name: string) => name.includes('whey');
-  const isWheyTolerance = (name: string) => isWhey(name) && name.includes('tolerancia');
-  const isEffort = (name: string) =>
-    /(^|\b)rpe(\b|$)|esforco percebido|percepcao de esforco/.test(name);
-  const wheyConsumptionRows = habitRows((name) => isWhey(name) && !isWheyTolerance(name));
-  const wheyToleranceRows = habitRows(isWheyTolerance);
-  const effortRows = habitRows(isEffort);
-  const generalHabitRows = habitRows((name) => !isWhey(name) && !isEffort(name));
+  const habitRows = entries.map((entry) => {
+    const definition = definitionById.get(entry.habitDefinitionId);
+    return [
+      date(entry.localDate) ?? NOT_RECORDED,
+      definition?.name,
+      habitValue(entry, options),
+      definition?.unit,
+      entry.notes,
+    ];
+  });
 
   const progressionRows = [...exerciseByDate.entries()]
     .filter(([name]) => {
@@ -293,62 +452,105 @@ export function buildEvolutionReport(data: DataExport): string {
 
   const muscular = pains.filter((pain) => pain.type === 'muscular');
   const joint = pains.filter((pain) => pain.type === 'joint');
+  const otherDiscomfort = pains.filter((pain) => pain.type === 'other');
   const painTable = (rows: Row[]): unknown[][] =>
     rows.map((pain) => [
       date(pain.localDate) ?? NOT_RECORDED,
-      pain.bodyRegion === 'other' ? pain.customBodyRegion : pain.bodyRegion,
-      pain.intensity,
-      pain.moment,
-      pain.exerciseStopped === true ? 'sim' : 'não',
+      pain.bodyRegion === 'other'
+        ? text(pain.customBodyRegion)
+        : label(BODY_REGION_LABELS, pain.bodyRegion),
+      pain.intensityScore ?? NOT_RECORDED,
+      label(PAIN_INTENSITY_LABELS, pain.intensity),
+      label(PAIN_MOMENT_LABELS, pain.moment),
+      boolText(pain.exerciseStopped),
+      boolText(pain.swelling),
+      boolText(pain.supportDifficulty),
+      recoveryDeservesAttention({
+        intensityScore: number(pain.intensityScore),
+        supportDifficulty: pain.supportDifficulty as boolean | null,
+        swelling: pain.swelling as boolean | null,
+        type: (pain.type as 'joint' | 'muscular' | 'other') ?? 'other',
+      })
+        ? 'sim'
+        : 'não',
       pain.notes,
     ]);
+  const painHeaders = [
+    'data',
+    'região',
+    'intensidade (0-10)',
+    'intensidade qualitativa',
+    'momento',
+    'interrompeu exercício',
+    'inchaço',
+    'dificuldade para apoiar',
+    'merece atenção',
+    'observações',
+  ];
 
-  const alerts: string[] = [];
-  for (const [type, rows] of [
-    ['muscular', muscular],
-    ['articular', joint],
-  ] as const) {
-    const counts = new Map<string, number>();
-    for (const pain of rows) {
-      const region = text(pain.bodyRegion === 'other' ? pain.customBodyRegion : pain.bodyRegion);
-      counts.set(region, (counts.get(region) ?? 0) + 1);
-    }
-    for (const [region, count] of counts) {
-      if (count >= 2) alerts.push(`Dor ${type} recorrente em ${region}: ${count} registros.`);
-    }
-  }
-  for (const [name, count] of stopped) {
-    if (count >= 2) alerts.push(`Exercício interrompido recorrentemente: ${name}, ${count} vezes.`);
-  }
-  const missedDates = executable
-    .filter((session) => session.status === 'missed')
-    .map((session) => date(session.plannedLocalDate))
-    .filter((item): item is string => item !== null);
-  if (missedDates.length >= 2)
-    alerts.push(
-      `Treinos de força perdidos em ${missedDates.length} datas: ${missedDates.join(', ')}.`,
-    );
+  // Sessões executáveis (força e caminhada) usadas para separar resposta explícita de ausência.
+  const answerable = sessions.filter(
+    (session) => session.type === 'strength' || session.type === 'walk',
+  );
+  const explicitNoPain = answerable.filter((session) => session.recoveryStatus === 'none');
+  const reportedPain = answerable.filter((session) => session.recoveryStatus === 'reported');
+  const unanswered = answerable.filter(
+    (session) => session.recoveryStatus !== 'none' && session.recoveryStatus !== 'reported',
+  );
 
-  const summary: string[] = [];
-  if (executable.length > 0)
-    summary.push(
-      `${executable.length} treinos de força analisados: ${completed} concluídos, ${partial} parciais e aderência equivalente de ${adherence}.`,
-    );
-  else summary.push(`Treinos de força: ${NOT_RECORDED}.`);
-  const completedWalks = sessions.filter(
-    (session) =>
-      session.type === 'walk' && (session.status === 'completed' || session.status === 'partial'),
-  );
-  summary.push(
-    completedWalks.length > 0
-      ? `${completedWalks.length} caminhadas concluídas ou parciais foram registradas.`
-      : `Caminhadas concluídas ou parciais: ${NOT_RECORDED}.`,
-  );
-  summary.push(`Evolução do peso: ${trend(measurements, 'weightKg', 'kg')}.`);
-  summary.push(`Evolução da cintura: ${trend(measurements, 'waistCm', 'cm')}.`);
-  summary.push(
-    `Dor muscular: ${muscular.length || NOT_RECORDED}; dor articular: ${joint.length || NOT_RECORDED}.`,
-  );
+  const exertionRows = sessions
+    .filter((session) => number(session.perceivedExertion) !== null)
+    .map((session) => [
+      date(session.plannedLocalDate) ?? NOT_RECORDED,
+      session.templateNameSnapshot,
+      number(session.perceivedExertion),
+      label(ACTIVITY_LABELS, session.type),
+      label(SESSION_STATUS_LABELS, session.status),
+    ]);
+  const exertionValues = sessions
+    .map((session) => number(session.perceivedExertion))
+    .filter((item): item is number => item !== null);
+  const exertionAverage =
+    exertionValues.length === 0
+      ? NOT_RECORDED
+      : decimal(exertionValues.reduce((total, item) => total + item, 0) / exertionValues.length);
+
+  const coffeeInPeriod = coffee.filter((row) => {
+    const localDate = date(row.localDate);
+    return localDate !== null && localDate >= evaluatedFrom && localDate <= evaluatedThrough;
+  });
+  const coffeeCounts = { not_consumed: 0, with_sugar: 0, without_sugar: 0 };
+  for (const row of coffeeInPeriod) {
+    const status = row.status as CoffeeStatus;
+    if (status in coffeeCounts) coffeeCounts[status] += 1;
+  }
+  const evaluatedDays = daysBetween(evaluatedFrom, evaluatedThrough);
+  const coffeeRows = coffee.map((row) => [
+    date(row.localDate) ?? NOT_RECORDED,
+    coffeeStatusLabel((row.status as CoffeeStatus | undefined) ?? null),
+    row.notes,
+  ]);
+
+  const wheyRows = whey.map((row) => {
+    const tolerance = Array.isArray(row.tolerance) ? (row.tolerance as string[]) : [];
+    return [
+      date(row.localDate) ?? NOT_RECORDED,
+      clock(row.localTime),
+      boolText(row.consumed),
+      value(row.powderGrams, 'g'),
+      value(row.servings),
+      value(row.proteinPerServingGrams, 'g'),
+      value(row.liquidMl, 'ml'),
+      row.mixedWith === 'other' ? text(row.customMixedWith) : label(WHEY_MIX_LABELS, row.mixedWith),
+      text(row.brand),
+      text(row.product),
+      label(WHEY_MOMENT_LABELS, row.moment),
+      tolerance.length === 0
+        ? NOT_RECORDED
+        : tolerance.map((item) => label(WHEY_TOLERANCE_LABELS, item)).join('; '),
+      row.notes,
+    ];
+  });
 
   const walkBySession = new Map(walks.map((walk) => [walk.sessionId, walk]));
   const walkRows = sessions
@@ -357,50 +559,147 @@ export function buildEvolutionReport(data: DataExport): string {
       const walk = walkBySession.get(session.id) ?? (session.walking as Row | undefined) ?? {};
       return [
         date(session.plannedLocalDate) ?? NOT_RECORDED,
-        session.status,
+        clock(session.suggestedLocalTime),
+        label(SESSION_STATUS_LABELS, session.status),
         value(walk.plannedDistanceMeters, 'm'),
         value(walk.actualDistanceMeters, 'm'),
         value(walk.durationSeconds, 's'),
-        walk.distanceSource,
+        number(session.perceivedExertion) ?? NOT_RECORDED,
         walk.notes ?? session.notes,
       ];
     });
 
+  const templateById = new Map(templates.map((template) => [template.id, template]));
+  const routineRows = rules
+    .map((rule) => {
+      const weekday = number(rule.weekday);
+      const template = templateById.get(rule.templateId);
+      return [
+        weekday === null ? NOT_RECORDED : (WEEKDAY_LABELS[weekday - 1] ?? NOT_RECORDED),
+        clock(rule.localTime),
+        text(template?.name),
+        label(ACTIVITY_LABELS, template?.type),
+        `${text(rule.validFrom)} → ${rule.validUntil ? text(rule.validUntil) : 'sem término'}`,
+      ];
+    })
+    .sort((left, right) => String(left[0]).localeCompare(String(right[0]), 'pt-BR'));
+
+  const photoRows = photos.map((photo) => [
+    date(photo.localDate) ?? NOT_RECORDED,
+    label(PHOTO_POSE_LABELS, photo.pose),
+    value(photo.byteSize, 'bytes'),
+    text(photo.contentType),
+    `${value(photo.widthPx)}×${value(photo.heightPx)}`,
+    photo.notes,
+  ]);
+
+  const levels = evaluateLevels({
+    measurementDates: measurements
+      .map((measurement) => date(measurement.localDate))
+      .filter((item): item is string => item !== null),
+    sessions: sessions.map((session) => ({
+      localDate: date(session.plannedLocalDate) ?? requestedFrom,
+      status: String(session.status ?? 'planned') as AdherenceSessionInput['status'],
+      type: String(session.type ?? 'other') as AdherenceSessionInput['type'],
+    })),
+  });
+
+  const attentionRows = pains.filter((pain) =>
+    recoveryDeservesAttention({
+      intensityScore: number(pain.intensityScore),
+      supportDifficulty: pain.supportDifficulty as boolean | null,
+      swelling: pain.swelling as boolean | null,
+      type: (pain.type as 'joint' | 'muscular' | 'other') ?? 'other',
+    }),
+  );
+
+  const missing: string[] = [];
+  if (measurements.length === 0) missing.push('Peso e medidas corporais.');
+  else {
+    if (measurements.every((row) => number(row.waistCm) === null)) missing.push('Cintura.');
+    if (measurements.every((row) => number(row.abdomenCm) === null)) missing.push('Barriga.');
+  }
+  if (coffee.length === 0) missing.push('Estado do café por dia.');
+  if (whey.length === 0) missing.push('Consumo e tolerância ao whey.');
+  if (exertionValues.length === 0) missing.push('Esforço percebido nos treinos.');
+  if (unanswered.length > 0)
+    missing.push(`Resposta de recuperação em ${unanswered.length} sessões executáveis.`);
+  if (photos.length === 0) missing.push('Fotos de evolução.');
+  if (!profile?.goal) missing.push('Objetivo declarado no perfil.');
+  if (rules.length === 0) missing.push('Regras de agenda que descrevem a rotina atual.');
+
+  const summary: string[] = [];
+  summary.push(
+    adherence.strength.denominator === 0
+      ? `Aderência de força: ${NOT_RECORDED}.`
+      : `Aderência de força: ${adherence.strength.percentage}% sobre ${adherence.strength.denominator} sessões vencidas (${adherence.strength.completed} concluídas, ${adherence.strength.partial} parciais, ${adherence.strength.missed} perdidas).`,
+  );
+  summary.push(
+    adherence.walk.denominator === 0
+      ? `Aderência de caminhada: ${NOT_RECORDED}.`
+      : `Aderência de caminhada: ${adherence.walk.percentage}% sobre ${adherence.walk.denominator} caminhadas vencidas.`,
+  );
+  summary.push(`Evolução do peso: ${trend(measurements, 'weightKg', 'kg')}.`);
+  summary.push(`Evolução da cintura: ${trend(measurements, 'waistCm', 'cm')}.`);
+  summary.push(`Evolução da barriga: ${trend(measurements, 'abdomenCm', 'cm')}.`);
+  summary.push(
+    `Esforço percebido médio: ${exertionAverage}${exertionValues.length ? ` em ${exertionValues.length} registros` : ''}.`,
+  );
+  summary.push(
+    `Recuperação: ${explicitNoPain.length} sessões com resposta explícita "sem dor", ${reportedPain.length} com desconforto relatado e ${unanswered.length} sem resposta.`,
+  );
+  summary.push(
+    `Dor muscular: ${muscular.length}; dor articular: ${joint.length}; outros desconfortos: ${otherDiscomfort.length}.`,
+  );
+  summary.push(
+    `Café no período avaliado: ${coffeeCounts.without_sugar} dias sem açúcar, ${coffeeCounts.with_sugar} com açúcar e ${coffeeCounts.not_consumed} sem consumo.`,
+  );
+  summary.push(`Nível atual: ${levels.current.name}.`);
+
   const report = [
     '# Relatório de evolução física e rotina de treino',
     '',
-    '> Documento gerado automaticamente apenas com dados registrados pelo usuário. Ausências são marcadas como “não registrado”. Dados locais pendentes foram aplicados na ordem em que foram registrados.',
+    '> Documento gerado automaticamente apenas com dados registrados pelo usuário. Ausências são marcadas como “não registrado”. Dados locais pendentes foram aplicados na ordem em que foram registrados. Este documento não é diagnóstico nem prescrição.',
     '',
     '## Metadados do relatório',
     '',
-    `- Data de geração: ${date(data.exportedAt) ?? NOT_RECORDED}`,
-    `- Período coberto: ${periodFrom === NOT_RECORDED ? NOT_RECORDED : `${periodFrom} a ${periodThrough}`}`,
-    `- Fuso horário: ${text(data.timeZone)}`,
+    `- Data de geração: ${generatedAt}`,
+    `- Período solicitado: ${requestedFrom} a ${requestedThrough}`,
+    `- Período efetivamente avaliado: ${evaluatedFrom} a ${evaluatedThrough}`,
+    `- Dias no período avaliado: ${evaluatedDays}`,
+    `- Fuso horário: ${text(timeZone)}`,
     `- Alterações locais pendentes incorporadas: ${data.pendingChanges.length}`,
     '',
     '## Perfil atual',
     '',
     `- Nome: ${text(data.account.name)}`,
     `- Altura: ${value(profile?.heightCm, 'cm')}`,
-    `- Horário de treino preferido: ${text(profile?.preferredWorkoutTime)}`,
+    `- Objetivo declarado: ${text(profile?.goal)}`,
+    `- Horário de treino preferido: ${clock(profile?.preferredWorkoutTime)}`,
     `- Início da conta: ${date(data.account.createdAt) ?? NOT_RECORDED}`,
     `- Sistema de unidades: ${text(profile?.unitSystem)}`,
     '',
-    '## Período analisado',
+    '## Rotina atual',
     '',
-    periodFrom === NOT_RECORDED
-      ? NOT_RECORDED
-      : `O relatório cobre registros datados de ${periodFrom} a ${periodThrough}, inclusive.`,
+    '> Derivada exclusivamente das regras de agenda registradas.',
     '',
-    '## Aderência aos treinos',
+    ...table(['dia', 'horário', 'atividade', 'tipo', 'vigência'], routineRows),
     '',
-    `- Aderência equivalente: ${adherence}`,
-    `- Fórmula: concluído = 1; parcial = 0,5; demais estados = 0; cancelados não entram no denominador. Apenas sessões de força entram neste indicador.`,
-    `- Sessões de força no denominador: ${executable.length || NOT_RECORDED}`,
-    `- Concluídas: ${executable.length ? completed : NOT_RECORDED}`,
-    `- Parciais: ${executable.length ? partial : NOT_RECORDED}`,
-    `- Perdidas: ${executable.length ? executable.filter((session) => session.status === 'missed').length : NOT_RECORDED}`,
-    `- Planejadas ou em andamento: ${executable.length ? executable.filter((session) => session.status === 'planned' || session.status === 'in_progress').length : NOT_RECORDED}`,
+    '## Aderência de força',
+    '',
+    `> ${ADHERENCE_EXPLANATION}`,
+    '',
+    ...adherenceLines(adherence.strength),
+    '',
+    '## Aderência de caminhada',
+    '',
+    ...adherenceLines(adherence.walk),
+    '',
+    '## Aderência geral',
+    '',
+    '> A aderência geral soma força e caminhada com a mesma fórmula; ela não substitui os indicadores separados.',
+    '',
+    ...adherenceLines(adherence.general),
     '',
     '## Histórico de séries e repetições',
     '',
@@ -409,32 +708,54 @@ export function buildEvolutionReport(data: DataExport): string {
       setHistory,
     ),
     '',
+    '## Esforço percebido',
+    '',
+    '> Escala de 0 a 10 registrada no fechamento do treino: 0 nenhum esforço; 1–3 leve; 4–6 moderado; 7–8 difícil; 9 muito difícil; 10 esforço máximo.',
+    '',
+    `- Média: ${exertionAverage}`,
+    `- Sessões com esforço registrado: ${exertionValues.length}`,
+    '',
+    ...table(['data', 'sessão', 'esforço', 'tipo', 'estado'], exertionRows),
+    '',
     '## Caminhadas',
+    '',
+    '> As caminhadas são apresentadas separadamente e não entram na aderência de força.',
     '',
     ...table(
       [
         'data',
+        'horário planejado',
         'estado',
         'distância planejada',
         'distância realizada',
         'duração',
-        'origem',
+        'esforço percebido',
         'observações',
       ],
       walkRows,
     ),
     '',
-    '## Peso e cintura',
+    '## Peso e medidas',
     '',
     `- Peso: ${trend(measurements, 'weightKg', 'kg')}`,
     `- Cintura: ${trend(measurements, 'waistCm', 'cm')}`,
+    `- Barriga: ${trend(measurements, 'abdomenCm', 'cm')}`,
+    '',
+    '> Cintura e barriga são medidas distintas e nunca são somadas ou substituídas uma pela outra. Pequenas oscilações não são interpretadas como ganho ou perda real.',
     '',
     ...table(
-      ['data', 'peso', 'cintura', 'outras medidas', 'observações'],
+      ['data', 'horário', 'jejum', 'peso', 'cintura', 'barriga', 'outras medidas', 'observações'],
       measurements.map((measurement) => [
         date(measurement.localDate) ?? NOT_RECORDED,
+        clock(
+          typeof measurement.measuredAt === 'string'
+            ? measurement.measuredAt.slice(11, 16)
+            : undefined,
+        ),
+        boolText(measurement.fasting),
         value(measurement.weightKg, 'kg'),
         value(measurement.waistCm, 'cm'),
+        value(measurement.abdomenCm, 'cm'),
         Array.isArray(measurement.additionalMeasurements) &&
         measurement.additionalMeasurements.length
           ? (measurement.additionalMeasurements as Row[])
@@ -445,71 +766,138 @@ export function buildEvolutionReport(data: DataExport): string {
       ]),
     ),
     '',
-    '## Dor muscular',
+    '## Registros explícitos sem dor',
     '',
-    '> Dor muscular é apresentada somente a partir de relatos cujo tipo registrado é `muscular`.',
+    '> Somente sessões em que o usuário respondeu explicitamente “não” à pergunta de recuperação. Ausência de registro nunca é tratada como ausência de dor.',
+    '',
+    `- Treinos com resposta explícita "sem dor": ${explicitNoPain.length}`,
+    `- Treinos com desconforto relatado: ${reportedPain.length}`,
+    `- Treinos sem resposta registrada: ${unanswered.length}`,
     '',
     ...table(
-      ['data', 'região', 'intensidade', 'momento', 'interrompeu exercício', 'observações'],
-      painTable(muscular),
+      ['data', 'sessão', 'tipo', 'estado'],
+      explicitNoPain.map((session) => [
+        date(session.plannedLocalDate) ?? NOT_RECORDED,
+        session.templateNameSnapshot,
+        label(ACTIVITY_LABELS, session.type),
+        label(SESSION_STATUS_LABELS, session.status),
+      ]),
     ),
+    '',
+    '## Dor muscular',
+    '',
+    '> Apresentada somente a partir de relatos cujo tipo registrado é `muscular`.',
+    '',
+    ...table(painHeaders, painTable(muscular)),
     '',
     '## Dor articular',
     '',
-    '> Dor articular é apresentada somente a partir de relatos cujo tipo registrado é `joint`; ela não é combinada com dor muscular.',
+    '> Apresentada somente a partir de relatos cujo tipo registrado é `joint`; nunca combinada com dor muscular.',
+    '',
+    ...table(painHeaders, painTable(joint)),
+    '',
+    ...(attentionRows.length > 0
+      ? [`> ${RECOVERY_ATTENTION_NOTICE}`, '']
+      : ['> Nenhum registro sinalizado como merecedor de atenção.', '']),
+    '## Outros desconfortos',
+    '',
+    ...table(painHeaders, painTable(otherDiscomfort)),
+    '',
+    '## Café',
+    '',
+    '> Estados registrados: “Não consumi”, “Sem açúcar” e “Com açúcar”. Café sem açúcar nunca é contado como ausência de consumo, e um dia sem linha significa ausência de registro.',
+    '',
+    `- Dias sem açúcar: ${coffeeCounts.without_sugar}`,
+    `- Dias com açúcar: ${coffeeCounts.with_sugar}`,
+    `- Dias sem consumo: ${coffeeCounts.not_consumed}`,
+    `- Dias sem registro de café no período: ${Math.max(0, evaluatedDays - coffeeInPeriod.length)}`,
+    '',
+    ...table(['data', 'estado', 'observações'], coffeeRows),
+    '',
+    '## Whey',
+    '',
+    '> Registro descritivo de consumo e tolerância. Nenhuma recomendação é derivada destes dados.',
     '',
     ...table(
-      ['data', 'região', 'intensidade', 'momento', 'interrompeu exercício', 'observações'],
-      painTable(joint),
+      [
+        'data',
+        'horário',
+        'consumiu',
+        'pó',
+        'porções',
+        'proteína por porção',
+        'líquido',
+        'misturado com',
+        'marca',
+        'produto',
+        'momento',
+        'tolerância',
+        'observações',
+      ],
+      wheyRows,
     ),
-    '',
-    '## Esforço percebido',
-    '',
-    '> Fonte: hábitos criados pelo usuário com nome “RPE”, “esforço percebido” ou “percepção de esforço”.',
-    '',
-    ...table(['data', 'campo', 'valor', 'unidade', 'observações'], effortRows),
     '',
     '## Alimentação e hábitos',
     '',
-    ...table(['data', 'hábito', 'valor', 'unidade', 'observações'], generalHabitRows),
+    ...table(['data', 'hábito', 'valor', 'unidade', 'observações'], habitRows),
     '',
-    '## Consumo e tolerância ao whey',
+    '## Progressão',
     '',
-    '> Fonte: hábitos criados pelo usuário que contêm “whey” no nome. Consumo e tolerância só são diferenciados quando os próprios nomes registrados fazem essa distinção.',
-    '',
-    '### Consumo',
-    '',
-    ...table(['data', 'campo', 'valor', 'unidade', 'observações'], wheyConsumptionRows),
-    '',
-    '### Tolerância',
-    '',
-    ...table(['data', 'campo', 'valor', 'unidade', 'observações'], wheyToleranceRows),
-    '',
-    '## Progressão de flexões e agachamentos',
-    '',
-    '> Totais abaixo somam as repetições realizadas por data para exercícios cujo nome registrado contém “flexão” ou “agachamento”.',
+    '> Totais somam as repetições realizadas por data para exercícios cujo nome registrado contém “flexão” ou “agachamento”.',
     '',
     ...table(['data', 'exercício', 'repetições realizadas'], progressionRows),
+    '',
+    '## Níveis',
+    '',
+    '> Gamificação leve baseada em consistência e registro. Treinar com dor, esforço máximo ou volume excessivo não concede nível.',
+    '',
+    `- Nível atual: ${levels.current.name}`,
+    `- Alcançado em: ${levels.current.achievedAt ?? NOT_RECORDED}`,
+    `- Próximo nível: ${levels.next?.name ?? 'nível máximo alcançado'}`,
+    `- Progresso até o próximo nível: ${levels.next ? `${levels.progressToNext}%` : '100%'}`,
+    '',
+    ...table(
+      ['nível', 'alcançado em', 'critérios atingidos', 'critérios restantes'],
+      levels.levels.map((level) => [
+        level.name,
+        level.achievedAt ?? NOT_RECORDED,
+        level.criteria
+          .filter((criterion) => criterion.achieved)
+          .map((criterion) => `${criterion.label} ${criterion.value}/${criterion.target}`)
+          .join('; ') || NOT_RECORDED,
+        level.criteria
+          .filter((criterion) => !criterion.achieved)
+          .map((criterion) => `${criterion.label} ${criterion.value}/${criterion.target}`)
+          .join('; ') || 'nenhum',
+      ]),
+    ),
+    '',
+    '## Fotos de evolução',
+    '',
+    '> Apenas metadados. As imagens permanecem privadas e não possuem endereço público ou assinado.',
+    '',
+    ...table(['data', 'pose', 'tamanho', 'formato', 'dimensões', 'observações'], photoRows),
     '',
     '## Resumo automático',
     '',
     ...summary.map((item) => `- ${item}`),
     '',
-    '## Alertas de padrões recorrentes',
+    '## Dados ausentes prioritários',
     '',
-    ...(alerts.length
-      ? alerts.map((alert) => `- ${alert}`)
-      : ['Nenhum padrão recorrente identificado nos dados registrados.']),
+    ...(missing.length > 0
+      ? missing.map((item) => `- ${item}`)
+      : ['- Nenhum dado prioritário está ausente.']),
     '',
     '## Perguntas para revisão externa',
     '',
-    '1. A aderência e o histórico de séries indicam que o volume atual está adequado, excessivo ou insuficiente?',
+    '1. A aderência de força e o histórico de séries indicam que o volume atual está adequado, excessivo ou insuficiente?',
     '2. A progressão registrada de flexões e agachamentos justifica alterar séries, repetições ou dificuldade?',
-    '3. Os registros de dor muscular sugerem necessidade de ajuste de volume ou recuperação?',
-    '4. Os registros de dor articular exigem interromper ou substituir algum exercício e buscar avaliação profissional?',
-    '5. Caminhadas, peso, cintura, alimentação e hábitos mostram tendências coerentes com o objetivo de treino?',
-    '6. Quais dados ainda “não registrados” seriam prioritários para uma próxima avaliação?',
-    '7. O consumo e a tolerância ao whey registrados sugerem manter, ajustar ou discutir o uso com profissional habilitado?',
+    '3. O esforço percebido médio é coerente com o volume e a frequência registrados?',
+    '4. Os registros de dor muscular sugerem necessidade de ajuste de volume ou recuperação?',
+    '5. Os registros de dor articular, inchaço ou dificuldade para apoiar exigem avaliação profissional?',
+    '6. Caminhadas, peso, cintura e barriga mostram tendências coerentes com o objetivo declarado?',
+    '7. O estado do café e o consumo de whey registrados sugerem manter ou discutir ajustes com profissional habilitado?',
+    '8. Quais dos dados ausentes prioritários seriam mais úteis em uma próxima avaliação?',
     '',
   ];
   return report.join('\n');

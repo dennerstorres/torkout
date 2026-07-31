@@ -4,6 +4,9 @@ import type {
   DataExportRequest,
   HistoryPage,
   ProgressAnalyticsResponse,
+  ProgressPanelResponse,
+  ProgressPhoto,
+  ProgressPhotoList,
 } from '@torkout/contracts';
 
 export interface SessionView {
@@ -66,6 +69,11 @@ export interface AppApi {
   loadDaily(localDate: string): Promise<DailyBootstrap>;
   loadHistoryPage(from: string, through: string, cursor?: string): Promise<HistoryPage>;
   loadProgressAnalytics(from: string, through: string): Promise<ProgressAnalyticsResponse>;
+  loadProgressPanel(from: string, through: string): Promise<ProgressPanelResponse>;
+  listProgressPhotos(): Promise<ProgressPhotoList>;
+  uploadProgressPhoto(input: Record<string, unknown>): Promise<ProgressPhoto>;
+  deleteProgressPhoto(id: string): Promise<void>;
+  progressPhotoUrl(id: string): string;
   requestPasswordReset(email: string): Promise<void>;
   decideProgression(
     suggestionId: string,
@@ -169,6 +177,17 @@ export const browserApi: AppApi = {
     const query = new URLSearchParams({ from, through });
     return productRequest(`/progress?${query.toString()}`);
   },
+  loadProgressPanel: (from, through) => {
+    const query = new URLSearchParams({ from, through });
+    return productRequest(`/progress/panel?${query.toString()}`);
+  },
+  listProgressPhotos: () => productRequest('/progress-photos'),
+  uploadProgressPhoto: (input) =>
+    productRequest('/progress-photos', { body: JSON.stringify(input), method: 'POST' }),
+  deleteProgressPhoto: (id) =>
+    productRequest(`/progress-photos/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  // Rota autenticada; o navegador envia o cookie de sessão e nada é publicado externamente.
+  progressPhotoUrl: (id) => `/api/v1/progress-photos/${encodeURIComponent(id)}/content`,
   async listSessions() {
     const result = await authClient.listSessions();
     assertAuthResult(result);

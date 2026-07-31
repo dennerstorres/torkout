@@ -8,7 +8,7 @@ import type { LocalConflict, OutboxEntry } from '../sync/local-database';
 import { BrandMark } from './BrandMark';
 
 export type AuthenticatedView =
-  'account' | 'analytics' | 'history' | 'planning' | 'progression' | 'today';
+  'account' | 'analytics' | 'history' | 'photos' | 'planning' | 'progression' | 'today';
 
 const destinations: Array<{ icon: IconName; label: string; view: AuthenticatedView }> = [
   { icon: 'home', label: 'Hoje', view: 'today' },

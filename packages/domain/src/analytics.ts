@@ -16,7 +16,7 @@ export interface AnalyticsPainInput {
   createdAt?: string;
   intensity: 'light' | 'moderate' | 'not_informed' | 'strong';
   localDate: string;
-  type: 'joint' | 'muscular';
+  type: 'joint' | 'muscular' | 'other';
 }
 
 export interface AnalyticsSetInput {

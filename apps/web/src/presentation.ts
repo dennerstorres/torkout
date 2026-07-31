@@ -34,6 +34,101 @@ export function sessionStatusLabel(value: string): string {
   );
 }
 
+export function coffeeStatusLabel(value: string): string {
+  return (
+    {
+      not_consumed: 'Não consumi',
+      with_sugar: 'Com açúcar',
+      without_sugar: 'Sem açúcar',
+    }[value] ?? 'Não registrado'
+  );
+}
+
+export function wheyMixLabel(value: string): string {
+  return (
+    {
+      other: 'Outro',
+      semi_skimmed_milk: 'Leite semidesnatado',
+      skimmed_milk: 'Leite desnatado',
+      water: 'Água',
+      whole_milk: 'Leite integral',
+    }[value] ?? 'Não informado'
+  );
+}
+
+export function wheyMomentLabel(value: string): string {
+  return (
+    {
+      morning: 'Manhã',
+      night: 'Noite',
+      other: 'Outro',
+      post_workout: 'Depois do treino',
+      pre_workout: 'Antes do treino',
+    }[value] ?? 'Não informado'
+  );
+}
+
+export function wheyToleranceLabel(value: string): string {
+  return (
+    {
+      bloating: 'Estufamento',
+      cramp: 'Cólica',
+      diarrhea: 'Diarreia',
+      gas: 'Gases',
+      nausea: 'Náusea',
+      none: 'Sem desconforto',
+      other: 'Outro',
+    }[value] ?? 'Outro'
+  );
+}
+
+export function discomfortTypeLabel(value: string): string {
+  return (
+    {
+      joint: 'Dor articular',
+      muscular: 'Dor muscular',
+      other: 'Outro desconforto',
+    }[value] ?? 'Outro desconforto'
+  );
+}
+
+export function bodyRegionLabel(value: string): string {
+  return (
+    {
+      abdomen: 'Abdômen',
+      ankle: 'Tornozelo',
+      arm: 'Braço',
+      back: 'Costas',
+      chest: 'Peito',
+      elbow: 'Cotovelo',
+      foot: 'Pé',
+      hand: 'Mão',
+      hip: 'Quadril',
+      knee: 'Joelho',
+      leg: 'Perna',
+      neck: 'Pescoço',
+      other: 'Outra região',
+      shoulder: 'Ombro',
+      thigh: 'Coxa',
+      wrist: 'Punho',
+    }[value] ?? 'Outra região'
+  );
+}
+
+/** Escala de esforço percebido usada no fechamento do treino. */
+export function perceivedExertionLabel(value: number): string {
+  if (value <= 0) return 'Nenhum esforço';
+  if (value <= 3) return 'Leve';
+  if (value <= 6) return 'Moderado';
+  if (value <= 8) return 'Difícil';
+  if (value === 9) return 'Muito difícil';
+  return 'Esforço máximo';
+}
+
+export function photoPoseLabel(value: string): string {
+  return { back: 'Costas', front: 'Frente', side: 'Lado' }[value] ?? 'Outra pose';
+}
+
 export function syncStateMessage(value: SyncState): string {
   return {
     'auth-required':
@@ -51,9 +146,11 @@ export function syncEntityLabel(value: string): string {
   return (
     {
       body_measurement: 'Medição corporal',
+      coffee_intake: 'Registro de café',
       habit_definition: 'Hábito',
       habit_entry: 'Registro de hábito',
       pain_report: 'Registro de desconforto',
+      whey_intake: 'Registro de whey',
       workout_session: 'Sessão de treino',
     }[value] ?? 'Registro'
   );

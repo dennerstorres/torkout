@@ -32,13 +32,22 @@ export const pendingExportChangeSchema = z
     path: ['payload'],
   });
 
-export const dataExportRequestSchema = z.strictObject({
-  format: z.enum(['json', 'csv_zip', 'markdown']),
-  pendingChanges: z.array(pendingExportChangeSchema).max(5_000).default([]),
-});
+export const dataExportRequestSchema = z
+  .strictObject({
+    format: z.enum(['json', 'csv_zip', 'markdown']),
+    /** Período solicitado pelo usuário; o relatório informa também o período efetivamente avaliado. */
+    from: z.iso.date().optional(),
+    pendingChanges: z.array(pendingExportChangeSchema).max(5_000).default([]),
+    through: z.iso.date().optional(),
+  })
+  .refine(
+    (request) => !request.from || !request.through || request.through >= request.from,
+    'A data final não pode anteceder a inicial.',
+  );
 
 export const dataExportEntityNames = [
   'bodyMeasurements',
+  'coffeeIntakes',
   'exercises',
   'exerciseSets',
   'habitDefinitions',
@@ -46,6 +55,7 @@ export const dataExportEntityNames = [
   'habitOptions',
   'painReports',
   'privacyAcceptances',
+  'progressPhotos',
   'progressionDecisions',
   'progressionEvaluations',
   'progressionRuleVersions',
@@ -55,6 +65,7 @@ export const dataExportEntityNames = [
   'trainingPlans',
   'userProfiles',
   'walkingDetails',
+  'wheyIntakes',
   'workoutSessions',
   'workoutTemplateExercises',
   'workoutTemplates',
@@ -78,6 +89,10 @@ export const dataExportSchema = z.strictObject({
   exportedAt: z.iso.datetime({ offset: true }),
   formatVersion: z.literal(DATA_EXPORT_FORMAT_VERSION),
   pendingChanges: z.array(pendingExportChangeSchema),
+  requestedRange: z
+    .strictObject({ from: z.iso.date(), through: z.iso.date() })
+    .nullable()
+    .optional(),
   timeZone: z.string().min(1),
   units: z.strictObject({
     distance: z.literal('meter'),

@@ -6,6 +6,7 @@ import {
 } from '@torkout/contracts';
 import {
   bodyMeasurements,
+  coffeeIntakes,
   exerciseSets,
   exercises,
   habitDefinitions,
@@ -14,6 +15,7 @@ import {
   painReports,
   privacyAcceptances,
   privacyDocuments,
+  progressPhotos,
   progressionDecisions,
   progressionEvaluations,
   progressionRuleVersions,
@@ -24,6 +26,7 @@ import {
   userProfiles,
   users,
   walkingDetails,
+  wheyIntakes,
   workoutSessions,
   workoutTemplateExercises,
   workoutTemplates,
@@ -59,6 +62,7 @@ async function loadExport(
   userId: string,
   pendingChanges: DataExport['pendingChanges'],
   now = new Date(),
+  requestedRange: { from: string; through: string } | null = null,
 ): Promise<DataExport> {
   const [account] = await database
     .select({
@@ -91,6 +95,9 @@ async function loadExport(
     habitOptionRows,
     habitEntryRows,
     measurementRows,
+    coffeeRows,
+    wheyRows,
+    photoRows,
     acceptanceRows,
     evaluationRows,
     suggestionRows,
@@ -118,6 +125,28 @@ async function loadExport(
     database.select().from(habitOptions).where(eq(habitOptions.userId, userId)),
     database.select().from(habitEntries).where(eq(habitEntries.userId, userId)),
     database.select().from(bodyMeasurements).where(eq(bodyMeasurements.userId, userId)),
+    database.select().from(coffeeIntakes).where(eq(coffeeIntakes.userId, userId)),
+    database.select().from(wheyIntakes).where(eq(wheyIntakes.userId, userId)),
+    database
+      .select({
+        byteSize: progressPhotos.byteSize,
+        capturedAt: progressPhotos.capturedAt,
+        contentType: progressPhotos.contentType,
+        createdAt: progressPhotos.createdAt,
+        deletedAt: progressPhotos.deletedAt,
+        heightPx: progressPhotos.heightPx,
+        id: progressPhotos.id,
+        localDate: progressPhotos.localDate,
+        measurementId: progressPhotos.measurementId,
+        notes: progressPhotos.notes,
+        pose: progressPhotos.pose,
+        updatedAt: progressPhotos.updatedAt,
+        userId: progressPhotos.userId,
+        version: progressPhotos.version,
+        widthPx: progressPhotos.widthPx,
+      })
+      .from(progressPhotos)
+      .where(eq(progressPhotos.userId, userId)),
     database
       .select({
         acceptedAt: privacyAcceptances.acceptedAt,
@@ -167,6 +196,7 @@ async function loadExport(
     account: jsonValue(account),
     entities: {
       bodyMeasurements: rows(measurementRows),
+      coffeeIntakes: rows(coffeeRows),
       exercises: rows(exerciseRows),
       exerciseSets: rows(setRows),
       habitDefinitions: rows(habitDefinitionRows),
@@ -174,6 +204,7 @@ async function loadExport(
       habitOptions: rows(habitOptionRows),
       painReports: rows(painRows),
       privacyAcceptances: rows(acceptanceRows),
+      progressPhotos: rows(photoRows),
       progressionDecisions: rows(decisionRows),
       progressionEvaluations: rows(evaluationRows),
       progressionRuleVersions: rows(ruleRows),
@@ -183,6 +214,7 @@ async function loadExport(
       trainingPlans: rows(planRows),
       userProfiles: rows(profileRows),
       walkingDetails: rows(walkingRows),
+      wheyIntakes: rows(wheyRows),
       workoutSessions: rows(sessionRows),
       workoutTemplateExercises: rows(templateExerciseRows),
       workoutTemplates: rows(templateRows),
@@ -191,6 +223,7 @@ async function loadExport(
     exportedAt: now.toISOString(),
     formatVersion: DATA_EXPORT_FORMAT_VERSION,
     pendingChanges,
+    requestedRange,
     timeZone: profileRows[0]?.timeZone ?? 'America/Cuiaba',
     units: {
       distance: 'meter',
@@ -217,6 +250,9 @@ export function registerPortabilityRoutes(
       user.id,
       parsed.data.pendingChanges,
       generatedAt,
+      parsed.data.from && parsed.data.through
+        ? { from: parsed.data.from, through: parsed.data.through }
+        : null,
     );
     const date = generatedAt.toISOString().slice(0, 10);
     if (parsed.data.format === 'json') {

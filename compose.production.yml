@@ -34,6 +34,7 @@ services:
       HOST: 0.0.0.0
       LOG_LEVEL: ${LOG_LEVEL:-info}
       NODE_ENV: production
+      OBJECT_STORAGE_DIR: /var/lib/torkout/object-storage
       PORT: 3000
       SMTP_FROM: ${SMTP_FROM:?configure a verified sender}
       SMTP_HOST: ${SMTP_HOST:?configure SMTP}
@@ -44,6 +45,9 @@ services:
       TRUSTED_ORIGINS: ${TRUSTED_ORIGINS:?configure the public HTTPS origin}
       TRUST_PROXY: ${TRUST_PROXY:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
     expose: ['3000']
+    volumes:
+      # Fotos de evolução ficam em volume persistente; nunca no PostgreSQL.
+      - object-storage:/var/lib/torkout/object-storage
     healthcheck:
       test: [CMD, wget, -q, -O, '-', 'http://127.0.0.1:3000/health/ready']
       interval: 15s
@@ -127,4 +131,5 @@ services:
       PGUSER: ${POSTGRES_USER:-torkout_owner}
 
 volumes:
+  object-storage:
   postgres-data:

@@ -1,14 +1,20 @@
-import { progressAnalyticsResponseSchema, progressQuerySchema } from '@torkout/contracts';
+import {
+  progressAnalyticsResponseSchema,
+  progressPanelResponseSchema,
+  progressQuerySchema,
+} from '@torkout/contracts';
 import {
   bodyMeasurements,
   exerciseSets,
   painReports,
+  scheduleRules,
   sessionExercises,
+  userProfiles,
   walkingDetails,
   workoutSessions,
   type DatabaseClient,
 } from '@torkout/database';
-import { calculateProgressAnalytics } from '@torkout/domain';
+import { calculateProgressAnalytics, summarizeProgressPanel } from '@torkout/domain';
 import { and, asc, eq, gte, inArray, isNull, lte } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 
@@ -158,7 +164,163 @@ async function loadAnalytics(
   });
 }
 
+async function loadProgressPanel(
+  database: DatabaseClient,
+  userId: string,
+  range: { from: string; through: string },
+  now: Date,
+) {
+  const [profile] = await database
+    .select({ timeZone: userProfiles.timeZone })
+    .from(userProfiles)
+    .where(eq(userProfiles.userId, userId))
+    .limit(1);
+  const timeZone = profile?.timeZone ?? 'America/Cuiaba';
+
+  const [sessionRows, measurementRows, painRows, ruleRows] = await Promise.all([
+    database
+      .select()
+      .from(workoutSessions)
+      .where(
+        and(
+          eq(workoutSessions.userId, userId),
+          gte(workoutSessions.plannedLocalDate, range.from),
+          lte(workoutSessions.plannedLocalDate, range.through),
+          isNull(workoutSessions.deletedAt),
+        ),
+      )
+      .orderBy(asc(workoutSessions.plannedLocalDate)),
+    database
+      .select()
+      .from(bodyMeasurements)
+      .where(
+        and(
+          eq(bodyMeasurements.userId, userId),
+          gte(bodyMeasurements.localDate, range.from),
+          lte(bodyMeasurements.localDate, range.through),
+          isNull(bodyMeasurements.deletedAt),
+        ),
+      )
+      .orderBy(asc(bodyMeasurements.measuredAt)),
+    database
+      .select()
+      .from(painReports)
+      .where(
+        and(
+          eq(painReports.userId, userId),
+          gte(painReports.localDate, range.from),
+          lte(painReports.localDate, range.through),
+          isNull(painReports.deletedAt),
+        ),
+      ),
+    database
+      .select({ id: scheduleRules.id, localTime: scheduleRules.localTime })
+      .from(scheduleRules)
+      .where(and(eq(scheduleRules.userId, userId), isNull(scheduleRules.deletedAt))),
+  ]);
+
+  const sessionIds = sessionRows.map((session) => session.id);
+  const exerciseRows =
+    sessionIds.length === 0
+      ? []
+      : await database
+          .select()
+          .from(sessionExercises)
+          .where(
+            and(
+              eq(sessionExercises.userId, userId),
+              inArray(sessionExercises.sessionId, sessionIds),
+              isNull(sessionExercises.deletedAt),
+            ),
+          )
+          .orderBy(asc(sessionExercises.sortOrder));
+  const exerciseIds = exerciseRows.map((exercise) => exercise.id);
+  const [setRows, walkingRows] = await Promise.all([
+    exerciseIds.length === 0
+      ? Promise.resolve([])
+      : database
+          .select()
+          .from(exerciseSets)
+          .where(
+            and(
+              eq(exerciseSets.userId, userId),
+              inArray(exerciseSets.sessionExerciseId, exerciseIds),
+              isNull(exerciseSets.deletedAt),
+            ),
+          )
+          .orderBy(asc(exerciseSets.setNumber)),
+    sessionIds.length === 0
+      ? Promise.resolve([])
+      : database
+          .select()
+          .from(walkingDetails)
+          .where(
+            and(
+              eq(walkingDetails.userId, userId),
+              inArray(walkingDetails.sessionId, sessionIds),
+              isNull(walkingDetails.deletedAt),
+            ),
+          ),
+  ]);
+  const exercisesBySession = groupBy(exerciseRows, (exercise) => exercise.sessionId);
+  const setsByExercise = groupBy(setRows, (set) => set.sessionExerciseId);
+  const walkingBySession = new Map(walkingRows.map((walking) => [walking.sessionId, walking]));
+  const timeByRule = new Map(ruleRows.map((rule) => [rule.id, rule.localTime]));
+
+  return summarizeProgressPanel({
+    from: range.from,
+    measurements: measurementRows.map((measurement) => ({
+      abdomenCm: measurement.abdomenCm === null ? null : Number(measurement.abdomenCm),
+      localDate: measurement.localDate,
+      waistCm: measurement.waistCm === null ? null : Number(measurement.waistCm),
+      weightKg: measurement.weightKg === null ? null : Number(measurement.weightKg),
+    })),
+    now: now.toISOString(),
+    painReports: painRows.map((report) => ({ localDate: report.localDate, type: report.type })),
+    sessions: sessionRows.map((session) => {
+      const walking = walkingBySession.get(session.id);
+      return {
+        exercises: (exercisesBySession.get(session.id) ?? []).map((exercise) => ({
+          metric: exercise.trackingMetricSnapshot,
+          name: exercise.exerciseNameSnapshot,
+          sets: (setsByExercise.get(exercise.id) ?? []).map((set) =>
+            exercise.trackingMetricSnapshot === 'repetitions'
+              ? (set.actualRepetitions ?? 0)
+              : exercise.trackingMetricSnapshot === 'duration'
+                ? (set.actualDurationSeconds ?? 0)
+                : Number(set.actualDistanceMeters ?? 0),
+          ),
+          status: exercise.status,
+        })),
+        localDate: session.plannedLocalDate,
+        perceivedExertion: session.perceivedExertion,
+        plannedLocalTime:
+          session.suggestedLocalTime ??
+          (session.scheduleRuleId ? (timeByRule.get(session.scheduleRuleId) ?? null) : null),
+        recoveryStatus: session.recoveryStatus,
+        status: session.status,
+        type: session.type,
+        walkDistanceMeters:
+          walking?.actualDistanceMeters == null ? null : Number(walking.actualDistanceMeters),
+        walkDurationSeconds: walking?.durationSeconds ?? null,
+      };
+    }),
+    through: range.through,
+    timeZone,
+  });
+}
+
 export function registerAnalyticsRoutes(app: FastifyInstance, dependencies: ApiDependencies): void {
+  app.get('/api/v1/progress/panel', async (request) => {
+    const user = await requireAuthenticatedUser(request, dependencies);
+    const parsed = progressQuerySchema.safeParse(request.query);
+    if (!parsed.success) {
+      throw new ApiHttpError(400, 'VALIDATION_ERROR', 'Intervalo de progresso inválido.');
+    }
+    const panel = await loadProgressPanel(dependencies.database, user.id, parsed.data, new Date());
+    return progressPanelResponseSchema.parse({ ...panel, range: parsed.data });
+  });
+
   app.get('/api/v1/progress', async (request) => {
     const user = await requireAuthenticatedUser(request, dependencies);
     const parsed = progressQuerySchema.safeParse(request.query);

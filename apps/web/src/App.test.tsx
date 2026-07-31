@@ -48,6 +48,15 @@ function createApi(overrides: Record<string, unknown> = {}) {
       sessions: { completed: 0, partial: 0 },
       walks: { distanceMeters: 0, frequencyPerWeek: 0, sessions: 0 },
     })),
+    loadProgressPanel: vi.fn(async () => {
+      throw new Error('PANEL_UNAVAILABLE');
+    }),
+    listProgressPhotos: vi.fn(async () => ({ guidance: [], items: [] })),
+    uploadProgressPhoto: vi.fn(async () => {
+      throw new Error('UPLOAD_UNAVAILABLE');
+    }),
+    deleteProgressPhoto: vi.fn(async () => undefined),
+    progressPhotoUrl: (id: string) => `/api/v1/progress-photos/${id}/content`,
     requestPasswordReset: vi.fn(async () => undefined),
     decideProgression: vi.fn(async () => ({
       decision: 'accepted',

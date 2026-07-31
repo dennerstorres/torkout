@@ -2,6 +2,7 @@ import { dataExportEntityNames, type DataExport } from '@torkout/contracts';
 
 const CSV_NAMES: Record<(typeof dataExportEntityNames)[number], string> = {
   bodyMeasurements: 'body_measurements.csv',
+  coffeeIntakes: 'coffee_intakes.csv',
   exercises: 'exercises.csv',
   exerciseSets: 'exercise_sets.csv',
   habitDefinitions: 'habit_definitions.csv',
@@ -9,6 +10,7 @@ const CSV_NAMES: Record<(typeof dataExportEntityNames)[number], string> = {
   habitOptions: 'habit_options.csv',
   painReports: 'pain_reports.csv',
   privacyAcceptances: 'privacy_acceptances.csv',
+  progressPhotos: 'progress_photos.csv',
   progressionDecisions: 'progression_decisions.csv',
   progressionEvaluations: 'progression_evaluations.csv',
   progressionRuleVersions: 'progression_rule_versions.csv',
@@ -18,6 +20,7 @@ const CSV_NAMES: Record<(typeof dataExportEntityNames)[number], string> = {
   trainingPlans: 'training_plans.csv',
   userProfiles: 'user_profiles.csv',
   walkingDetails: 'walking_details.csv',
+  wheyIntakes: 'whey_intakes.csv',
   workoutSessions: 'workout_sessions.csv',
   workoutTemplateExercises: 'workout_template_exercises.csv',
   workoutTemplates: 'workout_templates.csv',

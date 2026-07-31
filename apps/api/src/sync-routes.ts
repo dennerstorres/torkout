@@ -8,6 +8,7 @@ import {
 import {
   bodyMeasurements,
   changeLog,
+  coffeeIntakes,
   exerciseSets,
   exercises,
   habitDefinitions,
@@ -19,6 +20,7 @@ import {
   registeredDevices,
   syncOperations,
   trainingPlans,
+  wheyIntakes,
   workoutSessions,
   workoutTemplateExercises,
   workoutTemplates,
@@ -31,9 +33,12 @@ import { z } from 'zod';
 
 import { ApiHttpError, type ApiDependencies, requireAuthenticatedUser } from './auth-routes.js';
 import {
+  coffeeView,
   insertHabitDefinition,
   loadHabitDefinition,
   reconcileHabitOptions,
+  wheyValues,
+  wheyView,
 } from './daily-routes.js';
 import {
   applySessionExecution,
@@ -47,6 +52,8 @@ import { evaluateProgressionForSession } from './progression-service.js';
 
 type SyncTransaction = Parameters<Parameters<DatabaseClient['transaction']>[0]>[0];
 type MeasurementRow = typeof bodyMeasurements.$inferSelect;
+type CoffeeRow = typeof coffeeIntakes.$inferSelect;
+type WheyRow = typeof wheyIntakes.$inferSelect;
 type SyncRecord = NonNullable<SyncPushResult['record']>;
 
 const pullQuerySchema = z.strictObject({
@@ -63,13 +70,240 @@ function serializeMeasurement(row: MeasurementRow, tombstoneOnly = false): SyncR
   if (tombstoneOnly) return identity;
   return {
     ...identity,
+    abdomenCm: row.abdomenCm === null ? null : Number(row.abdomenCm),
     additionalMeasurements: row.additionalMeasurements,
+    fasting: row.fasting,
     localDate: row.localDate,
     measuredAt: row.measuredAt.toISOString(),
     notes: row.notes,
     waistCm: row.waistCm === null ? null : Number(row.waistCm),
     weightKg: row.weightKg === null ? null : Number(row.weightKg),
   };
+}
+
+function tombstone(row: { deletedAt: Date | null; id: string; version: number }): SyncRecord {
+  return { deletedAt: row.deletedAt?.toISOString() ?? null, id: row.id, version: row.version };
+}
+
+function serializeCoffee(row: CoffeeRow, tombstoneOnly = false): SyncRecord {
+  if (tombstoneOnly) return tombstone(row);
+  return { ...tombstone(row), ...coffeeView(row) };
+}
+
+function serializeWhey(row: WheyRow, tombstoneOnly = false): SyncRecord {
+  if (tombstoneOnly) return tombstone(row);
+  return { ...tombstone(row), ...wheyView(row) };
+}
+
+/**
+ * Café e whey compartilham o mesmo ciclo simples de sincronização: criar, atualizar campos
+ * validados pelo contrato e marcar tombstone, sempre limitados ao usuário autenticado.
+ */
+async function applyCoffeeOperation(
+  transaction: SyncTransaction,
+  userId: string,
+  operation: SyncOperation,
+): Promise<SyncPushResult> {
+  if (operation.entityType !== 'coffee_intake') {
+    return {
+      errorCode: 'invalid_entity_handler',
+      operationId: operation.operationId,
+      status: 'rejected',
+    };
+  }
+  const [current] = await transaction
+    .select()
+    .from(coffeeIntakes)
+    .where(and(eq(coffeeIntakes.id, operation.entityId), eq(coffeeIntakes.userId, userId)))
+    .limit(1);
+  if (operation.operation === 'create') {
+    if (current) {
+      return {
+        errorCode: 'entity_already_exists',
+        operationId: operation.operationId,
+        record: serializeCoffee(current),
+        status: 'conflict',
+      };
+    }
+    const [foreign] = await transaction
+      .select({ id: coffeeIntakes.id })
+      .from(coffeeIntakes)
+      .where(eq(coffeeIntakes.id, operation.entityId))
+      .limit(1);
+    if (foreign) return { operationId: operation.operationId, status: 'unauthorized' };
+    const [existingDay] = await transaction
+      .select({ id: coffeeIntakes.id })
+      .from(coffeeIntakes)
+      .where(
+        and(
+          eq(coffeeIntakes.userId, userId),
+          eq(coffeeIntakes.localDate, operation.payload.localDate),
+          isNull(coffeeIntakes.deletedAt),
+        ),
+      )
+      .limit(1);
+    if (existingDay) {
+      return {
+        errorCode: 'coffee_intake_already_exists',
+        operationId: operation.operationId,
+        status: 'rejected',
+      };
+    }
+    const [created] = await transaction
+      .insert(coffeeIntakes)
+      .values({
+        id: operation.entityId,
+        localDate: operation.payload.localDate,
+        notes: operation.payload.notes ?? null,
+        recordedAt: operation.payload.recordedAt ? new Date(operation.payload.recordedAt) : null,
+        status: operation.payload.status,
+        userId,
+      })
+      .returning();
+    if (!created) throw new Error('Coffee intake insert did not return a row.');
+    return {
+      operationId: operation.operationId,
+      record: serializeCoffee(created),
+      status: 'applied',
+    };
+  }
+  if (!current)
+    return {
+      errorCode: 'entity_not_found',
+      operationId: operation.operationId,
+      status: 'rejected',
+    };
+  if (current.version !== operation.baseVersion || current.deletedAt) {
+    return {
+      errorCode: 'version_conflict',
+      operationId: operation.operationId,
+      record: serializeCoffee(current, current.deletedAt !== null),
+      status: 'conflict',
+    };
+  }
+  if (operation.operation === 'delete') {
+    const [deleted] = await transaction
+      .update(coffeeIntakes)
+      .set({ deletedAt: new Date() })
+      .where(and(eq(coffeeIntakes.id, operation.entityId), eq(coffeeIntakes.userId, userId)))
+      .returning();
+    if (!deleted) throw new Error('Coffee intake delete did not return a row.');
+    return {
+      operationId: operation.operationId,
+      record: serializeCoffee(deleted, true),
+      status: 'applied',
+    };
+  }
+  const [updated] = await transaction
+    .update(coffeeIntakes)
+    .set({
+      ...('localDate' in operation.payload ? { localDate: operation.payload.localDate } : {}),
+      ...('notes' in operation.payload ? { notes: operation.payload.notes ?? null } : {}),
+      ...('recordedAt' in operation.payload
+        ? {
+            recordedAt: operation.payload.recordedAt
+              ? new Date(operation.payload.recordedAt)
+              : null,
+          }
+        : {}),
+      ...('status' in operation.payload ? { status: operation.payload.status } : {}),
+    })
+    .where(and(eq(coffeeIntakes.id, operation.entityId), eq(coffeeIntakes.userId, userId)))
+    .returning();
+  if (!updated) throw new Error('Coffee intake update did not return a row.');
+  return {
+    operationId: operation.operationId,
+    record: serializeCoffee(updated),
+    status: 'applied',
+  };
+}
+
+async function applyWheyOperation(
+  transaction: SyncTransaction,
+  userId: string,
+  operation: SyncOperation,
+): Promise<SyncPushResult> {
+  if (operation.entityType !== 'whey_intake') {
+    return {
+      errorCode: 'invalid_entity_handler',
+      operationId: operation.operationId,
+      status: 'rejected',
+    };
+  }
+  const [current] = await transaction
+    .select()
+    .from(wheyIntakes)
+    .where(and(eq(wheyIntakes.id, operation.entityId), eq(wheyIntakes.userId, userId)))
+    .limit(1);
+  if (operation.operation === 'create') {
+    if (current) {
+      return {
+        errorCode: 'entity_already_exists',
+        operationId: operation.operationId,
+        record: serializeWhey(current),
+        status: 'conflict',
+      };
+    }
+    const [foreign] = await transaction
+      .select({ id: wheyIntakes.id })
+      .from(wheyIntakes)
+      .where(eq(wheyIntakes.id, operation.entityId))
+      .limit(1);
+    if (foreign) return { operationId: operation.operationId, status: 'unauthorized' };
+    const { id, ...fields } = operation.payload;
+    void id;
+    const [created] = await transaction
+      .insert(wheyIntakes)
+      .values({
+        ...wheyValues(fields),
+        consumed: fields.consumed,
+        id: operation.entityId,
+        localDate: fields.localDate,
+        tolerance: fields.tolerance,
+        userId,
+      })
+      .returning();
+    if (!created) throw new Error('Whey intake insert did not return a row.');
+    return {
+      operationId: operation.operationId,
+      record: serializeWhey(created),
+      status: 'applied',
+    };
+  }
+  if (!current)
+    return {
+      errorCode: 'entity_not_found',
+      operationId: operation.operationId,
+      status: 'rejected',
+    };
+  if (current.version !== operation.baseVersion || current.deletedAt) {
+    return {
+      errorCode: 'version_conflict',
+      operationId: operation.operationId,
+      record: serializeWhey(current, current.deletedAt !== null),
+      status: 'conflict',
+    };
+  }
+  if (operation.operation === 'delete') {
+    const [deleted] = await transaction
+      .update(wheyIntakes)
+      .set({ deletedAt: new Date() })
+      .where(and(eq(wheyIntakes.id, operation.entityId), eq(wheyIntakes.userId, userId)))
+      .returning();
+    if (!deleted) throw new Error('Whey intake delete did not return a row.');
+    return {
+      operationId: operation.operationId,
+      record: serializeWhey(deleted, true),
+      status: 'applied',
+    };
+  }
+  const [updated] = await transaction
+    .update(wheyIntakes)
+    .set(wheyValues(operation.payload))
+    .where(and(eq(wheyIntakes.id, operation.entityId), eq(wheyIntakes.userId, userId)))
+    .returning();
+  if (!updated) throw new Error('Whey intake update did not return a row.');
+  return { operationId: operation.operationId, record: serializeWhey(updated), status: 'applied' };
 }
 
 function encodeCursor(sequence: number): string {
@@ -181,7 +415,9 @@ async function applyMeasurementOperation(
       .insert(bodyMeasurements)
       .values({
         id: operation.entityId,
+        abdomenCm: operation.payload.abdomenCm?.toString() ?? null,
         additionalMeasurements: operation.payload.additionalMeasurements ?? [],
+        fasting: operation.payload.fasting ?? null,
         localDate: operation.payload.localDate,
         measuredAt: new Date(operation.payload.measuredAt),
         notes: operation.payload.notes ?? null,
@@ -229,6 +465,13 @@ async function applyMeasurementOperation(
   }
 
   const mergedResult = bodyMeasurementCreatePayloadSchema.safeParse({
+    abdomenCm:
+      'abdomenCm' in operation.payload
+        ? operation.payload.abdomenCm
+        : current.abdomenCm === null
+          ? null
+          : Number(current.abdomenCm),
+    fasting: 'fasting' in operation.payload ? operation.payload.fasting : current.fasting,
     additionalMeasurements:
       'additionalMeasurements' in operation.payload
         ? operation.payload.additionalMeasurements
@@ -260,7 +503,9 @@ async function applyMeasurementOperation(
   const [updated] = await transaction
     .update(bodyMeasurements)
     .set({
+      abdomenCm: merged.abdomenCm?.toString() ?? null,
       additionalMeasurements: merged.additionalMeasurements ?? [],
+      fasting: merged.fasting ?? null,
       localDate: merged.localDate,
       measuredAt: new Date(merged.measuredAt),
       notes: merged.notes ?? null,
@@ -1205,11 +1450,13 @@ async function applySessionOperation(
 
 const entityHandlers = {
   body_measurement: applyMeasurementOperation,
+  coffee_intake: applyCoffeeOperation,
   exercise: applyExerciseOperation,
   habit_definition: applyHabitDefinitionOperation,
   habit_entry: applyHabitEntryOperation,
   pain_report: applyPainOperation,
   training_plan: applyPlanOperation,
+  whey_intake: applyWheyOperation,
   workout_session: applySessionOperation,
   workout_template: applyTemplateOperation,
 } satisfies Record<

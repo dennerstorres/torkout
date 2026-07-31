@@ -36,6 +36,8 @@ export const userProfiles = pgTable(
     weekStartsOn: integer('week_starts_on').default(1).notNull(),
     preferredWorkoutTime: time('preferred_workout_time'),
     unitSystem: unitSystemEnum('unit_system').default('metric').notNull(),
+    // Objetivo declarado pelo usuário, em texto livre; usado apenas para contextualizar relatórios.
+    goal: text('goal'),
   },
   (table) => [
     uniqueIndex('user_profiles_user_id_unique').on(table.userId),

@@ -55,3 +55,6 @@ Desktop.ini
 # Docker/Coolify local overrides
 compose.override.yml
 docker-compose.override.yml
+
+# Armazenamento local de objetos (fotos de evolução) no ambiente de desenvolvimento.
+var/

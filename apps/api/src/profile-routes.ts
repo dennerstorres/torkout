@@ -64,6 +64,7 @@ export function registerProfileRoutes(app: FastifyInstance, dependencies: ApiDep
     const [profile] = await dependencies.database
       .select({
         displayName: users.name,
+        goal: userProfiles.goal,
         heightCm: userProfiles.heightCm,
         locale: userProfiles.locale,
         preferredWorkoutTime: userProfiles.preferredWorkoutTime,
@@ -95,6 +96,7 @@ export function registerProfileRoutes(app: FastifyInstance, dependencies: ApiDep
       await transaction
         .insert(userProfiles)
         .values({
+          goal: input.goal ?? null,
           heightCm: input.heightCm?.toString() ?? null,
           locale: input.locale,
           preferredWorkoutTime: input.preferredWorkoutTime ?? null,
@@ -104,6 +106,7 @@ export function registerProfileRoutes(app: FastifyInstance, dependencies: ApiDep
         })
         .onConflictDoUpdate({
           set: {
+            goal: input.goal ?? null,
             heightCm: input.heightCm?.toString() ?? null,
             locale: input.locale,
             preferredWorkoutTime: input.preferredWorkoutTime ?? null,
@@ -177,6 +180,7 @@ export function registerProfileRoutes(app: FastifyInstance, dependencies: ApiDep
 
     return {
       displayName: input.displayName,
+      goal: input.goal ?? null,
       heightCm: input.heightCm ?? null,
       locale: input.locale,
       preferredWorkoutTime: input.preferredWorkoutTime ?? null,

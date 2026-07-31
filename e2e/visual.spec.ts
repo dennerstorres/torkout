@@ -287,8 +287,20 @@ for (const viewport of [
             return { top: box.top, width: box.width };
           }),
         );
-        expect(complementary).toHaveLength(3);
-        expect(new Set(complementary.map((item) => Math.round(item.top))).size).toBe(1);
+        // A grade tem 3 colunas explícitas; a partir da fase 22 são 5 cards
+        // complementares (café, whey, hábitos, dores, medidas), que ocupam duas
+        // linhas. O invariante é a grade explícita, não a contagem de colunas:
+        // cada linha alinha seus cards e nenhum card fica estreito demais.
+        expect(complementary).toHaveLength(5);
+        const rows = new Map<number, number[]>();
+        for (const item of complementary) {
+          const top = Math.round(item.top);
+          rows.set(top, [...(rows.get(top) ?? []), Math.round(item.width)]);
+        }
+        expect(rows.size).toBe(2);
+        for (const widths of rows.values()) {
+          expect(new Set(widths).size).toBe(1);
+        }
         expect(complementary.every((item) => item.width >= 224)).toBe(true);
       }
       if (destination === 'Planejamento') {

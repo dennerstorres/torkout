@@ -19,6 +19,8 @@ export const profileUpdateSchema = z.strictObject({
     .array(z.enum(['coffee', 'rice', 'protein', 'salad']))
     .max(4)
     .default([]),
+  /** Objetivo declarado pelo usuário; texto livre e opcional. */
+  goal: z.string().trim().max(500).nullable().optional(),
   heightCm: z.number().positive().max(300).nullable().optional(),
   initialWaistCm: z.number().positive().max(500).optional(),
   initialWeightKg: z.number().positive().max(1_000).optional(),

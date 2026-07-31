@@ -1312,6 +1312,55 @@ que continua oferecendo iniciar um treino já encerrado e perde a execução ao 
 - Testes afetados, E2E, typecheck, lint, formatação e build verdes.
 - `HISTORY.md` atualizado e fase encerrada em commit próprio.
 
+### Fase 22 — Refinamento de acompanhamento, nutrição e evolução corporal
+
+**Status:** implementação concluída — testes de integração e E2E pendentes de ambiente com Docker;
+confirmação em iPhone físico pendente do titular
+
+**Commit esperado:** `feat(phase-22): refine tracking, nutrition and body evolution`
+
+**Objetivo:** separar consumo de café de uso de açúcar, estruturar o registro de whey, ampliar o
+registro de dor e recuperação, incluir esforço percebido, padronizar medições corporais, entregar
+painel de progressão com níveis, fotos privadas de evolução e corrigir a aderência do relatório para
+não contar sessões futuras.
+
+#### Escopo
+
+- [x] Enum explícito de café (`not_consumed`, `without_sugar`, `with_sugar`) com tabela própria.
+- [x] Registro estruturado de whey com quantidade, líquido, momento, marca, produto e tolerância múltipla.
+- [x] Etapa opcional de recuperação ao concluir o treino, com "sem dor" explícito e detalhes só quando houver dor.
+- [x] Esforço percebido de 0 a 10 na sessão, no painel e no relatório.
+- [x] Orientações de medição, barriga como medida própria, horário e indicador de jejum.
+- [x] Painel de progressão com aderência separada, volume, medidas, caminhadas, esforço e recuperação.
+- [x] Sistema de níveis baseado em consistência, com critérios centralizados e datas de conquista.
+- [x] Fotos de evolução privadas com abstração de storage, compressão local, comparação e exclusão explícita.
+- [x] Aderência que só considera sessões vencidas, com força e caminhada separadas.
+- [x] Relatório `RELATORIO_EVOLUCAO.md` reescrito com período solicitado, período avaliado e dados ausentes.
+
+#### Testes primeiro
+
+- [x] RED de domínio: aderência ignora sessão futura, aplica 1/0,5/0 e separa força de caminhada.
+- [x] RED de domínio: mapeamento de café antigo nunca classifica valor ambíguo como "não consumido".
+- [x] RED de domínio: níveis, métricas de consistência e datas de conquista.
+- [x] RED de domínio: painel de progressão com volume, medidas, caminhadas e recuperação.
+- [x] RED de domínio: sinalização discreta de dor articular intensa, inchaço e dificuldade para apoiar.
+- [x] RED de contrato: café, whey, tolerância múltipla, dor 0–10, RPE e upload de foto.
+- [x] RED de unidade: storage local isolado por usuário e resistente a travessia de caminho.
+- [x] RED de autorização: rotas novas negam requisição anônima por padrão.
+- [x] RED de exportação: período avaliado, aderência sem sessão futura, café real e metadados de foto.
+- [x] RED de componente: café com três estados, whey, recuperação, painel, níveis e fotos.
+- [ ] Integração de fotos com PostgreSQL efêmero (requer Docker).
+- [ ] E2E e verificação geométrica das telas novas (requer navegadores do Playwright).
+
+#### Critérios de saída
+
+- "Café sem açúcar" nunca aparece como ausência de consumo em nenhuma tela ou relatório.
+- Sessão planejada para o futuro nunca entra no denominador de aderência.
+- Ausência de registro de dor nunca é apresentada como resposta explícita de "sem dor".
+- Fotos são acessíveis apenas por rota autenticada do próprio dono, sem URL pública ou assinada.
+- Lint, formatação, typecheck, testes unitários e build verdes.
+- `HISTORY.md` atualizado e fase encerrada em commit próprio.
+
 ## 5. Dependências entre fases
 
 ```text

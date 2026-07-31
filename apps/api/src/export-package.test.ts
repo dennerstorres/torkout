@@ -16,6 +16,7 @@ describe('portable CSV ZIP package', () => {
         },
         entities: {
           bodyMeasurements: [{ id: 'measure-1', notes: 'Cintura, manhã', weightKg: '70.00' }],
+          coffeeIntakes: [],
           exercises: [],
           exerciseSets: [],
           habitDefinitions: [],
@@ -23,6 +24,7 @@ describe('portable CSV ZIP package', () => {
           habitOptions: [],
           painReports: [],
           privacyAcceptances: [],
+          progressPhotos: [],
           progressionDecisions: [],
           progressionEvaluations: [],
           progressionRuleVersions: [],
@@ -32,6 +34,7 @@ describe('portable CSV ZIP package', () => {
           trainingPlans: [],
           userProfiles: [],
           walkingDetails: [],
+          wheyIntakes: [],
           workoutSessions: [],
           workoutTemplateExercises: [],
           workoutTemplates: [],

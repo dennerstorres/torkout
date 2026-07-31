@@ -19,20 +19,30 @@ import {
   painReportUpdateSchema,
   workoutExecutionSchema,
 } from './daily.js';
+import {
+  coffeeIntakeCreateSchema,
+  coffeeIntakeUpdateSchema,
+  wheyIntakeCreateSchema,
+  wheyIntakeUpdateSchema,
+} from './nutrition.js';
 
 export const syncEntityTypeSchema = z.enum([
   'body_measurement',
+  'coffee_intake',
   'exercise',
   'habit_definition',
   'habit_entry',
   'pain_report',
   'training_plan',
+  'whey_intake',
   'workout_template',
   'workout_session',
 ]);
 export const syncOperationKindSchema = z.enum(['create', 'update', 'delete']);
 
 const bodyMeasurementFields = {
+  // Barriga é registrada separadamente da cintura.
+  abdomenCm: z.number().positive().max(500).nullable().optional(),
   additionalMeasurements: z
     .array(
       z.strictObject({
@@ -44,6 +54,7 @@ const bodyMeasurementFields = {
     )
     .max(50)
     .optional(),
+  fasting: z.boolean().nullable().optional(),
   localDate: z.iso.date(),
   measuredAt: z.iso.datetime({ offset: true }),
   notes: z.string().trim().max(2_000).nullable().optional(),
@@ -57,6 +68,7 @@ export const bodyMeasurementCreatePayloadSchema = z
     (payload) =>
       payload.weightKg != null ||
       payload.waistCm != null ||
+      payload.abdomenCm != null ||
       (payload.additionalMeasurements?.length ?? 0) > 0,
     {
       message: 'Informe ao menos uma medida.',
@@ -65,7 +77,9 @@ export const bodyMeasurementCreatePayloadSchema = z
 
 export const bodyMeasurementUpdatePayloadSchema = z
   .strictObject({
+    abdomenCm: bodyMeasurementFields.abdomenCm,
     additionalMeasurements: bodyMeasurementFields.additionalMeasurements.optional(),
+    fasting: bodyMeasurementFields.fasting,
     localDate: bodyMeasurementFields.localDate.optional(),
     measuredAt: bodyMeasurementFields.measuredAt.optional(),
     notes: bodyMeasurementFields.notes,
@@ -161,6 +175,11 @@ export const syncOperationSchema = z.union([
     bodyMeasurementCreatePayloadSchema,
     bodyMeasurementUpdatePayloadSchema,
   ),
+  ...operationVariants(
+    z.literal('coffee_intake'),
+    coffeeIntakeCreateSchema,
+    coffeeIntakeUpdateSchema,
+  ),
   ...operationVariants(z.literal('exercise'), exerciseCreateSchema, exerciseSyncUpdateSchema),
   ...operationVariants(
     z.literal('habit_definition'),
@@ -170,6 +189,7 @@ export const syncOperationSchema = z.union([
   ...operationVariants(z.literal('habit_entry'), habitEntryCreateSchema, habitEntryUpdateSchema),
   ...operationVariants(z.literal('pain_report'), painReportCreateSchema, painReportUpdateSchema),
   ...operationVariants(z.literal('training_plan'), trainingPlanCreateSchema, planSyncUpdateSchema),
+  ...operationVariants(z.literal('whey_intake'), wheyIntakeCreateSchema, wheyIntakeUpdateSchema),
   ...operationVariants(
     z.literal('workout_template'),
     workoutTemplateCreateSchema,

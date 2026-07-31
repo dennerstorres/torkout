@@ -6,6 +6,7 @@ import type { AuthRuntime } from './auth-routes.js';
 import { createSmtpEmailSender } from './email.js';
 import { parseEnvironment } from './env.js';
 import { createLoggerOptions } from './operational.js';
+import { createLocalObjectStorage } from './storage.js';
 
 const environment = parseEnvironment();
 const { db, pool } = createDatabaseClient(environment.DATABASE_URL);
@@ -28,6 +29,7 @@ const app = buildApp(
   {
     auth: auth as unknown as AuthRuntime,
     database: db,
+    storage: createLocalObjectStorage(environment.OBJECT_STORAGE_DIR),
     trustedOrigins: environment.TRUSTED_ORIGINS,
   },
   {

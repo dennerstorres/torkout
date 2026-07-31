@@ -42,6 +42,7 @@ export const sessionExerciseStatusEnum = pgEnum('session_exercise_status', [
 ]);
 export const distanceSourceEnum = pgEnum('distance_source', ['manual', 'gps', 'import']);
 export const jointPainStatusEnum = pgEnum('joint_pain_status', ['unknown', 'none', 'reported']);
+export const recoveryStatusEnum = pgEnum('recovery_status', ['not_answered', 'none', 'reported']);
 
 export const exercises = pgTable(
   'exercises',
@@ -204,10 +205,17 @@ export const workoutSessions = pgTable(
     completedAt: timestamp('completed_at', { mode: 'date', withTimezone: true }),
     importKey: text('import_key'),
     jointPainStatus: jointPainStatusEnum('joint_pain_status').default('unknown').notNull(),
+    // Resposta explícita da etapa de recuperação; distinta de "não perguntado".
+    recoveryStatus: recoveryStatusEnum('recovery_status').default('not_answered').notNull(),
+    perceivedExertion: integer('perceived_exertion'),
     notes: text('notes'),
   },
   (table) => [
     index('workout_sessions_user_date_idx').on(table.userId, table.plannedLocalDate),
+    check(
+      'workout_sessions_perceived_exertion_check',
+      sql`${table.perceivedExertion} is null or (${table.perceivedExertion} between 0 and 10)`,
+    ),
     uniqueIndex('workout_sessions_rule_date_unique')
       .on(table.scheduleRuleId, table.plannedLocalDate)
       .where(sql`${table.scheduleRuleId} is not null and ${table.deletedAt} is null`),

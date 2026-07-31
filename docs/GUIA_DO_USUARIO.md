@@ -294,9 +294,30 @@ Na tela **Hoje**:
 7. Registre observações no exercício quando necessário.
 8. Marque **Confirmo que não houve dor articular** somente quando isso for verdadeiro.
 9. Toque em **Finalizar**.
+10. Responda a etapa rápida de recuperação e toque em **Concluir treino**.
 
 Se a sessão não aconteceu, use **Marcar como perdido**. Use **Cancelar treino** quando a sessão não
-dever mais contar como uma sessão esperada.
+dever mais contar como uma sessão esperada. Esses dois caminhos não passam pela etapa de recuperação.
+
+### Etapa de recuperação e esforço percebido
+
+Ao tocar em **Finalizar**, a aplicação pergunta **Sentiu alguma dor ou desconforto?** com quatro
+respostas: **Não**, **Dor muscular**, **Dor articular** e **Outro desconforto**.
+
+Responder **Não** grava uma resposta explícita e não pede nenhum detalhe. Isso é diferente de não
+responder: no relatório, "sem dor" e "sem resposta" aparecem separados.
+
+Quando há dor, você pode informar região, intensidade de 0 a 10, se ocorreu durante ou depois do
+exercício, o exercício relacionado, se interrompeu, se houve inchaço, se houve dificuldade para
+caminhar ou apoiar, e uma observação.
+
+Se registrar dor articular a partir de 7, inchaço ou dificuldade para apoiar, aparece um aviso
+discreto de que o registro merece atenção. O aviso não é diagnóstico, não interrompe o treino e não
+altera o seu planejamento.
+
+Na mesma etapa você pode informar o **esforço percebido** de 0 a 10: 0 nenhum esforço, 1 a 3 leve,
+4 a 6 moderado, 7 a 8 difícil, 9 muito difícil e 10 esforço máximo. O campo é opcional e aparece
+depois no painel de progressão e no relatório.
 
 ### O treino continua de onde você parou
 
@@ -323,7 +344,28 @@ Conversões úteis:
 - 45 minutos = 2700 segundos;
 - 1 hora = 3600 segundos.
 
-## 9. Hábitos do dia
+## 9. Café, whey e hábitos do dia
+
+### Café
+
+Em **Hoje → Café de hoje**, escolha um dos três estados: **Não consumi**, **Sem açúcar** ou
+**Com açúcar**. Um toque basta e o registro é salvo no aparelho.
+
+Enquanto você não escolher, o dia fica como não registrado. A aplicação nunca trata a falta de
+registro como "não consumi", e "sem açúcar" nunca é lido como ausência de café.
+
+### Whey
+
+Em **Hoje → Whey de hoje**, toque em **Registrar whey**. Informe se consumiu, o horário e, quando
+houver consumo, quantidade de pó em gramas, porções, proteína informada por porção, com o que foi
+misturado, quantidade do líquido, marca, produto e momento. Só a resposta de consumo é obrigatória.
+
+Em **Tolerância**, marque quantas ocorrências quiser entre sem desconforto, gases, estufamento,
+cólica, diarreia, náusea e outro. Marcar **Sem desconforto** limpa as demais.
+
+A aplicação apenas registra e resume esses dados. Ela não indica dose, marca nem horário.
+
+### Hábitos do dia
 
 Os hábitos selecionados no primeiro acesso e os hábitos personalizados ativos aparecem em
 **Hoje → Hábitos do dia**. Escolha ou informe o valor correspondente e aguarde a indicação de
@@ -352,6 +394,8 @@ O Torkout registra acompanhamento simples; ele não faz contagem de calorias.
 
 ## 10. Registrar dor ou desconforto
 
+Para dores fora do treino:
+
 1. Abra **Hoje**.
 2. Expanda **Dor e desconforto**.
 3. Escolha muscular ou articular.
@@ -359,19 +403,37 @@ O Torkout registra acompanhamento simples; ele não faz contagem de calorias.
 5. Escreva uma observação se necessário.
 6. Toque em **Registrar dor**.
 
-Ausência de registro não significa ausência de dor. Por isso, a confirmação sem dor articular fica
-dentro da execução do treino.
+Dores ligadas a um treino são registradas na etapa de recuperação, ao finalizar a sessão.
+
+Ausência de registro não significa ausência de dor. Por isso, a resposta explícita "não" só existe
+quando você responde a etapa de recuperação.
 
 ## 11. Registrar peso e medidas corporais
 
+Para que as medições sejam comparáveis entre si:
+
+- meça preferencialmente ao acordar;
+- meça depois de ir ao banheiro;
+- meça antes de comer;
+- use sempre condições semelhantes;
+- não contraia a barriga durante a medição;
+- mantenha a fita sem apertar excessivamente.
+
+Passo a passo:
+
 1. Abra **Hoje**.
-2. Expanda **Peso e cintura**.
+2. Expanda **Peso e medidas**.
 3. Informe **Data da medição**. A data pode estar no passado.
-4. Preencha peso e/ou cintura, se disponíveis.
-5. Use **Adicionar outra medida** para abdômen, bíceps, coxa, quadril/glúteos, pescoço, peito,
-   panturrilha ou uma medida personalizada.
-6. Escolha a unidade e informe o valor.
-7. Toque em **Salvar medida**.
+4. Informe **Horário da medição** e marque **Medi em jejum** quando for o caso.
+5. Preencha peso, cintura e barriga, se disponíveis.
+6. Use **Adicionar outra medida** para bíceps, coxa, quadril/glúteos, pescoço, peito, panturrilha ou
+   uma medida personalizada.
+7. Escolha a unidade e informe o valor.
+8. Toque em **Salvar medida**.
+
+**Cintura e barriga são medidas diferentes.** A cintura é o ponto mais estreito, acima do umbigo; a
+barriga é medida na altura do umbigo, sem contrair. A aplicação mostra as duas separadamente e nunca
+troca uma pela outra.
 
 É válido salvar somente uma circunferência, sem peso nem cintura.
 
@@ -400,6 +462,21 @@ Corrigir uma sessão histórica não altera o template que gerou as sessões fut
 
 **Progresso** consolida os dados registrados. Um gráfico vazio normalmente significa que ainda não
 há registros suficientes no período escolhido.
+
+No topo da tela, o painel de progressão mostra treinos concluídos, sequência atual, melhor sequência,
+treinos da semana, aderência de força e de caminhada separadas, flexões e agachamentos por treino,
+maior número de repetições em uma série, evolução de peso, cintura e barriga, caminhadas e distância
+total, média de esforço percebido, treinos com resposta "sem dor" e a contagem de dor muscular,
+articular e outros desconfortos. Os indicadores são descritivos e não substituem avaliação
+profissional.
+
+A aderência considera apenas sessões cujo horário planejado já passou. Uma sessão marcada para
+depois de hoje aparece como futura e nunca como perdida.
+
+O painel também mostra o seu nível, que vai de **Iniciante I** a **Consistente III**. O nível depende
+de consistência e de registro: treinos concluídos, semanas com regularidade, sequência e dias com
+registro de evolução. Treinar com dor, chegar ao esforço máximo ou acumular volume excessivo não
+concede nível, e o nível nunca altera o seu planejamento.
 
 Sugestões de progressão não são aplicadas automaticamente. Revise a justificativa e aceite ou
 rejeite conscientemente. Não aceite aumento apenas para fazer o calendário avançar.
@@ -439,14 +516,31 @@ As instruções completas ficam em **Conta**.
 Use a opção de instalação exibida pelo navegador compatível. Instalar a PWA não cria outra conta;
 ela usa a mesma conta e a réplica local daquele dispositivo.
 
-## 16. Exportar seus dados
+## 16. Fotos de evolução
+
+Em **Progresso → Fotos de evolução** você pode registrar fotos de frente, lado e costas.
+
+As fotos ficam guardadas na sua conta e são visíveis somente por você. Elas não têm endereço público
+e nunca aparecem no relatório: o relatório mostra apenas data, pose, tamanho, formato e dimensões.
+
+Para que a comparação faça sentido, repita a mesma iluminação, a mesma distância, roupa semelhante e
+a mesma posição. A imagem é reduzida no próprio aparelho antes de ser enviada.
+
+A tela mostra as fotos em ordem cronológica, junto do peso e das medidas do mesmo dia quando eles
+existirem, e permite comparar duas datas lado a lado. A exclusão pede confirmação e é definitiva.
+
+## 17. Exportar seus dados
 
 Em **Conta**, solicite a exportação disponível. O pacote contém os dados portáveis da conta e as
 alterações locais pendentes, sem incluir senha, sessão ou token de autenticação.
 
+O relatório em Markdown informa o período que você pediu e o período que foi efetivamente avaliado.
+Sessões planejadas para depois de hoje aparecem apenas como futuras e nunca entram no cálculo de
+aderência. Força e caminhada têm indicadores separados.
+
 Faça uma exportação antes de excluir a conta ou de trocar definitivamente de dispositivo.
 
-## 17. Checklist depois de configurar o HTML
+## 18. Checklist depois de configurar o HTML
 
 Confirme no **Histórico**:
 

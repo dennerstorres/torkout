@@ -1,13 +1,16 @@
-import type { ProgressAnalyticsResponse } from '@torkout/contracts';
+import type { ProgressAnalyticsResponse, ProgressPanelResponse } from '@torkout/contracts';
 import { useEffect, useMemo, useState } from 'react';
 import { CartesianGrid, Line, LineChart, Tooltip, XAxis, YAxis } from 'recharts';
 
 import type { UserSyncDatabase } from '../sync/local-database';
+import { ProgressPanel } from './ProgressPanel';
 
 interface AnalyticsScreenProps {
   database: UserSyncDatabase;
   onBack(): void;
   onLoad?(from: string, through: string): Promise<ProgressAnalyticsResponse>;
+  onLoadPanel?(from: string, through: string): Promise<ProgressPanelResponse>;
+  onPhotos?(): void;
   onProgression?(): void;
   today?: string;
 }
@@ -17,6 +20,8 @@ export function AnalyticsScreen(_props: AnalyticsScreenProps) {
     database,
     onBack,
     onLoad,
+    onLoadPanel,
+    onPhotos,
     onProgression,
     today = new Date().toISOString().slice(0, 10),
   } = _props;
@@ -27,6 +32,7 @@ export function AnalyticsScreen(_props: AnalyticsScreenProps) {
     null,
   );
   const [analytics, setAnalytics] = useState<ProgressAnalyticsResponse | null>(null);
+  const [panel, setPanel] = useState<ProgressPanelResponse | null>(null);
   const [message, setMessage] = useState('Carregando indicadores…');
   const [loading, setLoading] = useState(true);
 
@@ -75,6 +81,21 @@ export function AnalyticsScreen(_props: AnalyticsScreenProps) {
     };
   }, [database, onLoad, range]);
 
+  useEffect(() => {
+    if (!range || !onLoadPanel) return;
+    let active = true;
+    void onLoadPanel(range.from, range.through)
+      .then((response) => {
+        if (active) setPanel(response);
+      })
+      .catch(() => {
+        if (active) setPanel(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [onLoadPanel, range]);
+
   return (
     <main className="analytics-layout">
       <header className="analytics-header">
@@ -86,11 +107,18 @@ export function AnalyticsScreen(_props: AnalyticsScreenProps) {
           <h1>Progresso</h1>
           <p>Os indicadores resumem seus registros; eles não substituem orientação profissional.</p>
         </div>
-        {onProgression && (
-          <button className="progression-link" type="button" onClick={onProgression}>
-            Ver sugestões de progressão
-          </button>
-        )}
+        <div className="button-row">
+          {onProgression && (
+            <button className="progression-link" type="button" onClick={onProgression}>
+              Ver sugestões de progressão
+            </button>
+          )}
+          {onPhotos && (
+            <button type="button" onClick={onPhotos}>
+              Fotos de evolução
+            </button>
+          )}
+        </div>
       </header>
 
       <section className="card analytics-filters" aria-labelledby="analytics-filter-title">
@@ -156,6 +184,7 @@ export function AnalyticsScreen(_props: AnalyticsScreenProps) {
         {loading ? 'Carregando indicadores…' : message}
       </p>
 
+      {panel && <ProgressPanel panel={panel} />}
       {loading && !analytics ? <AnalyticsLoadingContent /> : null}
       {analytics && <AnalyticsContent analytics={analytics} />}
     </main>

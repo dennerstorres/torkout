@@ -11,6 +11,7 @@ import { ApiHttpError, type ApiDependencies, registerAuthRoutes } from './auth-r
 import { registerPrivacyRoutes } from './privacy.js';
 import { registerProfileRoutes } from './profile-routes.js';
 import { registerProgressionRoutes } from './progression-routes.js';
+import { registerPhotoRoutes } from './photo-routes.js';
 import { registerPlanningRoutes } from './planning-routes.js';
 import { registerPortabilityRoutes } from './portability-routes.js';
 import { registerSyncRoutes } from './sync-routes.js';
@@ -67,6 +68,7 @@ export function buildApp(
     registerProfileRoutes(app, dependencies);
     registerPlanningRoutes(app, dependencies);
     registerDailyRoutes(app, dependencies);
+    registerPhotoRoutes(app, dependencies);
     registerHistoryRoutes(app, dependencies);
     registerAnalyticsRoutes(app, dependencies);
     registerProgressionRoutes(app, dependencies);

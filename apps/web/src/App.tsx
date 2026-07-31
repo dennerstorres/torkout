@@ -1,4 +1,13 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 
 import { type AppApi, browserApi, type PrivacyDocumentView } from './auth-client';
 import { AccountScreen } from './components/AccountScreen';
@@ -8,6 +17,7 @@ import { OnboardingScreen } from './components/OnboardingScreen';
 import { HistoryScreen } from './components/HistoryScreen';
 import { PlanningScreen } from './components/PlanningScreen';
 import { ProgressionScreen } from './components/ProgressionScreen';
+import { ProgressPhotosScreen } from './components/ProgressPhotosScreen';
 import { PwaExperience } from './components/PwaExperience';
 import { ResetPasswordScreen } from './components/ResetPasswordScreen';
 import { TodayScreen } from './components/TodayScreen';
@@ -28,6 +38,7 @@ type View =
   | 'loading'
   | 'offline-locked'
   | 'onboarding'
+  | 'photos'
   | 'planning'
   | 'public'
   | 'progression'
@@ -102,6 +113,15 @@ function AppContent({ api }: { api: AppApi }) {
   const [userId, setUserId] = useState<string | null>(null);
   const sync = useSyncRuntime(userId);
   const previousView = useRef<View>(view);
+  const photoApi = useMemo(
+    () => ({
+      contentUrl: (id: string) => api.progressPhotoUrl(id),
+      list: () => api.listProgressPhotos(),
+      remove: (id: string) => api.deleteProgressPhoto(id),
+      upload: (input: Record<string, unknown>) => api.uploadProgressPhoto(input),
+    }),
+    [api],
+  );
 
   useEffect(() => {
     const from = previousView.current;
@@ -361,14 +381,25 @@ function AppContent({ api }: { api: AppApi }) {
           database={sync.database}
           onBack={() => setView('today')}
           onProgression={() => setView('progression')}
+          onPhotos={() => setView('photos')}
           {...(offline
             ? {}
             : {
                 onLoad: (from: string, through: string) => api.loadProgressAnalytics(from, through),
+                onLoadPanel: (from: string, through: string) =>
+                  api.loadProgressPanel(from, through),
               })}
           today={civilDate(new Date(), timeZone)}
         />
       </Suspense>
+    );
+  } else if (view === 'photos') {
+    page = (
+      <ProgressPhotosScreen
+        api={photoApi}
+        onBack={() => setView('analytics')}
+        today={civilDate(new Date(), timeZone)}
+      />
     );
   } else if (view === 'progression') {
     page = <ProgressionScreen api={api} onBack={() => setView('analytics')} />;

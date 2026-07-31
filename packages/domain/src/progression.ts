@@ -8,7 +8,7 @@ export type PainEvidence = {
   intensity: 'not_informed' | 'light' | 'moderate' | 'strong';
   moment: 'before' | 'during' | 'after' | 'next_day';
   reportId: string;
-  type: 'muscular' | 'joint';
+  type: 'muscular' | 'joint' | 'other';
 };
 
 export type ProgressionSessionEvidence = {

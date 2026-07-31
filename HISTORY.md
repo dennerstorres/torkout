@@ -1616,3 +1616,123 @@ merge` e o teste no container confirmaram CSP e HSTS.
 - A retomada lê apenas a réplica local do titular autenticado, particionada por usuário.
 - Pendência: a confirmação em iPhone físico do fim do zoom e da retomada depende do titular; os
   gates automatizados cobrem a geometria e o ciclo de vida, não o aparelho real.
+
+## Fase 22 — Refinamento de acompanhamento, nutrição e evolução corporal
+
+**Commit de encerramento:** `feat(phase-22): refine tracking, nutrition and body evolution`
+
+### Escopo entregue
+
+Doze frentes pedidas pelo titular: separação entre consumo de café e uso de açúcar; registro
+estruturado de whey com tolerância; etapa opcional de recuperação ao concluir o treino; esforço
+percebido de 0 a 10; padronização das medições corporais; painel de progressão; sistema visual de
+níveis; fotos privadas de evolução; caminhadas com indicadores próprios; correção da aderência do
+relatório; reescrita do `RELATORIO_EVOLUCAO.md`; e os gates de qualidade.
+
+Nenhuma funcionalidade existente foi reescrita. Hábitos personalizados, sincronização, autenticação,
+progressão explicável e o restante do planejamento seguem intactos.
+
+### Evidências TDD
+
+- RED de domínio — 33 testes falharam em `adherence`, `coffee`, `levels` e `progress-panel` sobre
+  módulos ainda vazios, com falha comportamental e não de importação.
+- RED de domínio — 4 testes falharam em `recovery` sobre a sinalização de dor articular intensa,
+  inchaço e dificuldade para apoiar.
+- RED de contrato — 22 testes falharam em `nutrition` e `recovery` (café, whey, tolerância múltipla,
+  dor de 0 a 10, RPE opcional e upload de foto).
+- RED de unidade — 6 testes falharam em `storage`, incluindo quatro tentativas de travessia de
+  caminho que precisavam ser recusadas.
+- RED de autorização — 8 rotas novas responderam 404 em vez de 401 antes de existirem.
+- RED de exportação — 16 testes falharam em `evolution-report`, entre eles o caso em que a sessão de
+  2026-07-27 aparecia como perdida em vez de futura.
+- RED de componente — 34 testes falharam em `DailyNutrition`, `RecoveryStep`, `ProgressPanel` e
+  `ProgressPhotosScreen`; mais 6 em `TodayScreen` após a introdução da etapa de recuperação.
+- GREEN — 51 arquivos e 308 testes unitários verdes, incluindo os 8 novos arquivos de teste.
+- GREEN de integração — 13 arquivos e 61 testes verdes contra PostgreSQL efêmero real, entre eles os
+  10 de autorização de fotos.
+- RED de regressão geométrica — os 4 casos de `phase 15 broad viewport invariants` falharam a partir
+  de `tablet-landscape`, porque o grid complementar passou de 3 para 5 cards com a entrada de café e
+  whey. A grade continua com `repeat(3, minmax(0, 1fr))` e `gap` explícitos, larguras uniformes de
+  536 px em duas linhas; o que estava errado era a asserção, que fixava a contagem de cards em vez do
+  invariante. Passou a verificar alinhamento por linha, largura uniforme dentro da linha e mínimo de
+  224 px, mantendo a contagem esperada em 5.
+- GREEN de E2E — 31 testes verdes e 2 pulados em `chromium-mobile`.
+- REFACTOR — formatação, lint com `--max-warnings 0`, typecheck de todos os pacotes, build completo
+  e `pnpm security:scan` verdes.
+
+### Migração
+
+`0011_phase_22_tracking_refinements` é aditiva. Cria `coffee_intakes`, `whey_intakes` e
+`progress_photos`; adiciona `intensity_score`, `swelling` e `support_difficulty` a `pain_reports`;
+`recovery_status` e `perceived_exertion` a `workout_sessions`; `abdomen_cm` e `fasting` a
+`body_measurements`; `goal` a `user_profiles`; e acrescenta o valor `other` ao enum `pain_type`.
+
+Todas as colunas novas são nulas ou têm valor padrão, então nenhum registro anterior é invalidado.
+O único `DROP` recria os dois `CHECK` de `body_measurements` para incluir `abdomen_cm`, mantendo as
+regras antigas. A reversão está em `packages/database/migrations/rollback/`, com aviso explícito de
+que os dados de café, whey e fotos são perdidos ao reverter e de que o enum só volta ao formato
+anterior se nenhum relato usar `other`.
+
+### Tratamento de registros antigos
+
+- Hábitos personalizados de café continuam funcionando e aparecem na seção de alimentação. A nova
+  tabela `coffee_intakes` convive com eles em vez de substituí-los.
+- `mapLegacyCoffeeRecord` classifica apenas o que é inequívoco. "Café sem açúcar = não" devolve
+  `ambiguous` com estado nulo, porque pode significar café com açúcar; um hábito booleano "Café" com
+  valor verdadeiro devolve `consumed_unknown_sugar`. Nada vira "não consumido" por inferência.
+- Um dia sem linha em `coffee_intakes` é ausência de registro. O relatório conta esses dias em uma
+  linha própria e nunca os apresenta como ausência de consumo.
+- Sessões antigas ficam com `recovery_status = 'not_answered'`, distinto da resposta explícita
+  "não". O relatório separa as três situações.
+- `jointPainStatus` foi preservado e continua sendo alimentado pela nova etapa de recuperação.
+
+### Endpoints
+
+`GET/PUT /api/v1/coffee-intakes`, `GET/POST/PUT/DELETE /api/v1/whey-intakes`,
+`POST /api/v1/sessions/:id/recovery`, `GET /api/v1/progress/panel`,
+`GET/POST/DELETE /api/v1/progress-photos`, `GET /api/v1/progress-photos/:id/content` e
+`GET /api/v1/progress-photos/comparison`. Todos exigem sessão autenticada e filtram pelo dono.
+
+`coffee_intake` e `whey_intake` entraram na sincronização com o mesmo ciclo de versão, tombstone e
+idempotência das demais entidades, mantendo o modelo local-first.
+
+### Decisões
+
+- Café virou tabela com enum próprio em vez de hábito convencionado. Um enum no banco impede que a
+  ambiguidade volte por convenção de nome.
+- Whey ganhou tabela própria porque um hábito genérico não comporta doze campos correlacionados.
+- Fotos usam upload em base64 sobre JSON e não `multipart`, evitando uma dependência nova para um
+  fluxo de arquivo único. A compressão acontece no dispositivo, antes do envio.
+- O armazenamento é uma interface (`ObjectStorage`) com driver local sobre volume persistente. Um
+  driver S3 pode ser adicionado sem tocar nas rotas. Nenhuma imagem vai para o PostgreSQL.
+- A aderência virou função pura versionada (`adherence/v1`) usada pelo relatório e pelo painel, para
+  que os dois números nunca divirjam.
+
+### Segurança e privacidade
+
+- Fotos são servidas apenas por rota autenticada, com `cache-control: private, no-store`. Não há URL
+  pública nem assinada, e `storageKey` nunca sai da API.
+- Identificador de foto de outra conta responde 404, sem revelar existência.
+- As chaves de armazenamento são particionadas por usuário e recusam travessia de caminho.
+- O relatório traz apenas metadados de foto: data, pose, tamanho, formato e dimensões.
+- A exportação não ganhou tokens, URLs nem segredos; o scanner de segredos passou em 321 arquivos.
+
+### Limites clínicos preservados
+
+- Nenhuma recomendação médica é derivada de whey, tolerância, dor ou esforço.
+- O aviso de atenção aparece apenas para dor articular a partir de 7, inchaço ou dificuldade para
+  apoiar, e nunca interrompe, altera ou substitui o treino.
+- Os níveis dependem de consistência e de registro; volume extremo, esforço máximo e dor não contam.
+
+### Pendências
+
+- A confirmação em iPhone físico continua pendente do titular.
+- A aderência trata todo cancelamento como justificado, porque o app ainda não coleta justificativa.
+  O contrato já aceita `cancellationJustified: false` para quando esse campo existir.
+
+### Freeze de schema e contratos
+
+O freeze foi promovido de `2.1.0` para `2.2.0` porque esta fase altera schema e contratos. A mudança
+é aditiva: nenhuma coluna, tabela, formato ou campo anterior foi removido ou renomeado, e
+`verify:release-rollback` continua verde. A promoção é uma decisão deliberada desta fase e deve ser
+revista pelo titular junto com o commit de encerramento.

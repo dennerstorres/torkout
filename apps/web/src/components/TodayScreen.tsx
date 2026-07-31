@@ -7,6 +7,8 @@ import {
   type UserSyncDatabase,
 } from '../sync/local-database';
 import type { SyncState } from '../sync/sync-coordinator';
+import { DailyNutrition } from './DailyNutrition';
+import { RecoveryStep, type RecoverySubmission } from './RecoveryStep';
 import { EmptyState, MetricCard, ProgressBar, StatusBadge } from './ui';
 
 interface TodayScreenProps {
@@ -19,8 +21,20 @@ interface TodayScreenProps {
   timeZone: string;
 }
 
+/**
+ * Orientações curtas exibidas junto do formulário de medidas para manter as condições comparáveis
+ * entre medições.
+ */
+const MEASUREMENT_GUIDANCE = [
+  'Meça preferencialmente ao acordar.',
+  'Meça depois de ir ao banheiro.',
+  'Meça antes de comer.',
+  'Use sempre condições semelhantes.',
+  'Não contrair a barriga durante a medição.',
+  'Mantenha a fita sem apertar excessivamente.',
+] as const;
+
 const BODY_MEASUREMENT_OPTIONS = [
-  { key: 'abdomen', label: 'Abdômen' },
   { key: 'biceps', label: 'Bíceps' },
   { key: 'thigh', label: 'Coxa' },
   { key: 'hips', label: 'Quadril/glúteos' },
@@ -62,6 +76,8 @@ interface ExecutionView {
   completedAt?: string | null;
   exercises: ExerciseView[];
   jointPainStatus: 'none' | 'reported' | 'unknown';
+  perceivedExertion?: number | null;
+  recoveryStatus?: 'none' | 'not_answered' | 'reported';
   startedAt?: string | null;
   walking?: {
     actualDistanceMeters?: number | null;
@@ -108,6 +124,12 @@ function executionOf(record: LocalRecord): ExecutionView {
       record.data.jointPainStatus === 'none' || record.data.jointPainStatus === 'reported'
         ? record.data.jointPainStatus
         : 'unknown',
+    perceivedExertion:
+      typeof record.data.perceivedExertion === 'number' ? record.data.perceivedExertion : null,
+    recoveryStatus:
+      record.data.recoveryStatus === 'none' || record.data.recoveryStatus === 'reported'
+        ? record.data.recoveryStatus
+        : 'not_answered',
     walking: (record.data.walking as ExecutionView['walking']) ?? null,
   };
 }
@@ -168,8 +190,13 @@ export function TodayScreen({
   const [painCustomRegion, setPainCustomRegion] = useState('');
   const [painMoment, setPainMoment] = useState('after');
   const [painNotes, setPainNotes] = useState('');
+  const [measurementNotes, setMeasurementNotes] = useState('');
   const [selectedRunnerId, setSelectedRunnerId] = useState<string | null>(null);
   const [summaryRequested, setSummaryRequested] = useState(false);
+  const [abdomen, setAbdomen] = useState('');
+  const [measurementTime, setMeasurementTime] = useState('');
+  const [fasting, setFasting] = useState(false);
+  const [recoveryForSessionId, setRecoveryForSessionId] = useState<string | null>(null);
 
   async function refresh(): Promise<void> {
     setRecords(await database.records.toArray());
@@ -349,22 +376,29 @@ export function TodayScreen({
           value: Number(measurement.value),
         };
       });
-    if (!weight && !waist && extra.length === 0) return;
+    if (!weight && !waist && !abdomen && extra.length === 0) return;
+    const measuredAt = measurementTime ? new Date(`${measurementDate}T${measurementTime}:00`) : now;
     await queueLocalMutation(database, {
       entityId: crypto.randomUUID(),
       entityType: 'body_measurement',
       operation: 'create',
       payload: {
+        abdomenCm: abdomen ? Number(abdomen) : null,
         additionalMeasurements: extra,
+        fasting,
         localDate: measurementDate,
-        measuredAt: now.toISOString(),
-        notes: painNotes || null,
+        measuredAt: Number.isNaN(measuredAt.getTime())
+          ? now.toISOString()
+          : measuredAt.toISOString(),
+        notes: measurementNotes || null,
         waistCm: waist ? Number(waist) : null,
         weightKg: weight ? Number(weight) : null,
       },
     });
     setWeight('');
     setWaist('');
+    setAbdomen('');
+    setMeasurementNotes('');
     setAdditionalMeasurements([]);
     setMessage('Salvo localmente: medida pendente de sincronização.');
     await refresh();
@@ -396,6 +430,7 @@ export function TodayScreen({
   async function finishSession(
     session: LocalRecord,
     forcedStatus?: 'cancelled' | 'missed',
+    recovery?: RecoverySubmission,
   ): Promise<void> {
     const execution = executionOf(session);
     execution.exercises.forEach((exercise) => {
@@ -403,6 +438,13 @@ export function TodayScreen({
       exercise.status = exercise.sets.every((set) => set.completed) ? 'completed' : 'stopped';
     });
     execution.completedAt = forcedStatus ? null : new Date().toISOString();
+    if (recovery) {
+      execution.perceivedExertion = recovery.perceivedExertion;
+      execution.recoveryStatus = recovery.recovery.status;
+      if (recovery.recovery.status === 'none') execution.jointPainStatus = 'none';
+      if (recovery.recovery.reports.some((report) => report.type === 'joint'))
+        execution.jointPainStatus = 'reported';
+    }
     const complete = execution.exercises.every(
       (exercise) => exercise.status === 'completed' && exercise.sets.every((set) => set.completed),
     );
@@ -412,7 +454,30 @@ export function TodayScreen({
       operation: 'update',
       payload: { execution, status: forcedStatus ?? (complete ? 'completed' : 'partial') },
     });
+    // Cada desconforto vira um relato próprio, ligado à sessão; o treino nunca é alterado por isso.
+    for (const report of recovery?.recovery.reports ?? []) {
+      await queueLocalMutation(database, {
+        entityId: crypto.randomUUID(),
+        entityType: 'pain_report',
+        operation: 'create',
+        payload: {
+          bodyRegion: report.bodyRegion,
+          customBodyRegion: report.customBodyRegion ?? null,
+          exerciseStopped: report.exerciseStopped,
+          intensityScore: report.intensityScore,
+          localDate: report.localDate,
+          moment: report.moment,
+          notes: report.notes ?? null,
+          occurredAt: new Date().toISOString(),
+          sessionId: session.entityId,
+          supportDifficulty: report.supportDifficulty,
+          swelling: report.swelling,
+          type: report.type,
+        },
+      });
+    }
     setMessage('Treino salvo localmente e pendente de sincronização.');
+    setRecoveryForSessionId(null);
     setSelectedRunnerId(null);
     setSummaryRequested(false);
     await refresh();
@@ -701,13 +766,28 @@ export function TodayScreen({
                         <p>A ausência ainda não foi confirmada e permanece desconhecida.</p>
                       )}
                     </fieldset>
-                    <button
-                      className="primary"
-                      type="button"
-                      onClick={() => void finishSession(session)}
-                    >
-                      Finalizar {stringValue(session.data, 'templateNameSnapshot', 'sessão')}
-                    </button>
+                    {recoveryForSessionId === session.entityId ? (
+                      <RecoveryStep
+                        exercises={namedExercises(session).map((exercise) => ({
+                          id: exercise.id,
+                          name: exercise.name ?? 'Exercício',
+                        }))}
+                        localDate={date}
+                        sessionName={stringValue(session.data, 'templateNameSnapshot', 'sessão')}
+                        onSkip={() => setRecoveryForSessionId(null)}
+                        onSubmit={(submission) =>
+                          void finishSession(session, undefined, submission)
+                        }
+                      />
+                    ) : (
+                      <button
+                        className="primary"
+                        type="button"
+                        onClick={() => setRecoveryForSessionId(session.entityId)}
+                      >
+                        Finalizar {stringValue(session.data, 'templateNameSnapshot', 'sessão')}
+                      </button>
+                    )}
                     <div className="button-row" aria-label="Outras formas de encerrar o treino">
                       <button type="button" onClick={() => void finishSession(session, 'missed')}>
                         Marcar como perdido
@@ -740,6 +820,13 @@ export function TodayScreen({
 
       {runnerSessionId === null && (
         <section className="today-complementary-grid" aria-label="Registros complementares">
+          <DailyNutrition
+            database={database}
+            localDate={date}
+            now={now}
+            onSaved={setMessage}
+            records={records}
+          />
           <section className="card today-section today-habits" aria-labelledby="habits-heading">
             <h2 id="habits-heading">Hábitos do dia</h2>
             {habits.length === 0 && <p>Nenhum hábito ativo.</p>}
@@ -891,12 +978,17 @@ export function TodayScreen({
           <details className="secondary-disclosure">
             <summary>
               <span>
-                <strong>Peso e cintura</strong>
+                <strong>Peso e medidas</strong>
                 <small>Adicione uma medição quando quiser</small>
               </span>
             </summary>
             <section className="today-section" aria-labelledby="measurements-heading">
               <h2 id="measurements-heading">Nova medição</h2>
+              <ul className="field-hint measurement-guidance">
+                {MEASUREMENT_GUIDANCE.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
               <form onSubmit={(event) => void saveMeasurement(event)}>
                 <label>
                   Data da medição
@@ -906,6 +998,22 @@ export function TodayScreen({
                     value={measurementDate}
                     onChange={(event) => setMeasurementDate(event.target.value)}
                   />
+                </label>
+                <label>
+                  Horário da medição
+                  <input
+                    type="time"
+                    value={measurementTime}
+                    onChange={(event) => setMeasurementTime(event.target.value)}
+                  />
+                </label>
+                <label className="inline-check">
+                  <input
+                    checked={fasting}
+                    type="checkbox"
+                    onChange={(event) => setFasting(event.target.checked)}
+                  />
+                  Medi em jejum
                 </label>
                 <label>
                   Peso (kg)
@@ -920,12 +1028,28 @@ export function TodayScreen({
                 <label>
                   Cintura (cm)
                   <input
+                    aria-label="Cintura (cm)"
                     min="0.1"
                     step="0.1"
                     type="number"
                     value={waist}
                     onChange={(event) => setWaist(event.target.value)}
                   />
+                  <span className="field-hint">Ponto mais estreito, acima do umbigo.</span>
+                </label>
+                <label>
+                  Barriga (cm)
+                  <input
+                    aria-label="Barriga (cm)"
+                    min="0.1"
+                    step="0.1"
+                    type="number"
+                    value={abdomen}
+                    onChange={(event) => setAbdomen(event.target.value)}
+                  />
+                  <span className="field-hint">
+                    Na altura do umbigo, sem contrair. É uma medida distinta da cintura.
+                  </span>
                 </label>
                 {additionalMeasurements.map((measurement, index) => (
                   <fieldset className="form-group" key={index}>
@@ -1021,12 +1145,19 @@ export function TodayScreen({
                   onClick={() =>
                     setAdditionalMeasurements((current) => [
                       ...current,
-                      { customLabel: '', key: 'abdomen', unit: 'cm', value: '' },
+                      { customLabel: '', key: 'hips', unit: 'cm', value: '' },
                     ])
                   }
                 >
                   Adicionar outra medida
                 </button>
+                <label>
+                  Observações da medição
+                  <textarea
+                    value={measurementNotes}
+                    onChange={(event) => setMeasurementNotes(event.target.value)}
+                  />
+                </label>
                 <button type="submit">Salvar medida</button>
               </form>
             </section>

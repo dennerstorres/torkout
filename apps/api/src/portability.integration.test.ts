@@ -203,7 +203,8 @@ describe('data portability and erasure API', () => {
     expect(response.headers['content-type']).toContain('text/markdown');
     expect(response.headers['content-disposition']).toContain('RELATORIO_EVOLUCAO.md');
     expect(response.body).toContain('# Relatório de evolução física e rotina de treino');
-    expect(response.body).toContain('- Período coberto: 2026-07-14 a 2026-07-14');
+    expect(response.body).toContain('- Período solicitado: 2026-07-14 a 2026-07-14');
+    expect(response.body).toContain('- Período efetivamente avaliado: 2026-07-14 a 2026-07-14');
     expect(response.body).toContain('70 kg em 2026-07-14; tendência: não registrado');
     expect(response.body).not.toContain('dado privado da segunda pessoa');
   });

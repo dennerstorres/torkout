@@ -306,6 +306,25 @@ execução do dia e só mudam por edição histórica explícita.
 
 **PAIN-010:** ausência de registro não equivale a ausência de dor para o motor de progressão.
 
+**PAIN-011:** além de muscular e articular, o registro aceita o tipo `other` para desconfortos que
+não se encaixam nos dois primeiros.
+
+**PAIN-012:** a intensidade também pode ser registrada em escala numérica de 0 a 10, que convive com
+a escala qualitativa herdada sem substituí-la.
+
+**PAIN-013:** o registro aceita inchaço e dificuldade para caminhar ou apoiar, ambos opcionais e
+distintos de "não informado".
+
+**PAIN-014:** ao concluir um treino, uma etapa rápida e opcional pergunta se houve dor ou
+desconforto. As respostas são "não", "dor muscular", "dor articular" e "outro desconforto".
+
+**PAIN-015:** a resposta "não" é armazenada explicitamente em `recovery_status = 'none'` e não
+exige nenhum detalhe. A ausência de resposta permanece em `not_answered` e nunca é apresentada
+como ausência de dor.
+
+**PAIN-016:** dor articular a partir de 7, inchaço ou dificuldade para apoiar exibem uma mensagem
+discreta de atenção. A mensagem não interrompe, altera nem substitui o treino e não é diagnóstico.
+
 ### 7.8 Hábitos e alimentação
 
 **HABIT-001:** definições de hábito suportam booleano, quantidade, escala e escolha.
@@ -326,6 +345,35 @@ execução do dia e só mudam por edição histórica explícita.
 **HABIT-006:** permitir no máximo um registro por hábito e data local, com edição posterior.
 
 **HABIT-007:** não calcular calorias sem entrada explícita de uma futura funcionalidade.
+
+**COFFEE-001:** o consumo de café é registrado em estado explícito: `not_consumed`,
+`without_sugar` ou `with_sugar`, apresentados como "Não consumi", "Sem açúcar" e "Com açúcar".
+
+**COFFEE-002:** no máximo um registro de café por data local, editável depois.
+
+**COFFEE-003:** "sem açúcar" nunca é interpretado como ausência de consumo, em nenhuma tela,
+indicador ou relatório.
+
+**COFFEE-004:** um dia sem registro é ausência de informação e nunca é convertido em
+`not_consumed`. Registros antigos de hábito só são reclassificados quando o valor é inequívoco.
+
+**WHEY-001:** o consumo de whey registra se houve consumo, data, horário, gramas de pó, porções,
+proteína informada por porção, líquido usado, quantidade do líquido, marca, produto, momento e
+observações. Somente o consumo, a data e a tolerância são obrigatórios.
+
+**WHEY-002:** o líquido aceita água, leite integral, leite semidesnatado, leite desnatado ou outro,
+com descrição livre exigida apenas em "outro".
+
+**WHEY-003:** o momento aceita manhã, antes do treino, depois do treino, noite ou outro.
+
+**WHEY-004:** a tolerância aceita nenhuma, uma ou mais ocorrências entre sem desconforto, gases,
+estufamento, cólica, diarreia, náusea e outro. "Sem desconforto" não pode ser combinado com as
+demais.
+
+**WHEY-005:** quando não houve consumo, quantidades e líquido não podem ser registrados.
+
+**WHEY-006:** o sistema registra e resume os dados de whey e tolerância, sem qualquer recomendação
+médica ou nutricional automática.
 
 ### 7.9 Medidas corporais
 
@@ -349,8 +397,19 @@ personalizados não alteram registros anteriores.
 
 **BODY-009:** permitir escolher a data civil da medição para lançamento retroativo.
 
-**BODY-010:** uma medição pode conter qualquer combinação não vazia de peso, cintura e medidas
-adicionais, sem tornar peso ou cintura obrigatórios.
+**BODY-010:** uma medição pode conter qualquer combinação não vazia de peso, cintura, barriga e
+medidas adicionais, sem tornar qualquer uma delas obrigatória.
+
+**BODY-011:** barriga tem coluna própria e é sempre apresentada como medida distinta da cintura. As
+duas nunca são somadas nem substituídas uma pela outra.
+
+**BODY-012:** a medição registra horário e um indicador opcional de jejum.
+
+**BODY-013:** a tela de registro exibe orientações curtas: medir ao acordar, depois de ir ao
+banheiro, antes de comer, em condições semelhantes, sem contrair a barriga e com a fita sem apertar
+excessivamente.
+
+**BODY-014:** oscilações pequenas entre medições não são apresentadas como ganho ou perda real.
 
 ### 7.10 Calendário e histórico
 
@@ -391,6 +450,64 @@ adicionais, sem tornar peso ou cintura obrigatórios.
 **PROGRESS-010:** indicadores devem informar fórmula e período.
 
 **PROGRESS-011:** semanas usam a preferência do usuário, inicialmente segunda a domingo.
+
+**PROGRESS-012:** o painel de progressão exibe treinos concluídos, sequência atual, melhor
+sequência, treinos da semana, flexões e agachamentos por treino, maior número de repetições em uma
+série, evolução de peso, cintura e barriga, caminhadas concluídas, distância total, média de esforço
+percebido, treinos sem dor e contagem de dor muscular, articular e outros desconfortos.
+
+**PROGRESS-013:** o painel é descritivo. Ele não é avaliação médica e informa isso na própria tela.
+
+**ADHERENCE-001:** a aderência considera apenas sessões cujo horário planejado já passou dentro do
+período analisado. Quando não há horário planejado, o limite é o fim da data local.
+
+**ADHERENCE-002:** concluída vale 1, parcial vale 0,5, perdida vale 0 e vencida sem conclusão vale 0. Cancelamento justificado sai do denominador.
+
+**ADHERENCE-003:** sessões futuras nunca entram no denominador e são informadas separadamente. Uma
+sessão futura nunca é apresentada como perdida.
+
+**ADHERENCE-004:** força e caminhada têm indicadores separados. A aderência geral existe e explica a
+própria fórmula. A fórmula é versionada em `adherence/v1`.
+
+**LEVEL-001:** o sistema de níveis tem seis faixas: Iniciante I a III e Consistente I a III.
+
+**LEVEL-002:** os critérios são treinos concluídos, semanas com regularidade, melhor sequência e
+dias com registro de evolução, declarados em um único ponto do domínio para permitir ajuste futuro.
+
+**LEVEL-003:** o nível considera principalmente consistência. Treinar com dor, atingir esforço
+máximo ou acumular volume excessivo não concede nível.
+
+**LEVEL-004:** a tela exibe nível atual, barra de progresso, critérios já atingidos, critérios
+restantes e a data em que cada nível foi alcançado.
+
+**LEVEL-005:** o nível não altera o planejamento de treino em nenhuma circunstância.
+
+**PHOTO-001:** o registro de fotos de evolução é opcional e aceita as poses frente, lado e costas,
+com data e observações.
+
+**PHOTO-002:** a foto é associada ao peso e às medidas do mesmo dia quando existirem.
+
+**PHOTO-003:** o tipo e o tamanho do arquivo são validados; a imagem é comprimida no dispositivo
+antes do envio quando o navegador permite.
+
+**PHOTO-004:** a tela orienta repetir iluminação, distância, roupa e posição.
+
+**PHOTO-005:** a visualização é cronológica e permite comparar duas datas.
+
+**PHOTO-006:** a exclusão é explícita e confirmada antes de acontecer.
+
+**PHOTO-007:** o binário é servido apenas por rota autenticada do próprio dono, sem URL pública ou
+assinada e sem cache compartilhado. Imagens não são armazenadas no PostgreSQL.
+
+**PHOTO-008:** o relatório exporta apenas metadados de foto; nunca a imagem, a chave de
+armazenamento ou um endereço.
+
+**RPE-001:** o fechamento do treino aceita esforço percebido de 0 a 10, sempre opcional. A escala é
+apresentada como 0 nenhum esforço, 1–3 leve, 4–6 moderado, 7–8 difícil, 9 muito difícil e 10 esforço
+máximo.
+
+**RPE-002:** o esforço percebido aparece no histórico do treino, na tela de detalhes, nos
+indicadores de evolução e no relatório.
 
 Consistência semanal será calculada como sessões concluídas equivalentes divididas pelas sessões planejadas executáveis: concluída vale `1`, parcial vale `0,5`, perdida vale `0`; descanso e cancelamento justificado não entram no denominador. A fórmula deve ser alterável apenas mediante versionamento.
 
@@ -486,6 +603,22 @@ Política inicial de tombstone: retenção mínima de 90 dias, revisável confor
 
 **EXPORT-007:** permitir correção de dados pela própria interface.
 
+**EXPORT-008:** o relatório Markdown informa data de geração, período solicitado e período
+efetivamente avaliado, e nunca avalia além da data local atual do titular.
+
+**EXPORT-009:** o relatório apresenta perfil, objetivo declarado, rotina atual derivada da agenda,
+aderência de força, aderência de caminhada, aderência geral, histórico de séries, esforço percebido,
+caminhadas, peso e medidas, registros explícitos sem dor, dor muscular, dor articular, outros
+desconfortos, alimentação, estado real do café, whey e tolerância, progressão, níveis, metadados de
+fotos, resumo automático, dados ausentes prioritários e perguntas para revisão externa.
+
+**EXPORT-010:** o relatório usa apenas dados reais, marca ausências como "não registrado", usa datas
+em `YYYY-MM-DD` e preserva o fuso do titular. Ele não confunde sessão futura com perdida, café sem
+açúcar com café não consumido, nem ausência de registro com resposta explícita de "sem dor".
+
+**EXPORT-011:** o relatório não contém tokens, URLs assinadas, segredos ou dados internos, e não
+emite diagnóstico ou prescrição.
+
 ### 7.15 PWA
 
 **PWA-001:** manifesto com nome, nome curto, ícones, cores, `id`, `start_url` e `display: standalone`.
@@ -545,8 +678,14 @@ Todas as tabelas de domínio incluem `id uuid`, `user_id uuid` quando aplicável
 - `habit_definitions`: nome, tipo, unidade, ordem e estado.
 - `habit_options`: rótulo, valor estável e ordem.
 - `habit_entries`: data local e exatamente um valor booleano, numérico, textual ou opção.
-- `body_measurements`: instante, data local, peso, cintura, medidas adicionais estruturadas e
-  observação.
+- `body_measurements`: instante, data local, peso, cintura, barriga, jejum, medidas adicionais
+  estruturadas e observação.
+- `coffee_intakes`: data local, estado explícito do café, instante do registro e observação; no
+  máximo um registro vigente por data.
+- `whey_intakes`: data local, horário, consumo, gramas de pó, porções, proteína por porção, líquido
+  usado, quantidade do líquido, marca, produto, momento, tolerância múltipla e observação.
+- `progress_photos`: data local, instante da captura, pose, chave de armazenamento, tipo, tamanho,
+  dimensões, medição associada e observação. O binário nunca é gravado no PostgreSQL.
 
 ### 8.5 Progressão
 

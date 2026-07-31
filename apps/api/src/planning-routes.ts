@@ -368,6 +368,8 @@ export async function loadSession(database: DatabaseClient, userId: string, id: 
     importKey: session.importKey,
     jointPainStatus: session.jointPainStatus,
     notes: session.notes,
+    perceivedExertion: session.perceivedExertion,
+    recoveryStatus: session.recoveryStatus,
     plannedLocalDate: session.plannedLocalDate,
     scheduleRuleId: session.scheduleRuleId,
     source: session.source,
@@ -655,6 +657,8 @@ export async function applySessionExecution(
         completedAt,
         jointPainStatus: input.execution.jointPainStatus,
         notes: input.notes,
+        perceivedExertion: input.execution.perceivedExertion ?? null,
+        recoveryStatus: input.execution.recoveryStatus,
         startedAt,
         status,
       })

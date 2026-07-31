@@ -1186,3 +1186,212 @@ body:has(.auth-dialog-backdrop) {
   align-content: start;
   gap: var(--space-3);
 }
+
+/* Fase 22 — café, whey, recuperação, painel de progressão, níveis e fotos. */
+
+.today-section.card {
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+}
+
+.today-section.card > h2 {
+  margin: 0;
+}
+
+.choice-group {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.choice-group > legend {
+  margin-bottom: var(--space-4);
+  padding: 0;
+}
+
+.record-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  color: var(--color-text-muted);
+  list-style: none;
+}
+
+.measurement-guidance {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+  padding-left: var(--space-5);
+}
+
+.recovery-step {
+  display: grid;
+  gap: var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+.recovery-details {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.progress-panel {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.progress-panel > .card {
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+}
+
+.progress-panel > .card > h2 {
+  margin: 0;
+}
+
+.adherence-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+}
+
+.adherence-card {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+.adherence-card h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.adherence-card__value {
+  margin: 0;
+  color: var(--color-primary-strong);
+  font-size: clamp(1.4rem, 5vw, 1.9rem);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.trend-list {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+}
+
+.trend-row {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.trend-row dt {
+  color: var(--color-text-muted);
+  font-weight: 650;
+}
+
+.trend-row dd {
+  margin: 0;
+}
+
+.level-current {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.level-criteria {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.level-criteria h3 {
+  margin: 0 0 var(--space-4);
+  font-size: 0.95rem;
+}
+
+.level-criteria ul {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+.photos-layout {
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: var(--content-standard);
+  margin: 0 auto;
+}
+
+.photos-layout > .card {
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+}
+
+.photos-layout > .card > h2 {
+  margin: 0;
+}
+
+.photo-timeline {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.photo-timeline > li {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+}
+
+.photo-timeline figure,
+.photo-comparison figure {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.photo-timeline img,
+.photo-comparison img {
+  width: 100%;
+  border-radius: var(--radius-md);
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+}
+
+.photo-timeline figcaption,
+.photo-comparison figcaption {
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+}
+
+.photo-comparison {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+.photo-comparison > div {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+}
+
+.photo-comparison h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}

@@ -4,6 +4,8 @@ import { eq } from 'drizzle-orm';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { fromNodeHeaders } from 'better-auth/node';
 
+import type { ObjectStorage } from './storage.js';
+
 export interface SessionData {
   session: { id: string; userId: string };
   user: { emailVerified: boolean; id: string };
@@ -21,6 +23,8 @@ export interface AuthRuntime {
 export interface ApiDependencies {
   auth: AuthRuntime;
   database: DatabaseClient;
+  /** Armazenamento de objetos usado pelas fotos de evolução; ausente desativa o recurso. */
+  storage?: ObjectStorage | undefined;
   trustedOrigins: string[];
 }
 

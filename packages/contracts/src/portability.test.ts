@@ -34,6 +34,7 @@ describe('data portability contracts', () => {
       },
       entities: {
         bodyMeasurements: [{ id: pendingChange.entityId, weightKg: '70.00' }],
+        coffeeIntakes: [],
         exercises: [],
         exerciseSets: [],
         habitDefinitions: [],
@@ -41,6 +42,7 @@ describe('data portability contracts', () => {
         habitOptions: [],
         painReports: [],
         privacyAcceptances: [],
+        progressPhotos: [],
         progressionDecisions: [],
         progressionEvaluations: [],
         progressionRuleVersions: [],
@@ -50,6 +52,7 @@ describe('data portability contracts', () => {
         trainingPlans: [],
         userProfiles: [],
         walkingDetails: [],
+        wheyIntakes: [],
         workoutSessions: [],
         workoutTemplateExercises: [],
         workoutTemplates: [],

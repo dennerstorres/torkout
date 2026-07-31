@@ -101,7 +101,9 @@ describe('Today mobile tracking', () => {
       screen.getByRole('heading', { name: 'Hábitos do dia' }),
     );
     expect(complementaryRegion).toHaveTextContent('Dor e desconforto');
-    expect(complementaryRegion).toHaveTextContent('Peso e cintura');
+    expect(complementaryRegion).toHaveTextContent('Peso e medidas');
+    expect(complementaryRegion).toHaveTextContent('Café de hoje');
+    expect(complementaryRegion).toHaveTextContent('Whey de hoje');
     expect(sessionsRegion.compareDocumentPosition(summaryRegion)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
@@ -126,6 +128,7 @@ describe('Today mobile tracking', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Adicionar série em Flexão' }));
     fireEvent.click(screen.getByLabelText('Confirmo que não houve dor articular'));
     fireEvent.click(screen.getByRole('button', { name: 'Finalizar Treino A' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Concluir treino' }));
     fireEvent.change(await screen.findByLabelText('Café'), { target: { value: optionId } });
     fireEvent.change(screen.getByLabelText('Peso (kg)'), { target: { value: '80.5' } });
     fireEvent.submit(screen.getByRole('button', { name: 'Salvar medida' }).closest('form')!);
@@ -164,7 +167,7 @@ describe('Today mobile tracking', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Adicionar outra medida' }));
     fireEvent.change(screen.getByLabelText('Tipo da medida 1'), {
-      target: { value: 'abdomen' },
+      target: { value: 'hips' },
     });
     fireEvent.change(screen.getByLabelText('Valor da medida 1'), { target: { value: '82.5' } });
     fireEvent.click(screen.getByRole('button', { name: 'Adicionar outra medida' }));
@@ -186,7 +189,7 @@ describe('Today mobile tracking', () => {
       );
       expect(measurement?.payload).toMatchObject({
         additionalMeasurements: [
-          { key: 'abdomen', label: 'Abdômen', unit: 'cm', value: 82.5 },
+          { key: 'hips', label: 'Quadril/glúteos', unit: 'cm', value: 82.5 },
           { key: 'braço_relaxado', label: 'Braço relaxado', unit: 'mm', value: 315 },
         ],
         localDate: '2026-07-01',
@@ -318,6 +321,7 @@ describe('Today mobile tracking', () => {
     );
     fireEvent.click(await screen.findByRole('button', { name: 'Iniciar Treino A' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Finalizar Treino A' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Concluir treino' }));
     expect(await screen.findByText('Treino concluído parcialmente.')).toBeVisible();
     first.unmount();
 
@@ -374,6 +378,127 @@ describe('Today mobile tracking', () => {
     expect(screen.queryByRole('button', { name: 'Iniciar Descanso' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Planejar outro treino' }));
     expect(onPlan).toHaveBeenCalledOnce();
+    database.close();
+  });
+
+  it('offers the recovery step when finishing and stores the explicit answer with the effort', async () => {
+    const database = await seed();
+    render(
+      <TodayScreen
+        database={database}
+        now={new Date('2026-07-15T01:00:00.000Z')}
+        onBack={vi.fn()}
+        syncState="offline"
+        timeZone="America/Cuiaba"
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Iniciar Treino A' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Finalizar Treino A' }));
+    expect(await screen.findByText('Sentiu alguma dor ou desconforto?')).toBeVisible();
+    fireEvent.click(screen.getByRole('radio', { name: 'Não' }));
+    fireEvent.change(screen.getByLabelText(/esforço percebido/i), { target: { value: '6' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Concluir treino' }));
+
+    await waitFor(async () => {
+      const session = await database.records.get(entityKey('workout_session', sessionId));
+      expect(session?.data).toMatchObject({
+        execution: { perceivedExertion: 6, recoveryStatus: 'none' },
+      });
+    });
+    database.close();
+  });
+
+  it('queues a discomfort report from the recovery step without changing the workout', async () => {
+    const database = await seed();
+    render(
+      <TodayScreen
+        database={database}
+        now={new Date('2026-07-15T01:00:00.000Z')}
+        onBack={vi.fn()}
+        syncState="offline"
+        timeZone="America/Cuiaba"
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Iniciar Treino A' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Finalizar Treino A' }));
+    fireEvent.click(await screen.findByRole('radio', { name: 'Dor muscular' }));
+    fireEvent.change(screen.getByLabelText(/região do corpo/i), { target: { value: 'thigh' } });
+    fireEvent.change(screen.getByLabelText(/intensidade/i), { target: { value: '4' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Concluir treino' }));
+
+    await waitFor(async () => {
+      const queued = await database.outbox.toArray();
+      const pain = queued.find((entry) => entry.entityType === 'pain_report');
+      expect(pain?.payload).toMatchObject({
+        bodyRegion: 'thigh',
+        intensityScore: 4,
+        localDate: '2026-07-14',
+        sessionId,
+        type: 'muscular',
+      });
+      const session = await database.records.get(entityKey('workout_session', sessionId));
+      expect(session?.data).toMatchObject({ execution: { recoveryStatus: 'reported' } });
+    });
+    database.close();
+  });
+
+  it('shows the measurement guidance and records abdomen, time and fasting', async () => {
+    const database = await seed();
+    render(
+      <TodayScreen
+        database={database}
+        now={new Date('2026-07-15T01:00:00.000Z')}
+        onBack={vi.fn()}
+        syncState="offline"
+        timeZone="America/Cuiaba"
+      />,
+    );
+
+    const guidance = screen.getByRole('region', { name: /nova medição/i });
+    expect(guidance).toHaveTextContent(/ao acordar/i);
+    expect(guidance).toHaveTextContent(/banheiro/i);
+    expect(guidance).toHaveTextContent(/antes de comer/i);
+    expect(guidance).toHaveTextContent(/não contrair a barriga/i);
+    expect(guidance).toHaveTextContent(/sem apertar/i);
+
+    fireEvent.change(screen.getByLabelText('Peso (kg)'), { target: { value: '80.5' } });
+    fireEvent.change(screen.getByLabelText('Barriga (cm)'), { target: { value: '90' } });
+    fireEvent.change(screen.getByLabelText('Horário da medição'), { target: { value: '06:30' } });
+    fireEvent.click(screen.getByLabelText('Medi em jejum'));
+    fireEvent.submit(screen.getByRole('button', { name: 'Salvar medida' }).closest('form')!);
+
+    await waitFor(async () => {
+      const measurement = (await database.outbox.toArray()).find(
+        (entry) => entry.entityType === 'body_measurement',
+      );
+      expect(measurement?.payload).toMatchObject({
+        abdomenCm: 90,
+        fasting: true,
+        localDate: '2026-07-14',
+        weightKg: 80.5,
+      });
+      expect(String(measurement?.payload.measuredAt)).toContain('T');
+    });
+    database.close();
+  });
+
+  it('shows the daily coffee and whey records', async () => {
+    const database = await seed();
+    render(
+      <TodayScreen
+        database={database}
+        now={new Date('2026-07-15T01:00:00.000Z')}
+        onBack={vi.fn()}
+        syncState="offline"
+        timeZone="America/Cuiaba"
+      />,
+    );
+
+    expect(await screen.findByRole('radiogroup', { name: /café de hoje/i })).toBeVisible();
+    expect(screen.getByRole('radio', { name: 'Sem açúcar' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Registrar whey' })).toBeVisible();
     database.close();
   });
 });
