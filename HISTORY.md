@@ -2102,3 +2102,54 @@ O E2E confirma o conjunto em um build real: durante a jornada `/demo`, nenhuma r
 - A rota `/demo` depende do fallback de SPA do servidor estático; confirmar no Coolify após o deploy.
 - O botão de entrada só aparece com o cadastro fechado, então em produção ele passa a existir junto
   com o deploy da Fase 28.
+
+## Fase 27 — CI de segurança verde no repositório público
+
+**Commit de encerramento:** `chore(phase-27): make the security workflow green`
+
+### Escopo entregue
+
+- `fastify` atualizado de 5.10.0 para 5.11.0 e as transitivas `fast-uri` (3.1.3 → 3.1.4) e
+  `find-my-way` (9.6.0 → 9.7.0) atualizadas para as versões corrigidas.
+- Badges de CI e de segurança no `README.md`, apontando para os workflows.
+
+### Evidência Red
+
+- O primeiro push com o repositório preparado para abertura executou os workflows no GitHub e
+  reprovou dois jobs: `Security / repository` e `Security / images`. Foi a primeira execução real
+  observada, e a Fase 13 havia deixado exatamente esse item em aberto.
+- Reprodução local: `pnpm audit --prod --audit-level high` apontou 3 vulnerabilidades altas, todas
+  transitivas de `fastify` — `fast-uri` com confusão de host por barra invertida literal e
+  `find-my-way` com negação de serviço em HTTP/2.
+
+### Evidência Green
+
+- `pnpm audit --prod --audit-level high` sem nenhuma vulnerabilidade.
+- Trivy 0.72.0 nas duas imagens de produção, com os mesmos parâmetros do workflow
+  (`--exit-code 1 --ignore-unfixed --severity HIGH,CRITICAL --scanners vuln`): ambas encerraram com
+  código 0.
+- Após a atualização: 355 unitários, 72 de integração contra PostgreSQL real, 34 E2E, typecheck,
+  lint, build e scan de segredos verdes. A subida de minor do framework HTTP foi revalidada pela
+  suíte inteira, não apenas pelo audit.
+
+### Decisões
+
+- A correção foi atualizar dependência, não afrouxar o gate. Nenhuma severidade foi rebaixada,
+  nenhum `--exit-code 0` foi introduzido e nenhuma exceção foi registrada.
+- As transitivas precisaram de atualização explícita: subir `fastify` sozinho manteve `fast-uri` e
+  `find-my-way` nas versões vulneráveis, porque o lock as preservou.
+
+### Desvios
+
+- O RED desta fase foi observado no GitHub Actions e reproduzido localmente, em vez de partir de um
+  teste escrito. Para uma fase de configuração, a verificação automatizada que falha antes da
+  correção é o próprio workflow.
+- A imagem da API carrega dependências de desenvolvimento no `node_modules`, observado durante o
+  scan. Não afeta o resultado do Trivy e não foi tratado aqui; fica registrado como oportunidade de
+  redução de superfície.
+
+### Pendências
+
+- Confirmar os dois jobs verdes no GitHub Actions após o push desta fase. O verde local usa os
+  mesmos parâmetros, mas não substitui a execução no CI.
+- Os badges do `README.md` só renderizam depois que o repositório for público.

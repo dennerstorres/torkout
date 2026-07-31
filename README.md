@@ -1,5 +1,8 @@
 # Torkout
 
+[![CI](https://github.com/dennerstorres/torkout/actions/workflows/ci.yml/badge.svg)](https://github.com/dennerstorres/torkout/actions/workflows/ci.yml)
+[![Security](https://github.com/dennerstorres/torkout/actions/workflows/security.yml/badge.svg)](https://github.com/dennerstorres/torkout/actions/workflows/security.yml)
+
 Aplicativo web progressivo (PWA) para planejar, registrar e acompanhar treinos, caminhadas, medidas
 corporais, hábitos alimentares e ocorrências de dor — com registro rápido no celular, funcionamento
 offline e sincronização posterior.

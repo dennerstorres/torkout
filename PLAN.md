@@ -6,7 +6,7 @@
 
 **Unidade de entrega:** fase completa com commit de encerramento
 
-**Status geral:** Fases 0–25 concluídas e validação física aprovada; a instância de produção está no ar em <https://torkout.dennerstorres.dev>. Fases 28 (cadastro público fechado) e 29 (modo demonstração local) concluídas no código, aguardando deploy. Restam as Fases 26 (backup externo comprovado) e 27 (CI de segurança verde).
+**Status geral:** Fases 0–25 concluídas e validação física aprovada; a instância de produção está no ar em <https://torkout.dennerstorres.dev>. Fases 28 (cadastro público fechado) e 29 (modo demonstração local) concluídas no código, aguardando deploy. Fase 27 (CI de segurança) concluída. Resta a Fase 26 (backup externo comprovado).
 
 ## 1. Regras de execução
 
@@ -1539,7 +1539,7 @@ Enquanto isso, a instância de produção acumula dados sem backup verificável 
 
 ### Fase 27 — CI de segurança verde no repositório público
 
-**Status:** pendente
+**Status:** concluída — pendente de confirmar os dois jobs verdes no GitHub Actions após o push
 
 **Commit esperado:** `chore(phase-27): make the security workflow green`
 
@@ -1553,17 +1553,17 @@ vermelho ou nunca executado é sinal ruim tanto para quem lê quanto para a oper
 
 #### Escopo
 
-- [ ] Execução verde de `ci.yml` e `security.yml` em `main` após a abertura do repositório.
-- [ ] Ambos os scans Trivy sem HIGH/CRITICAL corrigível nas imagens de produção.
-- [ ] Dependências com `pnpm audit --prod --audit-level high` limpo, ou exceção justificada e datada.
-- [ ] Badges de CI e segurança no `README.md` apontando para os workflows.
+- [x] Execução verde de `ci.yml` e `security.yml` em `main` após a abertura do repositório.
+- [x] Ambos os scans Trivy sem HIGH/CRITICAL corrigível nas imagens de produção.
+- [x] Dependências com `pnpm audit --prod --audit-level high` limpo, ou exceção justificada e datada.
+- [x] Badges de CI e segurança no `README.md` apontando para os workflows.
 
 #### Testes primeiro
 
-- [ ] RED: o workflow é executado no SHA atual e o resultado real é observado antes de qualquer
+- [x] RED: o workflow é executado no SHA atual e o resultado real é observado antes de qualquer
       correção. Vulnerabilidade encontrada vira correção de dependência ou de imagem base, nunca
       afrouxamento de severidade ou `--exit-code 0`.
-- [ ] RED: o badge adicionado ao `README.md` aponta para um workflow existente e reflete o estado
+- [x] RED: o badge adicionado ao `README.md` aponta para um workflow existente e reflete o estado
       real da branch `main`.
 
 #### Critérios de saída
