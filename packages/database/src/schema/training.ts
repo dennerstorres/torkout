@@ -203,6 +203,14 @@ export const workoutSessions = pgTable(
     source: sessionSourceEnum('source').notNull(),
     startedAt: timestamp('started_at', { mode: 'date', withTimezone: true }),
     completedAt: timestamp('completed_at', { mode: 'date', withTimezone: true }),
+    /**
+     * Instante em que a execução foi lançada depois da data da sessão. Nulo para
+     * registro feito no próprio dia; uma vez preenchido, nunca volta a ser nulo.
+     */
+    retroactivelyLoggedAt: timestamp('retroactively_logged_at', {
+      mode: 'date',
+      withTimezone: true,
+    }),
     importKey: text('import_key'),
     jointPainStatus: jointPainStatusEnum('joint_pain_status').default('unknown').notNull(),
     // Resposta explícita da etapa de recuperação; distinta de "não perguntado".

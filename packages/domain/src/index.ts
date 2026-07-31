@@ -10,4 +10,5 @@ export * from './planning.js';
 export * from './progress-panel.js';
 export * from './progression.js';
 export * from './recovery.js';
+export * from './retroactive.js';
 export * from './time.js';

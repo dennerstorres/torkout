@@ -3,6 +3,7 @@ import {
   ADHERENCE_EXPLANATION,
   calculateAdherence,
   coffeeStatusLabel,
+  countRetroactiveCompletions,
   evaluateLevels,
   recoveryDeservesAttention,
   RECOVERY_ATTENTION_NOTICE,
@@ -510,6 +511,36 @@ export function buildEvolutionReport(data: DataExport): string {
   const exertionValues = sessions
     .map((session) => number(session.perceivedExertion))
     .filter((item): item is number => item !== null);
+
+  // WORKOUT-017: conclusão lançada depois conta como realizada, mas o relatório
+  // precisa dizer quantas foram, para não sugerir precisão que o dado não tem.
+  const concluded = sessions.filter(
+    (session) => session.status === 'completed' || session.status === 'partial',
+  );
+  // `text()` devolve "não registrado" para ausência, que é truthy; a marca precisa
+  // ser lida do valor cru para não transformar ausência em afirmação.
+  const loggedAfterTheFact = (session: Record<string, unknown>): boolean => {
+    const value = session.retroactivelyLoggedAt;
+    return typeof value === 'string' && value !== '';
+  };
+  const retroactiveCount = countRetroactiveCompletions(
+    concluded.map((session) => ({
+      retroactivelyLoggedAt: loggedAfterTheFact(session)
+        ? String(session.retroactivelyLoggedAt)
+        : null,
+      status: String(session.status),
+    })),
+  );
+  const retroactiveLine =
+    retroactiveCount === 0
+      ? 'Nenhuma conclusão do período foi lançada depois da data.'
+      : `${retroactiveCount} de ${concluded.length} conclusões do período foram lançadas depois da data.`;
+  const retroactiveRows = concluded.map((session) => [
+    date(session.plannedLocalDate) ?? NOT_RECORDED,
+    session.templateNameSnapshot,
+    label(ACTIVITY_LABELS, session.type),
+    loggedAfterTheFact(session) ? 'sim' : 'não',
+  ]);
   const exertionAverage =
     exertionValues.length === 0
       ? NOT_RECORDED
@@ -700,6 +731,14 @@ export function buildEvolutionReport(data: DataExport): string {
     '> A aderência geral soma força e caminhada com a mesma fórmula; ela não substitui os indicadores separados.',
     '',
     ...adherenceLines(adherence.general),
+    '',
+    '## Registro no dia ou depois',
+    '',
+    '> Uma conclusão lançada depois da data vale como treino realizado, mas não é um registro feito no dia. A distinção existe para que o dado não afirme mais precisão do que tem.',
+    '',
+    `- ${retroactiveLine}`,
+    '',
+    ...table(['data', 'sessão', 'tipo', 'lançado depois'], retroactiveRows),
     '',
     '## Histórico de séries e repetições',
     '',

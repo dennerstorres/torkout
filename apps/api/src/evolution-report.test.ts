@@ -140,6 +140,7 @@ function exportData(): DataExport {
           perceivedExertion: 7,
           plannedLocalDate: '2026-07-10',
           recoveryStatus: 'none',
+          retroactivelyLoggedAt: '2026-07-12T22:00:00.000Z',
           status: 'completed',
           suggestedLocalTime: '18:30:00',
           templateNameSnapshot: 'Treino A',
@@ -327,5 +328,22 @@ describe('evolution Markdown report', () => {
     ];
     const report = buildEvolutionReport(data);
     expect(report).toMatch(/## Café[\s\S]*\| 2026-07-16 \| Sem açúcar \|/);
+  });
+
+  it('distinguishes a completion logged after the fact from one recorded on the day', () => {
+    const report = buildEvolutionReport(exportData());
+    // A sessão de força foi lançada dois dias depois; a caminhada foi registrada no dia.
+    expect(report).toMatch(/1 de 2 conclusões .*lançada.* depois da data/i);
+    expect(report).toMatch(/\| 2026-07-10 \|[^|\n]*\|[^|\n]*\| sim \|/);
+    expect(report).toMatch(/\| 2026-07-14 \|[^|\n]*\|[^|\n]*\| não \|/);
+  });
+
+  it('does not claim retroactive logging when nothing was logged after the fact', () => {
+    const data = exportData();
+    for (const session of data.entities.workoutSessions) {
+      delete (session as Record<string, unknown>).retroactivelyLoggedAt;
+    }
+    const report = buildEvolutionReport(data);
+    expect(report).toMatch(/Nenhuma conclusão .*lançada.* depois da data/i);
   });
 });

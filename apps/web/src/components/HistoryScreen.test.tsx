@@ -229,4 +229,97 @@ describe('calendar and historical editing', () => {
     );
     database.close();
   });
+
+  it('lança séries de um treino passado pelo outbox e marca como lançado depois', async () => {
+    const database = await seed();
+    const key = entityKey('workout_session', strengthId);
+    const current = await database.records.get(key);
+    await database.records.put({
+      ...current!,
+      data: {
+        ...current!.data,
+        exercises: [
+          {
+            id: 'a8600000-0000-4000-8000-000000000001',
+            name: 'Flexão',
+            sets: [
+              {
+                actualRepetitions: null,
+                completed: false,
+                id: 'a8600000-0000-4000-8000-000000000002',
+                plannedRepetitions: 8,
+                setNumber: 1,
+              },
+            ],
+            sortOrder: 0,
+            status: 'planned',
+            trackingMetric: 'repetitions',
+          },
+        ],
+        retroactivelyLoggedAt: null,
+      },
+    });
+    render(
+      <HistoryScreen
+        database={database}
+        initialMonth="2026-07"
+        onBack={vi.fn()}
+        today="2026-07-14"
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /13 de julho/i }));
+    fireEvent.change(screen.getByLabelText('Flexão · série 1 em 13/07/2026'), {
+      target: { value: '12' },
+    });
+    fireEvent.blur(screen.getByLabelText('Flexão · série 1 em 13/07/2026'));
+    fireEvent.click(screen.getByRole('button', { name: 'Lançar treino de 13/07/2026' }));
+
+    await waitFor(async () => {
+      const operations = await database.outbox.toArray();
+      const session = operations.find((item) => item.entityType === 'workout_session');
+      expect(session).toBeDefined();
+      const payload = session!.payload as { execution?: { exercises?: unknown[] } };
+      expect(payload.execution?.exercises).toHaveLength(1);
+    });
+    database.close();
+  });
+
+  it('não oferece lançamento para data futura', async () => {
+    const database = await seed();
+    render(
+      <HistoryScreen
+        database={database}
+        initialMonth="2026-07"
+        onBack={vi.fn()}
+        today="2026-07-10"
+      />,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: /13 de julho/i }));
+    expect(
+      screen.queryByRole('button', { name: 'Lançar treino de 13/07/2026' }),
+    ).not.toBeInTheDocument();
+    database.close();
+  });
+
+  it('mostra a marca quando a sessão foi lançada depois da data', async () => {
+    const database = await seed();
+    const key = entityKey('workout_session', walkId);
+    const current = await database.records.get(key);
+    await database.records.put({
+      ...current!,
+      data: { ...current!.data, retroactivelyLoggedAt: '2026-07-15T22:00:00.000Z' },
+    });
+    render(
+      <HistoryScreen
+        database={database}
+        initialMonth="2026-07"
+        onBack={vi.fn()}
+        today="2026-07-16"
+      />,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: /13 de julho/i }));
+    expect(await screen.findByText(/lançado depois da data/i)).toBeVisible();
+    database.close();
+  });
 });

@@ -62,6 +62,40 @@ function nullableNumber(record: LocalRecord, key: string): number | null {
   return typeof record.data[key] === 'number' ? record.data[key] : null;
 }
 
+type LoggableSet = {
+  id: string;
+  setNumber: number;
+  plannedRepetitions: number | null;
+  actualRepetitions: number | null;
+  completed: boolean;
+};
+type LoggableExercise = { id: string; name: string; sets: LoggableSet[] };
+
+function loggableExercises(session: LocalRecord): LoggableExercise[] {
+  const raw = session.data.exercises;
+  if (!Array.isArray(raw)) return [];
+  return raw.map((entry) => {
+    const exercise = entry as Record<string, unknown>;
+    const sets = Array.isArray(exercise.sets) ? exercise.sets : [];
+    return {
+      id: String(exercise.id ?? ''),
+      name: String(exercise.name ?? 'Exercício'),
+      sets: sets.map((item) => {
+        const set = item as Record<string, unknown>;
+        return {
+          actualRepetitions:
+            typeof set.actualRepetitions === 'number' ? set.actualRepetitions : null,
+          completed: set.completed === true,
+          id: String(set.id ?? ''),
+          plannedRepetitions:
+            typeof set.plannedRepetitions === 'number' ? set.plannedRepetitions : null,
+          setNumber: typeof set.setNumber === 'number' ? set.setNumber : 1,
+        };
+      }),
+    };
+  });
+}
+
 function dateLabel(localDate: string, options?: Intl.DateTimeFormatOptions): string {
   return new Intl.DateTimeFormat('pt-BR', {
     day: '2-digit',
@@ -190,6 +224,17 @@ export function HistoryScreen({
       today,
     );
     return { ...effective, type };
+  }
+
+  /**
+   * WORKOUT-011: só data local já encerrada, e só sessão que tem execução a lançar.
+   * Descanso não exige execução, então não oferece lançamento.
+   */
+  function canLogRetroactively(session: LocalRecord): boolean {
+    const plannedLocalDate = stringField(session, 'plannedLocalDate');
+    if (!plannedLocalDate || plannedLocalDate > today) return false;
+    if (stringField(session, 'type', 'other') === 'rest') return false;
+    return loggableExercises(session).length > 0;
   }
 
   function dayMatches(day: DayRecords): boolean {
@@ -419,6 +464,20 @@ export function HistoryScreen({
                 Tipo: {activityLabels[summary.type]} · Estado: {statusLabels[summary.status]}
                 {summary.derived ? ' (derivado)' : ''}
               </p>
+              {stringField(session, 'retroactivelyLoggedAt') !== '' && (
+                <p className="history-retroactive">
+                  <span aria-hidden="true">↩ </span>
+                  Lançado depois da data, em{' '}
+                  {dateLabel(stringField(session, 'retroactivelyLoggedAt').slice(0, 10))}.
+                </p>
+              )}
+              {canLogRetroactively(session) && (
+                <RetroactiveLogger
+                  dateLabelText={dateLabel(selectedDate)}
+                  onSubmit={(execution) => void updateRecord(session, { execution })}
+                  session={session}
+                />
+              )}
               {summary.derived && (
                 <button
                   type="button"
@@ -623,5 +682,83 @@ export function HistoryScreen({
         })}
       </section>
     </main>
+  );
+}
+
+interface RetroactiveLoggerProps {
+  dateLabelText: string;
+  onSubmit(execution: Record<string, unknown>): void;
+  session: LocalRecord;
+}
+
+/**
+ * Lançamento retroativo: preenche a execução de um treino cuja data já passou.
+ * O servidor decide e grava a marca de retroatividade; a tela nunca a inventa.
+ */
+function RetroactiveLogger({ dateLabelText, onSubmit, session }: RetroactiveLoggerProps) {
+  const exercises = loggableExercises(session);
+  const [draft, setDraft] = useState<Record<string, number | null>>(() =>
+    Object.fromEntries(
+      exercises.flatMap((exercise) =>
+        exercise.sets.map((set) => [set.id, set.actualRepetitions] as const),
+      ),
+    ),
+  );
+
+  return (
+    <div className="history-retroactive-form">
+      <h4>Lançar execução</h4>
+      <p className="field-hint">
+        Use quando não foi possível registrar no dia. O treino conta como realizado e fica marcado
+        como lançado depois.
+      </p>
+      {exercises.map((exercise) => (
+        <fieldset className="history-retroactive-exercise" key={exercise.id}>
+          <legend>{exercise.name}</legend>
+          {exercise.sets.map((set) => (
+            <label key={set.id}>
+              {`${exercise.name} · série ${set.setNumber} em ${dateLabelText}`}
+              <input
+                inputMode="numeric"
+                min={0}
+                aria-label={`${exercise.name} · série ${set.setNumber} em ${dateLabelText}`}
+                type="number"
+                value={draft[set.id] ?? ''}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...current,
+                    [set.id]: event.target.value === '' ? null : Number(event.target.value),
+                  }))
+                }
+              />
+              {set.plannedRepetitions === null ? (
+                <span className="field-hint">Sem alvo planejado.</span>
+              ) : (
+                <span className="field-hint">Planejado: {set.plannedRepetitions}.</span>
+              )}
+            </label>
+          ))}
+        </fieldset>
+      ))}
+      <button
+        type="button"
+        onClick={() =>
+          onSubmit({
+            exercises: exercises.map((exercise) => ({
+              id: exercise.id,
+              sets: exercise.sets.map((set) => ({
+                actualRepetitions: draft[set.id] ?? null,
+                completed: (draft[set.id] ?? 0) > 0,
+                id: set.id,
+                setNumber: set.setNumber,
+              })),
+              status: 'completed',
+            })),
+          })
+        }
+      >
+        {`Lançar treino de ${dateLabelText}`}
+      </button>
+    </div>
   );
 }

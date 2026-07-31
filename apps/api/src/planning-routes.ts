@@ -26,6 +26,7 @@ import {
 } from '@torkout/database';
 import {
   calculateWorkoutCompletion,
+  decideRetroactiveLog,
   materializeWorkoutSessions,
   type PlanningTemplate,
 } from '@torkout/domain';
@@ -371,6 +372,7 @@ export async function loadSession(database: DatabaseClient, userId: string, id: 
     perceivedExertion: session.perceivedExertion,
     recoveryStatus: session.recoveryStatus,
     plannedLocalDate: session.plannedLocalDate,
+    retroactivelyLoggedAt: session.retroactivelyLoggedAt?.toISOString() ?? null,
     scheduleRuleId: session.scheduleRuleId,
     source: session.source,
     status: session.status,
@@ -538,24 +540,51 @@ export async function applySessionExecution(
   sessionId: string,
   input: {
     execution: WorkoutExecution;
+    /** Injetável para tornar o teste determinístico; padrão é o instante real. */
+    loggedAt?: Date | undefined;
     notes?: string | null | undefined;
     version: number;
   },
 ): Promise<Awaited<ReturnType<typeof loadSession>>> {
   await database.transaction(async (transaction) => {
-    const [session] = await transaction
-      .select({ id: workoutSessions.id, startedAt: workoutSessions.startedAt })
+    // A posse é verificada antes da versão para que sessão de outro titular
+    // responda 404, e não se confunda com conflito de concorrência.
+    const [owned] = await transaction
+      .select({
+        id: workoutSessions.id,
+        plannedLocalDate: workoutSessions.plannedLocalDate,
+        retroactivelyLoggedAt: workoutSessions.retroactivelyLoggedAt,
+        startedAt: workoutSessions.startedAt,
+        timeZone: workoutSessions.timeZone,
+        version: workoutSessions.version,
+      })
       .from(workoutSessions)
       .where(
         and(
           eq(workoutSessions.id, sessionId),
           eq(workoutSessions.userId, userId),
-          eq(workoutSessions.version, input.version),
           isNull(workoutSessions.deletedAt),
         ),
       )
       .limit(1);
-    if (!session) throw new ApiHttpError(409, 'VERSION_CONFLICT', 'A sessão foi alterada.');
+    if (!owned) throw new ApiHttpError(404, 'SESSION_NOT_FOUND', 'Sessão não encontrada.');
+    if (owned.version !== input.version)
+      throw new ApiHttpError(409, 'VERSION_CONFLICT', 'A sessão foi alterada.');
+    const session = owned;
+
+    const decision = decideRetroactiveLog({
+      alreadyLoggedAt: owned.retroactivelyLoggedAt?.toISOString() ?? null,
+      loggedAt: (input.loggedAt ?? new Date()).toISOString(),
+      plannedLocalDate: owned.plannedLocalDate,
+      timeZone: owned.timeZone,
+    });
+    if (!decision.allowed) {
+      throw new ApiHttpError(
+        422,
+        'SESSION_DATE_IN_FUTURE',
+        'Não é possível lançar execução em data futura.',
+      );
+    }
 
     const exerciseIds = input.execution.exercises.map((exercise) => exercise.id);
     const ownedExercises =
@@ -659,6 +688,9 @@ export async function applySessionExecution(
         notes: input.notes,
         perceivedExertion: input.execution.perceivedExertion ?? null,
         recoveryStatus: input.execution.recoveryStatus,
+        retroactivelyLoggedAt: decision.retroactivelyLoggedAt
+          ? new Date(decision.retroactivelyLoggedAt)
+          : null,
         startedAt,
         status,
       })

@@ -1752,3 +1752,67 @@ O freeze foi promovido de `2.1.0` para `2.2.0` porque esta fase altera schema e 
 é aditiva: nenhuma coluna, tabela, formato ou campo anterior foi removido ou renomeado, e
 `verify:release-rollback` continua verde. A promoção é uma decisão deliberada desta fase e deve ser
 revista pelo titular junto com o commit de encerramento.
+
+## Fase 23 — Lançamento retroativo de treino
+
+### Escopo entregue
+
+- Lançamento da execução de uma sessão cuja data local já passou, direto do Histórico.
+- Marca persistente de "lançado depois", derivada no servidor e nunca inventada pela tela.
+- Recusa explícita de lançamento em data futura, com código de erro próprio.
+- Série além do planejado aceita com alvo nulo, deixando explícito o trabalho fora do plano.
+- Seção nova no relatório separando conclusão registrada no dia de conclusão lançada depois.
+
+### Evidências TDD
+
+- RED de domínio — 8 testes falharam em `retroactive` sobre recusa de data futura, marca do
+  lançamento, registro no próprio dia e imutabilidade da marca, com falha comportamental.
+- RED de API — 5 testes falharam em `retroactive.integration`: marca ausente, série extra sem alvo,
+  preservação da marca em correção posterior, data futura sem erro próprio e sessão de outro titular.
+- RED de exportação — 2 testes falharam em `evolution-report` sobre a distinção entre registro no dia
+  e lançamento posterior.
+- RED de componente — 2 testes falharam em `HistoryScreen` sobre o formulário de lançamento e a marca.
+- GREEN — 52 arquivos e 323 testes unitários, 14 arquivos e 66 de integração, 31 E2E.
+- REFACTOR — formatação, lint com `--max-warnings 0`, typecheck de todos os pacotes e build verdes.
+
+### Migração
+
+`0012_phase_23_retroactive_logging` adiciona `retroactively_logged_at` a `workout_sessions`. É
+aditiva e nula por padrão: nenhum registro anterior foi alterado, e toda sessão já existente
+permanece como registro feito no dia. A reversão está em
+`migrations/rollback/0012_phase_23_retroactive_logging.down.sql` e documenta que reverter apaga a
+distinção entre registro no dia e lançamento posterior.
+
+### Decisões
+
+- A marca é imutável. Uma vez gravada, nenhuma edição posterior a remove, nem correção feita na
+  própria data da sessão. O custo aceito é que uma correção legítima logo depois também fica marcada;
+  a alternativa seria uma janela de tolerância, que tornaria o dado discutível.
+- Série não planejada fica com alvo nulo em vez de herdar um alvo inventado.
+- A decisão de retroatividade é do servidor, a partir do fuso da própria sessão. A tela nunca calcula
+  a marca, para que dispositivo com relógio errado não produza histórico falso.
+
+### Correção de sinal de autorização
+
+`applySessionExecution` respondia 409 para sessão de outro titular, misturando ausência de permissão
+com conflito de concorrência. A posse passou a ser verificada antes da versão, e a resposta agora é 404. O comportamento anterior foi encontrado pelo teste de autorização desta fase.
+
+### Limites preservados
+
+- Editar template continua sem alterar sessão histórica.
+- O relatório informa quantas conclusões foram lançadas depois, para não sugerir precisão inexistente.
+- Nenhuma escrita direta em banco é necessária: o lançamento percorre fila local, versão e
+  `change_log`, como qualquer outra mutação.
+
+### Pendências
+
+- A confirmação em iPhone físico continua pendente do titular.
+- O lançamento retroativo ainda não permite criar sessão avulsa em data passada quando não existe
+  sessão na data (WORKOUT-012); hoje depende de a sessão já existir no calendário.
+- A etapa de recuperação e o esforço percebido ainda não aparecem no formulário retroativo.
+
+### Freeze de schema e contratos
+
+O freeze foi promovido de `2.2.0` para `2.3.0` porque esta fase adiciona uma coluna. Os contratos
+públicos não mudaram: o digest de `packages/contracts/src` continua o mesmo. A promoção é uma decisão
+deliberada desta fase e deve ser revista pelo titular.

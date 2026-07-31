@@ -1364,7 +1364,7 @@ não contar sessões futuras.
 
 ### Fase 23 — Lançamento retroativo de treino
 
-**Status:** não iniciada
+**Status:** implementação concluída — confirmação em iPhone físico pendente do titular
 
 **Commit esperado:** `feat(phase-23): allow retroactive workout logging`
 
@@ -1380,30 +1380,30 @@ repetir.
 
 #### Escopo
 
-- [ ] Abrir uma sessão passada a partir do Histórico e lançar séries, repetições e estado terminal.
-- [ ] Criar sessão avulsa em data passada quando não existir sessão na data (WORKOUT-012).
-- [ ] Aceitar série além da planejada, com alvo nulo, sem alterar o template (WORKOUT-015).
-- [ ] Coluna de instante do lançamento retroativo em `workout_sessions`, com migração reversível.
-- [ ] Marca persistente de "lançado depois" no Histórico, no detalhe da sessão e no relatório.
-- [ ] Contagem de conclusões lançadas retroativamente no relatório de evolução (WORKOUT-017).
-- [ ] Etapa de recuperação e esforço percebido disponíveis também no lançamento retroativo.
-- [ ] Bloqueio de data futura no contrato, no domínio e na API.
+- [x] Abrir uma sessão passada a partir do Histórico e lançar séries, repetições e estado terminal.
+- [x] Criar sessão avulsa em data passada quando não existir sessão na data (WORKOUT-012).
+- [x] Aceitar série além da planejada, com alvo nulo, sem alterar o template (WORKOUT-015).
+- [x] Coluna de instante do lançamento retroativo em `workout_sessions`, com migração reversível.
+- [x] Marca persistente de "lançado depois" no Histórico, no detalhe da sessão e no relatório.
+- [x] Contagem de conclusões lançadas retroativamente no relatório de evolução (WORKOUT-017).
+- [x] Etapa de recuperação e esforço percebido disponíveis também no lançamento retroativo.
+- [x] Bloqueio de data futura no contrato, no domínio e na API.
 
 #### Testes primeiro
 
-- [ ] RED de domínio: data futura é recusada; data passada é aceita; a marca de retroativo nunca é
+- [x] RED de domínio: data futura é recusada; data passada é aceita; a marca de retroativo nunca é
       removida depois de gravada.
-- [ ] RED de domínio: aderência conta a sessão retroativa como realizada e o resumo informa quantas
+- [x] RED de domínio: aderência conta a sessão retroativa como realizada e o resumo informa quantas
       conclusões foram lançadas depois da data.
-- [ ] RED de contrato: payload de lançamento retroativo com séries além do planejado e alvo nulo.
-- [ ] RED de API: sessão de outro usuário responde 404; data futura responde erro de validação
+- [x] RED de contrato: payload de lançamento retroativo com séries além do planejado e alvo nulo.
+- [x] RED de API: sessão de outro usuário responde 404; data futura responde erro de validação
       distinto de conflito; versão desatualizada responde conflito.
-- [ ] RED de migração: a coluna nova aceita nulo para registro feito no dia e rejeita voltar a nulo.
-- [ ] RED de sincronização: o lançamento retroativo gera entrada de `change_log` e converge na
+- [x] RED de migração: a coluna nova aceita nulo para registro feito no dia e rejeita voltar a nulo.
+- [x] RED de sincronização: o lançamento retroativo gera entrada de `change_log` e converge na
       réplica; repetição da mesma operação é idempotente.
-- [ ] RED de componente: o Histórico abre a edição, salva séries e mostra a marca de retroativo.
-- [ ] RED de exportação: o relatório distingue conclusão no dia de conclusão lançada depois.
-- [ ] RED geométrica: a tela de lançamento retroativo respeita o ritmo do `DESIGN.md` em viewport
+- [x] RED de componente: o Histórico abre a edição, salva séries e mostra a marca de retroativo.
+- [x] RED de exportação: o relatório distingue conclusão no dia de conclusão lançada depois.
+- [x] RED geométrica: a tela de lançamento retroativo respeita o ritmo do `DESIGN.md` em viewport
       móvel e nas demais larguras auditadas.
 
 #### Critérios de saída

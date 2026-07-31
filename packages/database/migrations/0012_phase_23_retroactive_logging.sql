@@ -1,0 +1,1 @@
+ALTER TABLE "workout_sessions" ADD COLUMN "retroactively_logged_at" timestamp with time zone;
