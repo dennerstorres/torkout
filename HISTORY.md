@@ -1833,3 +1833,63 @@ duas planejadas.
   Série acrescentada nasce sem alvo e exibe "Sem alvo planejado"; só ela pode ser removida, porque a
   série planejada pertence ao plano e não ao lançamento.
 - 52 arquivos e 325 testes unitários, 14 e 66 de integração, 31 E2E verdes.
+
+## Fase 24 — Réplica local observada pelas telas
+
+### Escopo entregue
+
+- `useLocalRecords`, ponto único de observação da réplica local, reutilizado por Hoje, Planejamento e
+  Histórico.
+- Café, whey e hábitos passam a aparecer marcados assim que a gravação local conclui.
+- O contador de pendências locais e a marca "Pendente" do Histórico acompanham a sincronização sem
+  recarregar a tela.
+- Falha de escrita local nas ações de planejamento passa a ser informada na própria tela.
+
+### Evidências TDD
+
+- RED de componente — 2 testes falharam em `TodayScreen`: a escolha de café não ficava marcada depois
+  do clique e o contador de pendências locais continuava em 1 depois de a réplica ser sincronizada
+  fora da tela.
+- RED de componente — 1 teste falhou em `PlanningScreen`: exercício gravado na réplica com a tela
+  aberta não aparecia no catálogo.
+- RED de componente — 1 teste falhou em `HistoryScreen`: a marca "Pendente" permanecia depois de a
+  réplica ser sincronizada fora da tela.
+- GREEN — 52 arquivos e 329 testes unitários verdes; 31 E2E verdes em `chromium-mobile`, com 2
+  ignorados pelo próprio conjunto.
+- REFACTOR — formatação, lint com `--max-warnings 0`, typecheck de todos os pacotes e build verdes.
+
+### Causa da falha original
+
+As telas liam `database.records` uma única vez, na montagem, e só reliam depois das próprias
+mutações. `DailyNutrition` recebe os registros por propriedade e não tinha como pedir releitura,
+então o café gravava sem aparecer. Depois de sincronizar, quem escrevia na réplica era o coordenador
+de sincronização, fora da tela, e nada disparava releitura — daí a impressão de que a pendência
+continuava.
+
+### Decisões
+
+- A observação usa o evento global de mutação do Dexie em vez de `liveQuery`. Uma consulta iniciada
+  dentro do evento herda o contexto da transação que a originou e, se a réplica fechar no meio
+  (logout, troca de conta), rejeita sem dono; agendar a releitura fora desse contexto e tratar a
+  falha na própria consulta mantém o console limpo.
+- `setRecords` continua exposto para a atualização otimista da tela Hoje enquanto a gravação no
+  IndexedDB não conclui.
+- Os testes de componente passam a fechar a réplica depois da desmontagem: fechar o banco com a tela
+  ainda montada interrompe consultas legítimas. Por isso `sequence.hooks` do projeto `unit-web` é
+  `list`, garantindo que o `cleanup` do setup rode antes do `afterEach` do arquivo.
+
+### Limites preservados
+
+- A réplica local continua sendo réplica: nenhuma tela passou a ler o PostgreSQL nem a decidir
+  conflito sozinha.
+- Nenhum dado de saúde entrou em log ou mensagem.
+
+### Pendências
+
+- A confirmação em iPhone físico continua pendente do titular.
+- Os testes de integração com PostgreSQL não foram executados nesta fase: a mudança é restrita ao
+  frontend e não toca API, schema nem contratos.
+
+### Commit de encerramento
+
+`fix(phase-24): keep authenticated screens in sync with the local replica`

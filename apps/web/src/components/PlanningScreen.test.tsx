@@ -46,12 +46,23 @@ async function seedInitialExercises(
 }
 
 describe('mobile-first planning', () => {
+  const openDatabases: ReturnType<typeof createUserSyncDatabase>[] = [];
+
+  function openDatabase() {
+    const database = createUserSyncDatabase(userId);
+    openDatabases.push(database);
+    return database;
+  }
+
+  // As telas observam a réplica enquanto montadas. Fechar o banco dentro do teste, com o componente
+  // ainda no DOM, interrompe consultas legítimas; o fechamento acontece depois da desmontagem.
   afterEach(async () => {
+    openDatabases.splice(0).forEach((database) => database.close());
     await deleteUserSyncDatabase(userId);
   });
 
   it('creates exercises, a weekly template and an ad-hoc session locally before sync', async () => {
-    const database = createUserSyncDatabase(userId);
+    const database = openDatabase();
     await seedInitialExercises(database);
     render(<PlanningScreen database={database} onBack={vi.fn()} syncState="offline" />);
 
@@ -108,12 +119,10 @@ describe('mobile-first planning', () => {
     expect(
       (await database.outbox.toArray()).some((entry) => entry.entityType === 'workout_session'),
     ).toBe(true);
-
-    database.close();
   });
 
   it('shows one planning decision area at a time', async () => {
-    const database = createUserSyncDatabase(userId);
+    const database = openDatabase();
     await seedInitialExercises(database);
     render(<PlanningScreen database={database} onBack={vi.fn()} syncState="synced" />);
 
@@ -145,11 +154,10 @@ describe('mobile-first planning', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sessão avulsa' }));
     expect(screen.getByLabelText('Nome da sessão avulsa')).toBeVisible();
     expect(screen.queryByLabelText('Nome do plano')).not.toBeInTheDocument();
-    database.close();
   });
 
   it('creates a multi-exercise recurring workout and materializes its local calendar', async () => {
-    const database = createUserSyncDatabase(userId);
+    const database = openDatabase();
     await seedInitialExercises(database);
     render(<PlanningScreen database={database} onBack={vi.fn()} syncState="offline" />);
 
@@ -207,11 +215,10 @@ describe('mobile-first planning', () => {
         plannedRepetitions: 12,
       });
     });
-    database.close();
   });
 
   it('supports a single-distance walk, Sunday recovery and complete retroactive sessions', async () => {
-    const database = createUserSyncDatabase(userId);
+    const database = openDatabase();
     await seedInitialExercises(database);
     render(<PlanningScreen database={database} onBack={vi.fn()} syncState="offline" />);
 
@@ -264,11 +271,10 @@ describe('mobile-first planning', () => {
       expect(exercises[1]).toMatchObject({ name: 'Agachamento livre' });
     });
     expect((await screen.findAllByText('Treino retroativo')).length).toBeGreaterThan(0);
-    database.close();
   });
 
   it('creates and edits a choice habit locally before synchronization', async () => {
-    const database = createUserSyncDatabase(userId);
+    const database = openDatabase();
     await seedInitialExercises(database);
     render(<PlanningScreen database={database} onBack={vi.fn()} syncState="offline" />);
 
@@ -311,11 +317,10 @@ describe('mobile-first planning', () => {
       operation: 'create',
       payload: { name: 'Sono' },
     });
-    database.close();
   });
 
   it('reads, deactivates, reactivates and deletes a synchronized habit without deleting history', async () => {
-    const database = createUserSyncDatabase(userId);
+    const database = openDatabase();
     await seedInitialExercises(database);
     const habitId = 'a8200000-0000-4000-8000-000000000009';
     const removableHabitId = 'a8200000-0000-4000-8000-000000000010';
@@ -392,11 +397,10 @@ describe('mobile-first planning', () => {
         }),
       ]),
     );
-    database.close();
   });
 
   it('edits and deletes an exercise received from the initial account seed', async () => {
-    const database = createUserSyncDatabase(userId);
+    const database = openDatabase();
     await seedInitialExercises(database);
     const exerciseId = '00000000-0000-4000-8000-000000000001';
     render(<PlanningScreen database={database} onBack={vi.fn()} syncState="synced" />);
@@ -424,11 +428,10 @@ describe('mobile-first planning', () => {
       entityType: 'exercise',
       operation: 'delete',
     });
-    database.close();
   });
 
   it('edits and deletes a weekly plan without deleting completed sessions', async () => {
-    const database = createUserSyncDatabase(userId);
+    const database = openDatabase();
     await seedInitialExercises(database);
     const planId = 'a9400000-0000-4000-8000-000000000001';
     const templateId = 'a9500000-0000-4000-8000-000000000001';
@@ -510,11 +513,10 @@ describe('mobile-first planning', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Excluir Plano renovado' }));
     await waitFor(() => expect(screen.queryByText('Plano renovado')).not.toBeInTheDocument());
     expect(await database.records.get(`workout_session:${historicalId}`)).toBeDefined();
-    database.close();
   });
 
   it('edits and deletes only planned ad-hoc sessions and hides scheduled sessions from the area', async () => {
-    const database = createUserSyncDatabase(userId);
+    const database = openDatabase();
     await seedInitialExercises(database);
     const plannedId = 'a9200000-0000-4000-8000-000000000001';
     const completedId = 'a9200000-0000-4000-8000-000000000002';
@@ -571,6 +573,31 @@ describe('mobile-first planning', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Excluir Mobilidade leve' }));
     await waitFor(() => expect(screen.queryByText('Mobilidade leve')).not.toBeInTheDocument());
     expect(await database.records.get(`workout_session:${completedId}`)).toBeDefined();
-    database.close();
+  });
+
+  it('shows an exercise that arrives in the replica while the screen stays open', async () => {
+    const database = openDatabase();
+    await seedInitialExercises(database);
+    render(<PlanningScreen database={database} onBack={vi.fn()} syncState="synced" />);
+    expect(await screen.findByText('Flexão', { selector: 'strong' })).toBeVisible();
+
+    // A sincronização escreve na réplica fora desta tela.
+    await database.records.put({
+      data: {
+        active: true,
+        category: 'Força',
+        name: 'Remada curvada',
+        trackingMetric: 'repetitions',
+      },
+      deletedAt: null,
+      entityId: '00000000-0000-4000-8000-000000000009',
+      entityType: 'exercise',
+      key: 'exercise:00000000-0000-4000-8000-000000000009',
+      syncStatus: 'synced',
+      updatedAt: '2026-07-16T12:00:00.000Z',
+      version: 1,
+    });
+
+    expect(await screen.findByText('Remada curvada', { selector: 'strong' })).toBeVisible();
   });
 });

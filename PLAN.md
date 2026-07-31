@@ -1416,11 +1416,49 @@ repetir.
 - Lint, formatação, typecheck, testes unitários, integração, E2E e build verdes.
 - `HISTORY.md` atualizado e fase encerrada em commit próprio.
 
+### Fase 24 — Réplica local observada pelas telas
+
+**Status:** implementação concluída — confirmação em iPhone físico pendente do titular
+
+**Commit esperado:** `fix(phase-24): keep authenticated screens in sync with the local replica`
+
+**Objetivo:** fazer as telas autenticadas refletirem a réplica local no momento em que ela muda, sem
+depender de sair da página e voltar.
+
+**Motivação:** na tela Hoje, marcar o café ou um hábito gravava o registro mas não atualizava a
+interface; o mesmo acontecia depois de sincronizar, quando o contador de pendências locais continuava
+mostrando o valor antigo. As telas liam a réplica uma única vez, na montagem, e só reliam depois das
+próprias mutações — escritas vindas da sincronização, de outro componente ou de outra aba nunca
+chegavam à interface.
+
+#### Escopo
+
+- [x] Observação da réplica local em um único ponto (`useLocalRecords`), reutilizada pelas telas.
+- [x] Tela Hoje reflete café, whey e hábitos assim que a gravação local conclui.
+- [x] Contador de pendências locais acompanha a sincronização sem recarregar a tela.
+- [x] Planejamento e Histórico acompanham mudanças vindas de fora da tela.
+- [x] Falha de escrita local nas ações de planejamento passa a ser informada em vez de silenciada.
+
+#### Testes primeiro
+
+- [x] RED de componente: a escolha de café fica marcada sem reabrir a tela.
+- [x] RED de componente: o contador de pendências locais zera quando a réplica é sincronizada fora
+      da tela.
+- [x] RED de componente: exercício que chega à réplica aparece no Planejamento com a tela aberta.
+- [x] RED de componente: a marca "Pendente" some do Histórico quando a réplica é sincronizada.
+
+#### Critérios de saída
+
+- Nenhuma tela autenticada exige navegação de ida e volta para mostrar dado já gravado localmente.
+- Nenhuma consulta interrompida pelo fechamento da réplica escapa como rejeição sem dono.
+- Lint, formatação, typecheck, testes unitários, E2E e build verdes.
+- `HISTORY.md` atualizado e fase encerrada em commit próprio.
+
 ## 5. Dependências entre fases
 
 ```text
 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21
-  → 22 → 23
+  → 22 → 23 → 24
 ```
 
 Trabalhos internos de uma mesma fase podem ser paralelos somente quando não compartilham arquivos ou contratos instáveis. O encerramento continua único.

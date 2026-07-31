@@ -1,5 +1,5 @@
 import type { SyncEntityType } from '@torkout/contracts';
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 
 import { syncStateMessage, trackingMetricLabel } from '../presentation';
 import {
@@ -9,6 +9,7 @@ import {
   type UserSyncDatabase,
 } from '../sync/local-database';
 import type { SyncState } from '../sync/sync-coordinator';
+import { useLocalRecords } from '../sync/use-local-records';
 import { HabitManagement } from './HabitManagement';
 
 interface PlanningScreenProps {
@@ -172,7 +173,7 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
   const [activeArea, setActiveArea] = useState<'catalog' | 'weekly' | 'adhoc' | 'habits'>(
     'catalog',
   );
-  const [records, setRecords] = useState<LocalRecord[]>([]);
+  const [records, setRecords] = useLocalRecords(database);
   const [message, setMessage] = useState(
     'Alterações são salvas neste dispositivo antes da sincronização.',
   );
@@ -201,19 +202,17 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
   ]);
   const [editingAdHocId, setEditingAdHocId] = useState<string | null>(null);
 
+  // Uma exclusão interrompida no meio das mutações precisa ser informada; sem isso a promessa
+  // rejeitada some e a tela sugere que tudo foi salvo.
+  function reportWriteFailure(): void {
+    setMessage('Não foi possível concluir a alteração neste dispositivo.');
+  }
+
+  // A leitura direta depois de cada mutação garante que o `await` do formulário só termine com a
+  // gravação concluída; a observação da réplica cuida das mudanças vindas de fora desta tela.
   async function refresh(): Promise<void> {
     setRecords(await database.records.toArray());
   }
-
-  useEffect(() => {
-    let active = true;
-    void database.records.toArray().then((items) => {
-      if (active) setRecords(items);
-    });
-    return () => {
-      active = false;
-    };
-  }, [database]);
 
   const exerciseRecords = useMemo(() => recordsOf(records, 'exercise'), [records]);
   const exercises = useMemo(
@@ -707,7 +706,7 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
                     <button
                       aria-label={`${active ? 'Desativar' : 'Ativar'} ${name}`}
                       type="button"
-                      onClick={() => void toggleExercise(record)}
+                      onClick={() => void toggleExercise(record).catch(reportWriteFailure)}
                     >
                       {active ? 'Desativar' : 'Ativar'} {name}
                     </button>
@@ -715,7 +714,7 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
                       aria-label={`Excluir ${name}`}
                       className="danger"
                       type="button"
-                      onClick={() => void deleteExercise(record)}
+                      onClick={() => void deleteExercise(record).catch(reportWriteFailure)}
                     >
                       Excluir {name}
                     </button>
@@ -726,7 +725,7 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
           </ul>
           <form
             aria-label={editingExerciseId ? 'Editar exercício' : 'Novo exercício'}
-            onSubmit={(event) => void saveExercise(event)}
+            onSubmit={(event) => void saveExercise(event).catch(reportWriteFailure)}
           >
             <label>
               Nome do exercício
@@ -811,7 +810,7 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
                         aria-label={`Excluir ${name}`}
                         className="danger"
                         type="button"
-                        onClick={() => void deleteWeeklyPlan(plan)}
+                        onClick={() => void deleteWeeklyPlan(plan).catch(reportWriteFailure)}
                       >
                         Excluir {name}
                       </button>
@@ -821,7 +820,10 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
               })}
             </ul>
           )}
-          <form className="weekly-plan-form" onSubmit={(event) => void savePlanning(event)}>
+          <form
+            className="weekly-plan-form"
+            onSubmit={(event) => void savePlanning(event).catch(reportWriteFailure)}
+          >
             <div className="weekly-plan-basics">
               <label>
                 Nome do plano
@@ -992,9 +994,9 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
           <AdHocSessionList
             sessions={adHocSessions}
             onEdit={editAdHocSession}
-            onDelete={(session) => void deleteAdHocSession(session)}
+            onDelete={(session) => void deleteAdHocSession(session).catch(reportWriteFailure)}
           />
-          <form onSubmit={(event) => void saveAdHocSession(event)}>
+          <form onSubmit={(event) => void saveAdHocSession(event).catch(reportWriteFailure)}>
             <label>
               Tipo da sessão avulsa
               <select

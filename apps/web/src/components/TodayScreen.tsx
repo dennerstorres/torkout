@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 
 import { activityTypeLabel, sessionStatusLabel } from '../presentation';
 import {
@@ -7,6 +7,7 @@ import {
   type UserSyncDatabase,
 } from '../sync/local-database';
 import type { SyncState } from '../sync/sync-coordinator';
+import { useLocalRecords } from '../sync/use-local-records';
 import { DailyNutrition } from './DailyNutrition';
 import { RecoveryStep, type RecoverySubmission } from './RecoveryStep';
 import { EmptyState, MetricCard, ProgressBar, StatusBadge } from './ui';
@@ -176,7 +177,7 @@ export function TodayScreen({
   timeZone,
 }: TodayScreenProps) {
   const date = localDate(now, timeZone);
-  const [records, setRecords] = useState<LocalRecord[]>([]);
+  const [records, setRecords] = useLocalRecords(database);
   const [message, setMessage] = useState(syncMessages[syncState]);
   const [weight, setWeight] = useState('');
   const [waist, setWaist] = useState('');
@@ -197,23 +198,6 @@ export function TodayScreen({
   const [measurementTime, setMeasurementTime] = useState('');
   const [fasting, setFasting] = useState(false);
   const [recoveryForSessionId, setRecoveryForSessionId] = useState<string | null>(null);
-
-  async function refresh(): Promise<void> {
-    setRecords(await database.records.toArray());
-  }
-
-  useEffect(() => {
-    let active = true;
-    void database.records
-      .toArray()
-      .then((items) => {
-        if (active) setRecords(items);
-      })
-      .catch(() => undefined);
-    return () => {
-      active = false;
-    };
-  }, [database]);
 
   const sessions = useMemo(
     () =>
@@ -269,7 +253,6 @@ export function TodayScreen({
       payload: { execution, ...patch },
     });
     setMessage('Salvo localmente e pendente de sincronização.');
-    await refresh();
   }
 
   async function startSession(session: LocalRecord): Promise<void> {
@@ -354,7 +337,6 @@ export function TodayScreen({
         : { habitDefinitionId: definition.entityId, localDate: date, ...value },
     });
     setMessage('Salvo localmente: hábito pendente de sincronização.');
-    await refresh();
   }
 
   async function saveMeasurement(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -401,7 +383,6 @@ export function TodayScreen({
     setMeasurementNotes('');
     setAdditionalMeasurements([]);
     setMessage('Salvo localmente: medida pendente de sincronização.');
-    await refresh();
   }
 
   async function savePain(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -424,7 +405,6 @@ export function TodayScreen({
     });
     setMessage('Salvo localmente: relato de dor pendente de sincronização.');
     setPainNotes('');
-    await refresh();
   }
 
   async function finishSession(
@@ -480,7 +460,6 @@ export function TodayScreen({
     setRecoveryForSessionId(null);
     setSelectedRunnerId(null);
     setSummaryRequested(false);
-    await refresh();
   }
 
   return (
@@ -602,7 +581,7 @@ export function TodayScreen({
                             entityType: 'workout_session',
                             operation: 'update',
                             payload: { notes: event.target.value || null },
-                          }).then(refresh)
+                          })
                         }
                       />
                     </label>

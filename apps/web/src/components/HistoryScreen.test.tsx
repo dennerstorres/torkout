@@ -433,4 +433,26 @@ describe('calendar and historical editing', () => {
     expect(await screen.findByText(/lançado depois da data/i)).toBeVisible();
     database.close();
   });
+
+  it('drops the pending badge when the replica is synchronised elsewhere', async () => {
+    const database = await seed();
+    render(
+      <HistoryScreen
+        database={database}
+        initialMonth="2026-07"
+        onBack={vi.fn()}
+        today="2026-07-14"
+      />,
+    );
+    const day13 = await screen.findByRole('button', { name: /13 de julho/i });
+    expect(within(day13).getByText('Pendente')).toBeVisible();
+
+    // A sincronização escreve na réplica fora desta tela.
+    await database.records.update(entityKey('workout_session', strengthId), {
+      syncStatus: 'synced',
+    });
+
+    await waitFor(() => expect(within(day13).queryByText('Pendente')).not.toBeInTheDocument());
+    database.close();
+  });
 });

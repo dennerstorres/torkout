@@ -501,4 +501,49 @@ describe('Today mobile tracking', () => {
     expect(screen.getByRole('button', { name: 'Registrar whey' })).toBeVisible();
     database.close();
   });
+
+  it('marks the coffee choice on screen without reopening the page', async () => {
+    const database = await seed();
+    render(
+      <TodayScreen
+        database={database}
+        now={new Date('2026-07-15T01:00:00.000Z')}
+        onBack={vi.fn()}
+        syncState="offline"
+        timeZone="America/Cuiaba"
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole('radio', { name: 'Sem açúcar' }));
+
+    await waitFor(() => expect(screen.getByRole('radio', { name: 'Sem açúcar' })).toBeChecked());
+    database.close();
+  });
+
+  it('clears the pending counter when the replica is synchronised elsewhere', async () => {
+    const database = await seed();
+    render(
+      <TodayScreen
+        database={database}
+        now={new Date('2026-07-15T01:00:00.000Z')}
+        onBack={vi.fn()}
+        syncState="offline"
+        timeZone="America/Cuiaba"
+      />,
+    );
+
+    fireEvent.change(await screen.findByLabelText('Café'), { target: { value: optionId } });
+    const pending = screen.getByRole('group', { name: 'Pendências locais' });
+    await waitFor(() => expect(pending).toHaveTextContent('1'));
+
+    // A sincronização escreve na réplica fora desta tela; a tela precisa acompanhar sozinha.
+    const entry = (await database.records.toArray()).find(
+      (record) => record.entityType === 'habit_entry',
+    );
+    await database.records.update(entry!.key, { syncStatus: 'synced', version: 1 });
+    await database.outbox.clear();
+
+    await waitFor(() => expect(pending).toHaveTextContent('0'));
+    database.close();
+  });
 });

@@ -13,6 +13,7 @@ import {
   type LocalRecord,
   type UserSyncDatabase,
 } from '../sync/local-database';
+import { useLocalRecords } from '../sync/use-local-records';
 
 interface HistoryScreenProps {
   database: UserSyncDatabase;
@@ -123,7 +124,11 @@ export function HistoryScreen({
   today = new Date().toISOString().slice(0, 10),
 }: HistoryScreenProps) {
   const [month, setMonth] = useState(initialMonth);
-  const [records, setRecords] = useState<LocalRecord[]>([]);
+  const [storedRecords] = useLocalRecords(database);
+  const records = useMemo(
+    () => storedRecords.filter((record) => record.deletedAt === null),
+    [storedRecords],
+  );
   const [loaded, setLoaded] = useState(false);
   const [selectedDate, setSelectedDate] = useState(
     today.startsWith(initialMonth) ? today : `${initialMonth}-01`,
@@ -138,10 +143,6 @@ export function HistoryScreen({
   );
   const [message, setMessage] = useState('Histórico disponível neste dispositivo.');
 
-  async function refresh(): Promise<void> {
-    setRecords(await database.records.filter((record) => record.deletedAt === null).toArray());
-  }
-
   useEffect(() => {
     let active = true;
     const load = async () => {
@@ -149,9 +150,6 @@ export function HistoryScreen({
       try {
         await onLoadRange?.(bounds.from, bounds.through);
         if (active) {
-          setRecords(
-            await database.records.filter((record) => record.deletedAt === null).toArray(),
-          );
           setMessage(
             onLoadRange
               ? 'Histórico atualizado e disponível offline.'
@@ -161,9 +159,6 @@ export function HistoryScreen({
         }
       } catch {
         if (active) {
-          setRecords(
-            await database.records.filter((record) => record.deletedAt === null).toArray(),
-          );
           setMessage('Sem conexão. Exibindo o histórico salvo neste dispositivo.');
           setLoaded(true);
         }
@@ -173,7 +168,7 @@ export function HistoryScreen({
     return () => {
       active = false;
     };
-  }, [database, month, onLoadRange]);
+  }, [month, onLoadRange]);
 
   const habits = useMemo(
     () =>
@@ -262,7 +257,6 @@ export function HistoryScreen({
       payload,
     });
     setMessage('Alteração histórica salva localmente e pendente de sincronização.');
-    await refresh();
   }
 
   return (

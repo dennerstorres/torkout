@@ -22,6 +22,10 @@ export default defineConfig({
           environment: 'jsdom',
           include: ['apps/web/src/**/*.test.tsx'],
           name: 'unit-web',
+          // As telas observam a réplica local enquanto montadas. Com a ordem padrão (`stack`), o
+          // `afterEach` do arquivo apaga o banco antes de o `cleanup` desmontar os componentes, e a
+          // consulta órfã rejeita fora do teste. Em ordem de declaração o `cleanup` vem primeiro.
+          sequence: { hooks: 'list' },
           setupFiles: ['./apps/web/src/test/setup.ts'],
           // jsdom com fake-indexeddb em paralelo pode ultrapassar o padrão de 5 s sem que haja
           // erro de comportamento; o limite maior evita reprovação por saturação de máquina.
