@@ -1458,11 +1458,51 @@ chegavam à interface.
 - Lint, formatação, typecheck, testes unitários, E2E e build verdes.
 - `HISTORY.md` atualizado e fase encerrada em commit próprio.
 
+### Fase 25 — Leitura visual do painel de Progresso
+
+**Status:** implementação concluída — confirmação em iPhone físico pendente do titular
+
+**Commit esperado:** `fix(phase-25): make the progress panel readable`
+
+**Objetivo:** transformar o painel de Progresso em conteúdo lido de relance, sem alterar nenhum
+número, regra ou contrato.
+
+**Motivação:** o painel exibia tabelas e parágrafos sem tratamento visual. As colunas de "Volume por
+treino" ficavam espalhadas na largura do cartão, as datas apareciam em ISO, o recorde de série era um
+parágrafo solto e, dentro dos cartões de aderência, a grade de métricas de tela cheia encolhia a
+ponto de colar rótulos vizinhos.
+
+#### Escopo
+
+- [x] Volume por treino em cartões com resumo (treinos, média, melhor) e barra proporcional por data.
+- [x] Datas do painel apresentadas no formato local `dd/mm/aaaa`.
+- [x] Recorde de série destacado como métrica rotulada em vez de parágrafo.
+- [x] Medidas corporais com valores inicial e final e variação assinada em selo neutro.
+- [x] Critérios de nível e histórico de níveis com hierarquia própria em vez de lista/tabela cruas.
+- [x] Cartão de aderência com rótulo e valor em linha, sem herdar a grade de métricas de tela cheia.
+
+#### Testes primeiro
+
+- [x] RED de componente: as linhas de volume trazem data local, barra proporcional ao melhor treino
+      e resumo com média.
+- [x] RED de componente: o recorde de série é um grupo rotulado com exercício e data local.
+- [x] RED de componente: a variação de cada medida aparece como valor assinado com unidade.
+- [x] RED geométrica: nenhum rótulo do cartão de aderência ultrapassa a própria coluna e nenhuma
+      barra de volume estoura o cartão em viewport de desktop.
+
+#### Critérios de saída
+
+- Nenhum número, unidade ou regra do painel mudou junto com a apresentação.
+- Nenhum indicador passa a sugerir julgamento clínico de ganho ou perda.
+- Nenhum rótulo do painel volta a encostar em rótulo ou valor vizinho.
+- Lint, formatação, typecheck, testes unitários, E2E e build verdes.
+- `HISTORY.md` atualizado e fase encerrada em commit próprio.
+
 ## 5. Dependências entre fases
 
 ```text
 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21
-  → 22 → 23 → 24
+  → 22 → 23 → 24 → 25
 ```
 
 Trabalhos internos de uma mesma fase podem ser paralelos somente quando não compartilham arquivos ou contratos instáveis. O encerramento continua único.

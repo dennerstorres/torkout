@@ -155,6 +155,45 @@ describe('progression panel', () => {
     expect(screen.getByText(/15 repetições/)).toBeVisible();
   });
 
+  it('reads volume as dated bars with a summary instead of a bare table', () => {
+    render(
+      <ProgressPanel
+        panel={
+          panel({
+            pushUpsPerSession: [
+              { localDate: '2026-07-06', repetitions: 30 },
+              { localDate: '2026-07-08', repetitions: 15 },
+            ],
+          }) as ProgressPanelResponse
+        }
+      />,
+    );
+    const table = screen.getByRole('table', { name: /flexões por treino/i });
+    expect(within(table).getByText('06/07/2026')).toBeVisible();
+    expect(within(table).getByText('08/07/2026')).toBeVisible();
+    const fills = table.querySelectorAll<HTMLElement>('.volume-bar__fill');
+    expect(fills).toHaveLength(2);
+    expect(fills[0]?.style.width).toBe('100%');
+    expect(fills[1]?.style.width).toBe('50%');
+    expect(table.closest('.volume-card')).toHaveTextContent(/média 22,5/i);
+  });
+
+  it('highlights the best single set as a labelled stat', () => {
+    render(<ProgressPanel panel={panel()} />);
+    const best = screen.getByRole('group', { name: /maior número de repetições em uma série/i });
+    expect(within(best).getByText('15 repetições')).toBeVisible();
+    expect(best).toHaveTextContent('Agachamento livre');
+    expect(best).toHaveTextContent('06/07/2026');
+  });
+
+  it('shows body measurement variation as a signed badge', () => {
+    render(<ProgressPanel panel={panel()} />);
+    const body = screen.getByRole('region', { name: /medidas/i });
+    expect(within(body).getByText('+1,2 kg')).toBeVisible();
+    expect(within(body).getAllByText('-1,5 cm')).toHaveLength(2);
+    expect(within(body).getAllByText('01/07/2026').length).toBeGreaterThan(0);
+  });
+
   it('separates weight, waist and abdomen without calling small changes a real gain', () => {
     render(<ProgressPanel panel={panel()} />);
     const body = screen.getByRole('region', { name: /medidas/i });
@@ -206,7 +245,7 @@ describe('visual level system', () => {
     render(<ProgressPanel panel={panel()} />);
     const levels = screen.getByRole('region', { name: /níveis/i });
     expect(within(levels).getByText('Iniciante I')).toBeVisible();
-    expect(levels).toHaveTextContent('2026-07-06');
+    expect(levels).toHaveTextContent('06/07/2026');
     expect(within(levels).getByRole('progressbar')).toHaveAttribute('aria-valuenow', '75');
   });
 

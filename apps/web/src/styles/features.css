@@ -1352,24 +1352,228 @@ body:has(.auth-dialog-backdrop) {
   line-height: 1;
 }
 
-.trend-list {
+/* Dentro do cartão de aderência não há largura para a grade de métricas de tela cheia: as colunas
+   encolhiam a ponto de colar rótulos vizinhos. Aqui cada item vira uma linha rótulo → valor. */
+.adherence-card .indicator-grid {
+  gap: 0;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.adherence-card .indicator-grid div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+}
+
+.adherence-card .indicator-grid dt {
+  font-size: 0.82rem;
+}
+
+.adherence-card .indicator-grid dd {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.volume-grid {
   display: grid;
   gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+}
+
+.volume-card {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  background: rgb(255 255 255 / 2.5%);
+}
+
+.volume-card__title {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.volume-card__summary,
+.volume-card__empty {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.volume-table {
+  width: 100%;
+  margin-top: var(--space-2);
+  border-collapse: collapse;
+}
+
+.volume-table th,
+.volume-table td {
+  padding: var(--space-2) 0;
+  text-align: left;
+}
+
+.volume-table thead th {
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-subtle);
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.volume-table tbody th {
+  width: 1%;
+  padding-right: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.volume-table tbody tr + tr th,
+.volume-table tbody tr + tr td {
+  border-top: 1px solid var(--color-border);
+}
+
+.volume-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.volume-bar__track {
+  flex: 1;
+  min-width: 2rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--color-surface-highlighted);
+}
+
+.volume-bar__fill {
+  display: block;
+  height: 100%;
+  min-width: 0.5rem;
+  border-radius: 999px;
+  background: var(--color-primary);
+}
+
+.volume-bar__value {
+  min-width: 2.5ch;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  text-align: right;
+}
+
+.best-set {
+  display: grid;
+  gap: var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  background: rgb(183 223 75 / 8%);
+}
+
+.best-set__label {
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+}
+
+.best-set__value {
+  color: var(--color-primary-strong);
+  font-size: 1.45rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 720;
+  line-height: 1.2;
+}
+
+.best-set__context {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.trend-list {
+  display: grid;
+  gap: var(--space-3);
   margin: 0;
 }
 
 .trend-row {
   display: grid;
   gap: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
 }
 
 .trend-row dt {
   color: var(--color-text-muted);
+  font-size: 0.82rem;
   font-weight: 650;
 }
 
 .trend-row dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
   margin: 0;
+  gap: var(--space-3);
+}
+
+.trend-row__points {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.trend-point {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.trend-point strong {
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.trend-point small {
+  color: var(--color-text-subtle);
+  font-size: 0.75rem;
+}
+
+.trend-row__arrow {
+  color: var(--color-text-subtle);
+}
+
+.trend-row__empty {
+  color: var(--color-text-muted);
+}
+
+.trend-badge {
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: var(--space-1) var(--space-3);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+/* A variação é neutra por decisão de produto: o painel não julga ganho ou perda. */
+.trend-badge--up,
+.trend-badge--down,
+.trend-badge--flat {
+  color: var(--color-text);
+  background: var(--color-surface-raised);
 }
 
 .level-current {
@@ -1393,6 +1597,86 @@ body:has(.auth-dialog-backdrop) {
   gap: var(--space-2);
   margin: 0;
   padding-left: var(--space-5);
+}
+
+.criteria-list {
+  padding-left: 0;
+  list-style: none;
+}
+
+.criteria-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.9rem;
+}
+
+.criteria-item__mark {
+  color: var(--color-text-subtle);
+  font-weight: 720;
+}
+
+.criteria-item--achieved .criteria-item__mark {
+  color: var(--color-primary);
+}
+
+.criteria-item__value {
+  margin-left: auto;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+}
+
+.criteria-list__empty {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.level-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.level-table th,
+.level-table td {
+  padding: var(--space-3) 0;
+  text-align: left;
+}
+
+.level-table thead th {
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-subtle);
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.level-table thead th:last-child {
+  text-align: right;
+}
+
+.level-table tbody th {
+  font-weight: 650;
+}
+
+.level-table tbody td {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.level-table tbody tr + tr th,
+.level-table tbody tr + tr td {
+  border-top: 1px solid var(--color-border);
+}
+
+.level-table__pending {
+  color: var(--color-text-subtle);
 }
 
 .photos-layout {

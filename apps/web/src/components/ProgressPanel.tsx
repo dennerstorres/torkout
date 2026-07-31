@@ -16,19 +16,45 @@ function percentage(value: number | null): string {
   return value === null ? 'não registrado' : `${numberLabel(value)}%`;
 }
 
+function localDateLabel(localDate: string): string {
+  const [year, month, day] = localDate.split('-');
+  return year && month && day ? `${day}/${month}/${year}` : localDate;
+}
+
+function deltaLabel(delta: number, unit: string): string {
+  return `${delta > 0 ? '+' : ''}${numberLabel(delta)} ${unit}`;
+}
+
 function TrendRow({ label, trend, unit }: { label: string; trend: Trend; unit: string }) {
+  const direction = trend === null || trend.delta === 0 ? 'flat' : trend.delta > 0 ? 'up' : 'down';
   return (
     <div className="trend-row">
       <dt>{label}</dt>
       <dd>
         {trend === null ? (
-          'Sem medições no período.'
+          <span className="trend-row__empty">Sem medições no período.</span>
         ) : (
           <>
-            {numberLabel(trend.first.value)} {unit} em {trend.first.localDate} →{' '}
-            {numberLabel(trend.last.value)} {unit} em {trend.last.localDate} (
-            {trend.delta >= 0 ? '+' : ''}
-            {numberLabel(trend.delta)} {unit})
+            <span className="trend-row__points">
+              <span className="trend-point">
+                <strong>
+                  {numberLabel(trend.first.value)} {unit}
+                </strong>
+                <small>{localDateLabel(trend.first.localDate)}</small>
+              </span>
+              <span aria-hidden="true" className="trend-row__arrow">
+                →
+              </span>
+              <span className="trend-point">
+                <strong>
+                  {numberLabel(trend.last.value)} {unit}
+                </strong>
+                <small>{localDateLabel(trend.last.localDate)}</small>
+              </span>
+            </span>
+            <span className={`trend-badge trend-badge--${direction}`}>
+              {deltaLabel(trend.delta, unit)}
+            </span>
           </>
         )}
       </dd>
@@ -77,32 +103,60 @@ function AdherenceCard({
   );
 }
 
-function RepetitionTable({
+function VolumeCard({
   caption,
   points,
 }: {
   caption: string;
   points: ProgressPanelResponse['pushUpsPerSession'];
 }) {
-  if (points.length === 0) return <p>Nenhum registro de {caption.toLocaleLowerCase('pt-BR')}.</p>;
+  const best = points.reduce((highest, point) => Math.max(highest, point.repetitions), 0);
+  const total = points.reduce((sum, point) => sum + point.repetitions, 0);
+  const average = points.length === 0 ? 0 : total / points.length;
   return (
-    <table aria-label={caption}>
-      <caption>{caption}</caption>
-      <thead>
-        <tr>
-          <th scope="col">Data</th>
-          <th scope="col">Repetições</th>
-        </tr>
-      </thead>
-      <tbody>
-        {points.map((point) => (
-          <tr key={point.localDate}>
-            <td>{point.localDate}</td>
-            <td>{numberLabel(point.repetitions)}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <article className="volume-card">
+      <h3 className="volume-card__title">{caption}</h3>
+      {points.length === 0 ? (
+        <p className="volume-card__empty">
+          Nenhum registro de {caption.toLocaleLowerCase('pt-BR')}.
+        </p>
+      ) : (
+        <>
+          <p className="volume-card__summary">
+            {points.length} {points.length === 1 ? 'treino' : 'treinos'} · média{' '}
+            {numberLabel(average, 1)} · melhor {numberLabel(best)}
+          </p>
+          <table aria-label={caption} className="volume-table">
+            <thead>
+              <tr>
+                <th scope="col">Data</th>
+                <th scope="col">Repetições</th>
+              </tr>
+            </thead>
+            <tbody>
+              {points.map((point) => (
+                <tr key={point.localDate}>
+                  <th scope="row">{localDateLabel(point.localDate)}</th>
+                  <td>
+                    <span className="volume-bar">
+                      <span className="volume-bar__track">
+                        <span
+                          className="volume-bar__fill"
+                          style={{
+                            width: `${best === 0 ? 0 : Math.round((point.repetitions / best) * 100)}%`,
+                          }}
+                        />
+                      </span>
+                      <span className="volume-bar__value">{numberLabel(point.repetitions)}</span>
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+    </article>
   );
 }
 
@@ -127,8 +181,8 @@ export function ProgressPanel({ panel }: ProgressPanelProps) {
         <h2>Aderência</h2>
         <p className="field-hint">{panel.adherence.explanation}</p>
         <p className="field-hint">
-          Período efetivamente avaliado: {panel.adherence.evaluatedFrom} a{' '}
-          {panel.adherence.evaluatedThrough}.
+          Período efetivamente avaliado: {localDateLabel(panel.adherence.evaluatedFrom)} a{' '}
+          {localDateLabel(panel.adherence.evaluatedThrough)}.
         </p>
         <div className="adherence-grid">
           <AdherenceCard breakdown={panel.adherence.strength} title="Aderência de força" />
@@ -139,19 +193,23 @@ export function ProgressPanel({ panel }: ProgressPanelProps) {
 
       <section className="card" aria-label="Volume por treino">
         <h2>Volume por treino</h2>
-        <RepetitionTable caption="Flexões por treino" points={panel.pushUpsPerSession} />
-        <RepetitionTable caption="Agachamentos por treino" points={panel.squatsPerSession} />
-        <p>
-          <strong>Maior número de repetições em uma série: </strong>
+        <div className="volume-grid">
+          <VolumeCard caption="Flexões por treino" points={panel.pushUpsPerSession} />
+          <VolumeCard caption="Agachamentos por treino" points={panel.squatsPerSession} />
+        </div>
+        <div aria-label="Maior número de repetições em uma série" className="best-set" role="group">
+          <span className="best-set__label">Maior número de repetições em uma série</span>
           {panel.bestSet === null ? (
-            'não registrado'
+            <strong className="best-set__value">Não registrado</strong>
           ) : (
-            <span>
-              {panel.bestSet.repetitions} repetições em {panel.bestSet.exercise} (
-              {panel.bestSet.localDate})
-            </span>
+            <>
+              <strong className="best-set__value">{panel.bestSet.repetitions} repetições</strong>
+              <span className="best-set__context">
+                {panel.bestSet.exercise} · {localDateLabel(panel.bestSet.localDate)}
+              </span>
+            </>
           )}
-        </p>
+        </div>
       </section>
 
       <section className="card" aria-label="Medidas corporais">
@@ -227,7 +285,9 @@ export function ProgressPanel({ panel }: ProgressPanelProps) {
         </p>
         <p className="level-current">
           <strong>{levels.current.name}</strong>
-          {levels.current.achievedAt ? ` · alcançado em ${levels.current.achievedAt}` : ''}
+          {levels.current.achievedAt
+            ? ` · alcançado em ${localDateLabel(levels.current.achievedAt)}`
+            : ''}
         </p>
         <ProgressBar
           label={`Progresso até ${levels.next?.name ?? 'o nível máximo'}`}
@@ -237,30 +297,42 @@ export function ProgressPanel({ panel }: ProgressPanelProps) {
           <div className="level-criteria">
             <div>
               <h3 id="level-achieved">Critérios atingidos</h3>
-              <ul aria-labelledby="level-achieved">
+              <ul aria-labelledby="level-achieved" className="criteria-list">
                 {levels.next.criteria.filter((criterion) => criterion.achieved).length === 0 && (
-                  <li>Nenhum critério atingido ainda.</li>
+                  <li className="criteria-list__empty">Nenhum critério atingido ainda.</li>
                 )}
                 {levels.next.criteria
                   .filter((criterion) => criterion.achieved)
                   .map((criterion) => (
-                    <li key={criterion.key}>
-                      {criterion.label} {criterion.value}/{criterion.target}
+                    <li className="criteria-item criteria-item--achieved" key={criterion.key}>
+                      <span aria-hidden="true" className="criteria-item__mark">
+                        ✓
+                      </span>
+                      {criterion.label}{' '}
+                      <span className="criteria-item__value">
+                        {criterion.value}/{criterion.target}
+                      </span>
                     </li>
                   ))}
               </ul>
             </div>
             <div>
               <h3 id="level-remaining">Critérios restantes</h3>
-              <ul aria-labelledby="level-remaining">
+              <ul aria-labelledby="level-remaining" className="criteria-list">
                 {levels.next.criteria.filter((criterion) => !criterion.achieved).length === 0 && (
-                  <li>Nenhum critério restante.</li>
+                  <li className="criteria-list__empty">Nenhum critério restante.</li>
                 )}
                 {levels.next.criteria
                   .filter((criterion) => !criterion.achieved)
                   .map((criterion) => (
-                    <li key={criterion.key}>
-                      {criterion.label} {criterion.value}/{criterion.target}
+                    <li className="criteria-item" key={criterion.key}>
+                      <span aria-hidden="true" className="criteria-item__mark">
+                        •
+                      </span>
+                      {criterion.label}{' '}
+                      <span className="criteria-item__value">
+                        {criterion.value}/{criterion.target}
+                      </span>
                     </li>
                   ))}
               </ul>
@@ -268,7 +340,7 @@ export function ProgressPanel({ panel }: ProgressPanelProps) {
           </div>
         )}
         {levels.levels.length > 0 && (
-          <table aria-label="Histórico de níveis">
+          <table aria-label="Histórico de níveis" className="level-table">
             <thead>
               <tr>
                 <th scope="col">Nível</th>
@@ -278,8 +350,14 @@ export function ProgressPanel({ panel }: ProgressPanelProps) {
             <tbody>
               {levels.levels.map((level) => (
                 <tr key={level.id}>
-                  <td>{level.name}</td>
-                  <td>{level.achievedAt ?? 'ainda não alcançado'}</td>
+                  <th scope="row">{level.name}</th>
+                  <td>
+                    {level.achievedAt ? (
+                      localDateLabel(level.achievedAt)
+                    ) : (
+                      <span className="level-table__pending">ainda não alcançado</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

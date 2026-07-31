@@ -1907,3 +1907,49 @@ soltos no meio de um vão — o efeito relatado pelo titular como tela quebrada 
 ### Commit de encerramento
 
 `fix(phase-24): keep authenticated screens in sync with the local replica`
+
+## Fase 25 — Leitura visual do painel de Progresso
+
+### Escopo entregue
+
+- "Volume por treino" deixou de ser tabela crua: cada exercício vira um cartão com resumo (treinos,
+  média, melhor) e uma linha por data com barra proporcional ao melhor treino do período.
+- Todas as datas do painel passam a aparecer no formato local `dd/mm/aaaa`.
+- O recorde de série virou métrica rotulada; as medidas corporais mostram valor inicial, valor final
+  e a variação em selo neutro; critérios de nível e histórico de níveis ganharam hierarquia própria.
+- Dentro do cartão de aderência, cada métrica virou uma linha rótulo → valor.
+
+### Evidências TDD
+
+- RED de componente — 4 testes falharam em `ProgressPanel`: não havia data local, barra proporcional,
+  resumo com média, grupo rotulado do recorde nem selo de variação.
+- RED geométrica — 1 teste falhou em `visual.spec.ts`: com a grade de métricas de tela cheia dentro
+  do cartão de aderência, os rótulos "Concluídas" e "Canceladas" ultrapassavam a própria coluna nos
+  três cartões.
+- GREEN — 332 testes unitários verdes em 52 arquivos; 33 E2E verdes em `chromium-mobile`, com 2
+  ignorados pelo próprio conjunto.
+- REFACTOR — formatação, lint com `--max-warnings 0`, typecheck de todos os pacotes e build verdes.
+
+### Decisões
+
+- A variação de medida não usa cor de sucesso ou alerta. O painel não julga ganho nem perda: o selo é
+  neutro e o sinal do número é o indicador, o que também evita depender de cor sozinha.
+- A barra de volume é proporcional ao melhor treino do próprio período e sempre acompanha o número em
+  texto; a barra é leitura auxiliar, não substitui o valor.
+- A escala das barras começa em zero. Com valores próximos as barras ficam parecidas, o que é
+  preferível a exagerar diferenças pequenas.
+
+### Limites preservados
+
+- Nenhum número, unidade, regra de aderência ou contrato mudou: a fase é de apresentação.
+- Nenhum dado de saúde entrou em log, mensagem ou nome de classe.
+
+### Pendências
+
+- A confirmação em iPhone físico continua pendente do titular.
+- Os testes de integração com PostgreSQL não foram executados nesta fase: a mudança é restrita ao
+  frontend e não toca API, schema nem contratos.
+
+### Commit de encerramento
+
+`fix(phase-25): make the progress panel readable`

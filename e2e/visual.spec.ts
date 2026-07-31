@@ -557,3 +557,156 @@ test('phase 24 keeps Today inside the viewport with several choice habits on des
   });
   expect(Math.max(0, ...columnGaps)).toBeLessThanOrEqual(24);
 });
+
+function progressPanelPayload() {
+  const trend = (first: number, last: number) => ({
+    delta: Number((last - first).toFixed(2)),
+    first: { localDate: '2026-07-01', value: first },
+    last: { localDate: '2026-07-13', value: last },
+  });
+  const breakdown = (percentage: number | null) => ({
+    cancelled: 0,
+    completed: 7,
+    denominator: 8,
+    due: 8,
+    future: 1,
+    missed: 1,
+    overdue: 0,
+    partial: 0,
+    percentage,
+    score: 7,
+  });
+  return {
+    abdomen: trend(90, 88.5),
+    adherence: {
+      evaluatedFrom: '2026-07-01',
+      evaluatedThrough: '2026-07-14',
+      explanation: 'Concluída vale 1; parcial vale 0,5.',
+      formulaVersion: 'adherence/v1',
+      general: breakdown(87.5),
+      strength: breakdown(87.5),
+      walk: breakdown(null),
+    },
+    averagePerceivedExertion: 5.25,
+    bestSet: { exercise: 'Agachamento livre', localDate: '2026-07-13', repetitions: 15 },
+    concludedSessions: 7,
+    currentStreak: 2,
+    jointPainReports: 1,
+    levels: {
+      current: {
+        achieved: true,
+        achievedAt: '2026-07-06',
+        criteria: [],
+        id: 'beginner-1',
+        index: 0,
+        name: 'Iniciante I',
+      },
+      levels: [],
+      metrics: {
+        concludedSessions: 7,
+        currentStreak: 2,
+        evolutionRecords: 2,
+        longestStreak: 2,
+        regularWeeks: 1,
+      },
+      next: {
+        achieved: false,
+        achievedAt: null,
+        criteria: [
+          {
+            achieved: false,
+            key: 'concludedSessions',
+            label: 'Treinos concluídos',
+            target: 8,
+            value: 7,
+          },
+        ],
+        id: 'beginner-2',
+        index: 1,
+        name: 'Iniciante II',
+      },
+      progressToNext: 75,
+    },
+    longestStreak: 2,
+    muscularPainReports: 2,
+    otherDiscomfortReports: 0,
+    perceivedExertionSamples: 4,
+    pushUpsPerSession: [
+      { localDate: '2026-07-06', repetitions: 30 },
+      { localDate: '2026-07-13', repetitions: 36 },
+    ],
+    range: { from: '2026-07-01', through: '2026-07-14' },
+    sessionsThisWeek: 2,
+    sessionsWithoutPain: 3,
+    squatsPerSession: [
+      { localDate: '2026-07-06', repetitions: 30 },
+      { localDate: '2026-07-13', repetitions: 45 },
+    ],
+    strengthSessionsThisWeek: 2,
+    waist: trend(84, 82.5),
+    walkDistanceMeters: 10_200,
+    walkDurationSeconds: 6000,
+    walksConcluded: 2,
+    weight: trend(70, 71.2),
+  };
+}
+
+test('phase 25 keeps the progress panel readable instead of colliding labels and values', async ({
+  page,
+}) => {
+  await page.setViewportSize({ height: 1080, width: 1440 });
+  await mockToday(page);
+  await page.route('**/api/v1/progress?**', async (route) => {
+    const url = new URL(route.request().url());
+    await route.fulfill({
+      json: progressPayload(url.searchParams.get('from')!, url.searchParams.get('through')!),
+    });
+  });
+  await page.route('**/api/v1/progress/panel?**', (route) =>
+    route.fulfill({ json: progressPanelPayload() }),
+  );
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Progresso', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Volume por treino' })).toBeVisible();
+
+  // Rótulo e valor de aderência nunca podem se encostar, nem um rótulo invadir a coluna vizinha.
+  const collisions = await page.evaluate(() => {
+    const problems: string[] = [];
+    for (const card of document.querySelectorAll<HTMLElement>('.adherence-card')) {
+      const rows = [...card.querySelectorAll<HTMLElement>('.indicator-grid > div')];
+      for (const row of rows) {
+        const label = row.querySelector('dt')!.getBoundingClientRect();
+        const value = row.querySelector('dd')!.getBoundingClientRect();
+        const sameLine = label.top < value.bottom && value.top < label.bottom;
+        if (sameLine && value.left - label.right < 8) problems.push(row.textContent ?? '');
+      }
+      for (const row of rows) {
+        // Rótulo mais largo que a própria coluna encosta no vizinho: era assim que "Concluídas" e
+        // "Parciais" apareciam grudadas dentro do cartão de aderência.
+        const label = row.querySelector('dt')!;
+        if (label.scrollWidth > label.clientWidth + 1) problems.push(label.textContent ?? '');
+      }
+    }
+    return problems;
+  });
+  expect(collisions).toEqual([]);
+
+  // Volume vira barra datada: cada linha mantém data, barra e valor sem estourar o cartão.
+  const volume = await page.evaluate(() => {
+    const cards = [...document.querySelectorAll<HTMLElement>('.volume-card')];
+    return cards.map((card) => {
+      const bounds = card.getBoundingClientRect();
+      const fills = [...card.querySelectorAll<HTMLElement>('.volume-bar__fill')];
+      return {
+        overflow: fills.some((fill) => fill.getBoundingClientRect().right > bounds.right + 1),
+        widths: fills.map((fill) => fill.style.width),
+      };
+    });
+  });
+  expect(volume).toHaveLength(2);
+  expect(volume.every((card) => !card.overflow)).toBe(true);
+  expect(volume.map((card) => card.widths)).toEqual([
+    ['83%', '100%'],
+    ['67%', '100%'],
+  ]);
+});
