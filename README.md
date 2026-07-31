@@ -7,9 +7,12 @@ offline e sincronização posterior.
 **Instância de produção:** <https://torkout.dennerstorres.dev>
 
 > **Projeto pessoal.** Construí o Torkout para o meu próprio acompanhamento de treino. A instância
-> acima é minha, o cadastro nela está fechado e ela não é um serviço mantido para terceiros. O
-> código está público para quem quiser ler, aprender ou hospedar a própria cópia — o cadastro é uma
-> opção de implantação (`PUBLIC_SIGNUP_ENABLED`), desabilitada por padrão.
+> acima é minha, o cadastro nela está fechado e ela não é um serviço mantido para terceiros. Para
+> conhecer o aplicativo sem criar conta, use a
+> **[demonstração](https://torkout.dennerstorres.dev/demo)**: ela roda inteiramente no seu aparelho,
+> com dados de exemplo, e não envia nada a servidor algum. O código está público para quem quiser
+> ler, aprender ou hospedar a própria cópia — o cadastro é uma opção de implantação
+> (`PUBLIC_SIGNUP_ENABLED`), desabilitada por padrão.
 
 > **Não é software médico.** O Torkout registra e resume o que você informa. Ele não diagnostica,
 > não prescreve e não substitui orientação médica, fisioterapêutica, nutricional ou de educação
@@ -111,6 +114,22 @@ recuperação de senha continuam funcionando para contas já existentes.
 
 Abrir o cadastro em uma instância exposta significa assumir a responsabilidade pelos dados de saúde
 de quem se cadastrar, incluindo os documentos em [`docs/legal/`](docs/legal/).
+
+### Modo demonstração
+
+Com o cadastro fechado, a tela de entrada oferece **Ver demonstração**, também acessível pela rota
+`/demo`. A demonstração roda o aplicativo real contra a réplica local, com um plano de exemplo e
+quatro semanas de histórico fictício, e nada dela alcança o servidor. A garantia é em três camadas
+independentes, cada uma coberta por teste:
+
+1. o transporte de sincronização da demonstração **recusa** envio, em vez de apenas não ser
+   acionado;
+2. a réplica fica em banco próprio, apagado ao sair e descartado se uma conta real assumir a sessão
+   no mesmo navegador;
+3. o servidor recusa qualquer sincronização sem sessão autenticada.
+
+Os dados ficam no IndexedDB do aparelho, então sobrevivem a um recarregamento — "sem persistência"
+aqui significa que nada sai do aparelho e tudo é apagado ao sair, não que some a cada clique.
 
 ## Testes e qualidade
 

@@ -3,7 +3,12 @@ import { useEffect, useMemo, useState } from 'react';
 import type { LocalConflict, OutboxEntry } from './local-database';
 import { createUserSyncDatabase } from './local-database';
 import { httpSyncTransport } from './http-transport';
-import { installSyncTriggers, SyncCoordinator, type SyncSnapshot } from './sync-coordinator';
+import {
+  installSyncTriggers,
+  SyncCoordinator,
+  type SyncSnapshot,
+  type SyncTransport,
+} from './sync-coordinator';
 
 const initialSnapshot: SyncSnapshot = {
   conflictCount: 0,
@@ -12,12 +17,20 @@ const initialSnapshot: SyncSnapshot = {
   state: 'synced',
 };
 
-export function useSyncRuntime(userId: string | null) {
+/**
+ * O transporte é injetável para que o modo demonstração possa fornecer um que recusa envio. Sem
+ * essa costura, a única garantia seria "a sincronização não é disparada", que é frágil demais para
+ * dados que nunca podem sair do aparelho.
+ */
+export function useSyncRuntime(
+  userId: string | null,
+  transport: SyncTransport = httpSyncTransport,
+) {
   const runtime = useMemo(() => {
     if (!userId || !/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(userId)) return null;
     const database = createUserSyncDatabase(userId);
-    return { coordinator: new SyncCoordinator(database, httpSyncTransport), database };
-  }, [userId]);
+    return { coordinator: new SyncCoordinator(database, transport), database };
+  }, [transport, userId]);
   const [snapshot, setSnapshot] = useState(initialSnapshot);
   const [conflicts, setConflicts] = useState<LocalConflict[]>([]);
   const [pendingOperations, setPendingOperations] = useState<OutboxEntry[]>([]);

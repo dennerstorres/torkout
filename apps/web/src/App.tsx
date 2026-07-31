@@ -22,6 +22,9 @@ import { PwaExperience } from './components/PwaExperience';
 import { ResetPasswordScreen } from './components/ResetPasswordScreen';
 import { TodayScreen } from './components/TodayScreen';
 import { DesignSystemLab } from './components/DesignSystemLab';
+import { demoApi } from './demo/demo-api';
+import { discardDemoReplica, startDemo } from './demo/demo-session';
+import { DEMO_USER_ID, demoSyncTransport } from './demo/demo-sync';
 import { clearOfflineIdentity, readOfflineIdentity, recordOnlineIdentity } from './offline-auth';
 import { deleteUserSyncDatabase, entityKey, type UserSyncDatabase } from './sync/local-database';
 import { useSyncRuntime } from './sync/use-sync-runtime';
@@ -87,12 +90,18 @@ async function cacheDailyData(
 
 export function App({
   api = browserApi,
+  demo = false,
   signUpEnabled = import.meta.env.VITE_PUBLIC_SIGNUP_ENABLED === 'true',
 }: {
   api?: AppApi;
+  /** Inicia já dentro do modo demonstração; usado pelos testes e pela entrada do visitante. */
+  demo?: boolean;
   /** Cadastro público; o padrão é fechado. Ver `PUBLIC_SIGNUP_ENABLED` na API. */
   signUpEnabled?: boolean;
 }) {
+  // A demonstração tem endereço próprio para poder ser compartilhada por link, além do botão na
+  // tela de entrada.
+  const [demoMode, setDemoMode] = useState(demo || window.location.pathname === '/demo');
   if (window.location.pathname === '/design-system') return <DesignSystemLab />;
   return (
     <>
@@ -101,13 +110,31 @@ export function App({
       </a>
       <PwaExperience />
       <div id="main-content" tabIndex={-1}>
-        <AppContent api={api} signUpEnabled={signUpEnabled} />
+        <AppContent
+          api={demoMode ? demoApi : api}
+          demoMode={demoMode}
+          // Trocar entre demonstração e uso normal recria o conteúdo: sessão, réplica e estado de
+          // tela pertencem a identidades diferentes e não podem se misturar.
+          key={demoMode ? 'demo' : 'real'}
+          onDemoChange={setDemoMode}
+          signUpEnabled={signUpEnabled}
+        />
       </div>
     </>
   );
 }
 
-function AppContent({ api, signUpEnabled }: { api: AppApi; signUpEnabled: boolean }) {
+function AppContent({
+  api,
+  demoMode,
+  onDemoChange,
+  signUpEnabled,
+}: {
+  api: AppApi;
+  demoMode: boolean;
+  onDemoChange(active: boolean): void;
+  signUpEnabled: boolean;
+}) {
   const resetToken =
     window.location.pathname === '/reset-password'
       ? new URLSearchParams(window.location.search).get('token')
@@ -118,7 +145,7 @@ function AppContent({ api, signUpEnabled }: { api: AppApi; signUpEnabled: boolea
   const [offline, setOffline] = useState(false);
   const [timeZone, setTimeZone] = useState('America/Cuiaba');
   const [userId, setUserId] = useState<string | null>(null);
-  const sync = useSyncRuntime(userId);
+  const sync = useSyncRuntime(userId, demoMode ? demoSyncTransport : undefined);
   const previousView = useRef<View>(view);
   const photoApi = useMemo(
     () => ({
@@ -186,7 +213,22 @@ function AppContent({ api, signUpEnabled }: { api: AppApi; signUpEnabled: boolea
   }, []);
 
   useEffect(() => {
-    if (resetToken) return;
+    if (!demoMode) return;
+    let active = true;
+    void startDemo().then(() => {
+      if (!active) return;
+      setName('Visitante');
+      setTimeZone('America/Cuiaba');
+      setUserId(DEMO_USER_ID);
+      setView('home');
+    });
+    return () => {
+      active = false;
+    };
+  }, [demoMode]);
+
+  useEffect(() => {
+    if (resetToken || demoMode) return;
     let active = true;
     void api
       .getSession()
@@ -196,6 +238,9 @@ function AppContent({ api, signUpEnabled }: { api: AppApi; signUpEnabled: boolea
           setView('public');
           return;
         }
+        // Uma conta real assumindo a sessão descarta qualquer resíduo de demonstração: dados de
+        // exemplo não podem conviver com dados de verdade no mesmo navegador.
+        await discardDemoReplica();
         setName(session.user.name);
         setUserId(session.user.id);
         recordOnlineIdentity({ name: session.user.name, userId: session.user.id });
@@ -236,7 +281,7 @@ function AppContent({ api, signUpEnabled }: { api: AppApi; signUpEnabled: boolea
     return () => {
       active = false;
     };
-  }, [api, resetToken]);
+  }, [api, demoMode, resetToken]);
 
   const openToday = useCallback(async (): Promise<void> => {
     if (sync.database && !offline) {
@@ -271,7 +316,15 @@ function AppContent({ api, signUpEnabled }: { api: AppApi; signUpEnabled: boolea
       </main>
     );
   }
-  if (view === 'public') return <AuthScreen api={api} signUpEnabled={signUpEnabled} />;
+  if (view === 'public') {
+    return (
+      <AuthScreen
+        api={api}
+        signUpEnabled={signUpEnabled}
+        {...(signUpEnabled ? {} : { onStartDemo: () => onDemoChange(true) })}
+      />
+    );
+  }
   if (view === 'offline-locked') {
     return (
       <main className="centered-layout">
@@ -421,6 +474,25 @@ function AppContent({ api, signUpEnabled }: { api: AppApi; signUpEnabled: boolea
   return (
     <AuthenticatedShell
       conflicts={sync.conflicts}
+      {...(demoMode
+        ? {
+            demo: {
+              onExit: async () => {
+                await discardDemoReplica();
+                // Sem limpar o endereço, recarregar depois de sair reabriria a demonstração.
+                if (window.location.pathname === '/demo') {
+                  window.history.pushState({}, '', '/');
+                }
+                setUserId(null);
+                onDemoChange(false);
+              },
+              onRestart: async () => {
+                await startDemo();
+                window.location.reload();
+              },
+            },
+          }
+        : {})}
       name={name}
       onExport={() => void sync.exportPending()}
       onNavigate={(destination) => void navigate(destination)}

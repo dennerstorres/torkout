@@ -98,6 +98,30 @@ describe('local-first sync API', () => {
     await pool.end();
   });
 
+  // Terceira camada da garantia do modo demonstração: mesmo que as camadas do cliente falhem, uma
+  // operação sem sessão autenticada não pode escrever. A demonstração não vira caminho de escrita
+  // anônima.
+  it('refuses to sync without an authenticated session', async () => {
+    const anonymousHeaders = { origin: 'https://torkout.example.test' };
+
+    const pushed = await app.inject({
+      headers: anonymousHeaders,
+      method: 'POST',
+      payload: { operations: [createOperation()] },
+      url: '/api/v1/sync/push',
+    });
+    const pulled = await app.inject({
+      headers: anonymousHeaders,
+      method: 'GET',
+      url: '/api/v1/sync/pull?limit=50',
+    });
+
+    expect(pushed.statusCode).toBe(401);
+    expect(pulled.statusCode).toBe(401);
+    const stored = await pool.query('select count(*)::int as total from body_measurements');
+    expect(stored.rows[0].total).toBe(0);
+  });
+
   it('rejects a malformed item without blocking the valid remainder of the batch', async () => {
     const valid = createOperation();
     const response = await push(users.first, [{ broken: true }, valid]);

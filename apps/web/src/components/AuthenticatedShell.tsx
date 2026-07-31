@@ -21,6 +21,8 @@ const destinations: Array<{ icon: IconName; label: string; view: AuthenticatedVi
 interface Props {
   children: ReactNode;
   conflicts: Array<Omit<LocalConflict, 'operationId'>>;
+  /** Presente somente no modo demonstração; define o aviso permanente e suas ações. */
+  demo?: { onExit(): void | Promise<void>; onRestart(): void | Promise<void> };
   name: string;
   onExport(): void;
   onNavigate(view: AuthenticatedView): void;
@@ -89,7 +91,24 @@ export function AuthenticatedShell(props: Props) {
             </div>
           </details>
         </header>
-        {unhealthy && (
+        {props.demo && (
+          <div aria-label="Modo demonstração" className="demo-banner" role="status">
+            <Icon name="warning" size={16} />
+            <p>
+              <strong>Modo demonstração.</strong> Os dados são de exemplo e ficam só neste aparelho:
+              nada é salvo em servidor algum.
+            </p>
+            <span className="demo-banner__actions">
+              <button type="button" onClick={() => void props.demo?.onRestart()}>
+                Recomeçar
+              </button>
+              <button type="button" onClick={() => void props.demo?.onExit()}>
+                Sair da demonstração
+              </button>
+            </span>
+          </div>
+        )}
+        {unhealthy && !props.demo && (
           <div className={`global-status global-status--${props.state}`} role="status">
             <Icon
               name={props.state === 'conflict' || props.state === 'error' ? 'warning' : 'refresh'}

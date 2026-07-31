@@ -109,3 +109,22 @@ test('authenticated shell remains accessible with reduced motion and forced colo
   }));
   expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.viewportWidth);
 });
+
+test('demonstration mode announces itself and emits no request to the API', async ({ page }) => {
+  const requests: string[] = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/auth/')) {
+      requests.push(url.pathname);
+    }
+  });
+
+  await page.goto('/demo');
+
+  const notice = page.getByRole('status', { name: /demonstração/i });
+  await expect(notice).toBeVisible();
+  await expect(notice).toContainText(/nada é salvo/i);
+  await expect(page.getByRole('heading', { name: 'Hoje', exact: true })).toBeVisible();
+  await expectWcagAa(page);
+  expect(requests).toEqual([]);
+});

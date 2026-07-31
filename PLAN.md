@@ -6,7 +6,7 @@
 
 **Unidade de entrega:** fase completa com commit de encerramento
 
-**Status geral:** Fases 0–25 concluídas e validação física aprovada; a instância de produção está no ar em <https://torkout.dennerstorres.dev>. Restam as Fases 26 (backup externo comprovado), 27 (CI de segurança verde), 28 (cadastro público fechado) e 29 (modo demonstração local), abertas na preparação do repositório para uso público.
+**Status geral:** Fases 0–25 concluídas e validação física aprovada; a instância de produção está no ar em <https://torkout.dennerstorres.dev>. Fases 28 (cadastro público fechado) e 29 (modo demonstração local) concluídas no código, aguardando deploy. Restam as Fases 26 (backup externo comprovado) e 27 (CI de segurança verde).
 
 ## 1. Regras de execução
 
@@ -1621,7 +1621,7 @@ aberto deixa de ser propriedade do produto e passa a ser opção de implantaçã
 
 ### Fase 29 — Modo demonstração local
 
-**Status:** pendente
+**Status:** concluída — pendente de verificação em iPhone físico e de confirmar o fallback de `/demo` no Coolify
 
 **Commit esperado:** `feat(phase-29): add local demonstration mode`
 
@@ -1638,33 +1638,33 @@ camadas independentes, e a fase só fecha com as três demonstradas por teste.
 
 #### Escopo
 
-- [ ] Sessão de demonstração local, sem cookie de autenticação e sem qualquer chamada autenticada a
+- [x] Sessão de demonstração local, sem cookie de autenticação e sem qualquer chamada autenticada a
       `/api/v1`.
-- [ ] Réplica isolada em banco próprio, reaproveitando o particionamento de
+- [x] Réplica isolada em banco próprio, reaproveitando o particionamento de
       `createUserSyncDatabase`, com identificador de demonstração reservado.
-- [ ] `SyncTransport` de demonstração que recusa todo envio, em vez de apenas não ser acionado.
-- [ ] Semente com o plano de referência de `docs/GUIA_DO_USUARIO.md` e histórico fictício suficiente
+- [x] `SyncTransport` de demonstração que recusa todo envio, em vez de apenas não ser acionado.
+- [x] Semente com o plano de referência de `docs/GUIA_DO_USUARIO.md` e histórico fictício suficiente
       para o painel de Progresso mostrar volume, aderência e variação de medidas.
-- [ ] Aviso permanente e perceptível de que é demonstração e de que nada é salvo, sem depender só de
+- [x] Aviso permanente e perceptível de que é demonstração e de que nada é salvo, sem depender só de
       cor.
-- [ ] Ação "Recomeçar" que semeia novamente, e saída que apaga a réplica com
+- [x] Ação "Recomeçar" que semeia novamente, e saída que apaga a réplica com
       `deleteUserSyncDatabase`.
-- [ ] Entrar em uma conta real no mesmo navegador apaga qualquer réplica de demonstração residual.
-- [ ] A demonstração não pede aceite de documentos legais nem coleta consentimento de dados de saúde.
+- [x] Entrar em uma conta real no mesmo navegador apaga qualquer réplica de demonstração residual.
+- [x] A demonstração não pede aceite de documentos legais nem coleta consentimento de dados de saúde.
 
 #### Testes primeiro
 
-- [ ] RED camada 1: o transporte de demonstração recusa envio, e nenhuma requisição de rede é emitida
+- [x] RED camada 1: o transporte de demonstração recusa envio, e nenhuma requisição de rede é emitida
       durante uma jornada completa de registro.
-- [ ] RED camada 2: após exercitar a demonstração, o outbox da réplica de uma conta real permanece
+- [x] RED camada 2: após exercitar a demonstração, o outbox da réplica de uma conta real permanece
       vazio; `retryFailed` na demonstração não produz nenhum envio.
-- [ ] RED camada 3: uma operação de sincronização apresentada sem sessão autenticada é recusada pelo
+- [x] RED camada 3: uma operação de sincronização apresentada sem sessão autenticada é recusada pelo
       servidor. A demonstração não vira caminho de escrita anônima.
-- [ ] RED de ciclo de vida: sair da demonstração remove o banco local, e entrar em conta real com
+- [x] RED de ciclo de vida: sair da demonstração remove o banco local, e entrar em conta real com
       resíduo de demonstração presente o descarta antes de qualquer leitura de tela.
-- [ ] RED de componente: toda tela autenticada exibe o aviso de demonstração enquanto o modo estiver
+- [x] RED de componente: toda tela autenticada exibe o aviso de demonstração enquanto o modo estiver
       ativo.
-- [ ] RED de acessibilidade: o aviso é anunciado por leitor de tela e não depende de cor.
+- [x] RED de acessibilidade: o aviso é anunciado por leitor de tela e não depende de cor.
 
 #### Critérios de saída
 

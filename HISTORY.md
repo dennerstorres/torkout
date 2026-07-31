@@ -2025,3 +2025,80 @@ soltos no meio de um vão — o efeito relatado pelo titular como tela quebrada 
   tenha efeito. Enquanto o deploy não ocorrer, o cadastro segue aberto em produção.
 - Uma execução de `TodayScreen.test.tsx` falhou de forma isolada e passou nas execuções seguintes sem
   alteração de código. Instabilidade local não relacionada a esta fase; não foi investigada.
+
+## Fase 29 — Modo demonstração local
+
+**Commit de encerramento:** `feat(phase-29): add local demonstration mode`
+
+### Escopo entregue
+
+- Modo demonstração executando o aplicativo real contra a réplica local, sem conta e sem rede.
+- Entrada pelo botão "Ver demonstração" na tela pública, oferecido apenas quando o cadastro está
+  fechado, e pela rota própria `/demo`, que torna a demonstração compartilhável por link.
+- Semente com o plano de referência de `docs/GUIA_DO_USUARIO.md`: força em terça, quinta e sábado,
+  caminhada nos demais dias úteis, descanso no domingo, quatro hábitos e 28 dias de histórico com
+  medições semanais, tudo relativo ao dia da visita.
+- Aviso permanente no shell autenticado, com ícone e texto, mais as ações "Recomeçar" e "Sair da
+  demonstração".
+- `useSyncRuntime` passou a aceitar o transporte, que antes era fixo em `httpSyncTransport`.
+
+### Evidência Red
+
+- RED camada 1 (`demo-sync.test.tsx`): com um transporte que apenas devolvia respostas vazias, a
+  operação enfileirada ficou presa em `sending`. A falha expôs exatamente o modo de falha que a fase
+  queria impedir: "não faz nada" não é o mesmo que "recusa".
+- RED camada 2 (`demo-lifecycle.test.tsx`): a réplica não era semeada nem apagada.
+- RED de interface (`demo-mode.test.tsx`): 4 de 5 falharam; não existiam botão de entrada, aviso nem
+  saída. Depois, RED próprio para o descarte de resíduo ao entrar em conta real, para a rota `/demo`
+  e para a limpeza do endereço ao sair.
+
+### Evidência Green
+
+- Unitários: 353 testes em 58 arquivos.
+- Integração: 72 testes em 15 arquivos contra PostgreSQL real.
+- E2E: 34 testes Playwright, 2 pulados, incluindo o novo caso de demonstração com axe-core.
+- Formatação, lint com `--max-warnings 0`, typecheck, build e scan de segredos verdes.
+
+### Camadas da garantia
+
+1. `demoSyncTransport` lança `DEMO_SYNC_BLOCKED` em `pull` e `push`.
+2. Réplica em banco próprio sob um UUID reservado, apagada ao sair, ao recomeçar e quando uma conta
+   real assume a sessão.
+3. O servidor recusa `POST /api/v1/sync/push` e `GET /api/v1/sync/pull` sem sessão autenticada.
+
+O E2E confirma o conjunto em um build real: durante a jornada `/demo`, nenhuma requisição para
+`/api/` ou `/auth/` foi emitida.
+
+### Decisões
+
+- A demonstração usa a API de demonstração apenas para sessão e perfil, que decidem qual tela abrir.
+  Todo o resto recusa, porque as telas já leem da réplica local e toleram hidratação indisponível.
+  Simular respostas criaria um segundo caminho de leitura que envelheceria em paralelo ao produto.
+- Exportação, exclusão de conta e troca de senha recusam em vez de simular sucesso: sem conta, um
+  sucesso falso seria mentira sobre o que o produto faz.
+- A demonstração não pede aceite de documentos legais nem consentimento de dados de saúde, porque
+  não há tratamento correspondente.
+- O aviso não depende de cor: traz ícone e texto explícito, e é anunciado como `status`.
+
+### Desvios
+
+- A camada 3 passou na primeira execução, porque o servidor já exigia sessão autenticada. O teste é
+  caracterização de uma garantia existente, não um ciclo Red→Green, e está registrado assim.
+- Um caso de interface passa por vacuidade quando o cadastro está habilitado, já que o botão de
+  demonstração simplesmente não existe. O caso complementar cobre a presença.
+
+### Limites preservados
+
+- Nenhum dado de demonstração chega ao PostgreSQL, comprovado pelas três camadas.
+- Os dados semeados são fictícios e não descrevem pessoa real.
+- A demonstração usa as mesmas regras de domínio e as mesmas telas do produto, sem ramo paralelo de
+  cálculo.
+- Entrar em conta real no mesmo navegador descarta resíduo de demonstração antes de qualquer leitura
+  de tela.
+
+### Pendências
+
+- Verificação em iPhone físico da demonstração, incluindo o aviso permanente e a saída.
+- A rota `/demo` depende do fallback de SPA do servidor estático; confirmar no Coolify após o deploy.
+- O botão de entrada só aparece com o cadastro fechado, então em produção ele passa a existir junto
+  com o deploy da Fase 28.

@@ -13,10 +13,16 @@ const modeTitle: Record<Mode, string> = {
 
 export function AuthScreen({
   api,
+  onStartDemo,
   signUpEnabled = import.meta.env.VITE_PUBLIC_SIGNUP_ENABLED === 'true',
   version = import.meta.env.VITE_APP_VERSION ?? 'desenvolvimento',
 }: {
   api: AppApi;
+  /**
+   * Abre o modo demonstração. Só é oferecido quando o cadastro está fechado: com cadastro aberto, a
+   * própria conta já é o caminho para conhecer o produto.
+   */
+  onStartDemo?: () => void;
   /**
    * Cadastro público. O padrão é fechado, acompanhando `PUBLIC_SIGNUP_ENABLED` da API: a ausência
    * de configuração nunca pode abrir o cadastro por engano.
@@ -121,8 +127,15 @@ export function AuthScreen({
                 Começar agora
               </button>
             )}
+            {!signUpEnabled && onStartDemo && (
+              <button className="primary" type="button" onClick={onStartDemo}>
+                Ver demonstração
+              </button>
+            )}
             <button
-              className={signUpEnabled ? undefined : 'primary'}
+              // O herói tem uma única ação primária: cadastro, demonstração ou, na falta das duas,
+              // a própria entrada.
+              className={signUpEnabled || onStartDemo ? undefined : 'primary'}
               type="button"
               onClick={() => open('login')}
             >
@@ -130,10 +143,14 @@ export function AuthScreen({
             </button>
           </div>
           {!signUpEnabled && (
-            <p className="auth-signup-closed">
-              O cadastro está fechado nesta instância, que é de uso pessoal. O Torkout é software
-              livre: você pode hospedar a sua própria cópia.
-            </p>
+            <>
+              <p className="auth-signup-closed">
+                O cadastro está fechado nesta instância, que é de uso pessoal. Você pode conhecer o
+                aplicativo pela demonstração, que roda inteiramente no seu aparelho e não salva nada
+                em nenhum servidor. O Torkout é software livre: você também pode hospedar a sua
+                própria cópia.
+              </p>
+            </>
           )}
           <ul className="auth-assurances" aria-label="Características do Torkout">
             <li>Dados sob seu controle</li>
