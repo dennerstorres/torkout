@@ -1816,3 +1816,20 @@ com conflito de concorrência. A posse passou a ser verificada antes da versão,
 O freeze foi promovido de `2.2.0` para `2.3.0` porque esta fase adiciona uma coluna. Os contratos
 públicos não mudaram: o digest de `packages/contracts/src` continua o mesmo. A promoção é uma decisão
 deliberada desta fase e deve ser revista pelo titular.
+
+### Correção: séries além do planejado na tela
+
+O primeiro corte da fase entregou o WORKOUT-015 apenas no servidor. A API aceitava série além do
+planejado — o teste de integração cobria exatamente isso —, mas o formulário do Histórico só
+renderizava as séries que já existiam, sem forma de acrescentar. Na prática o requisito não estava
+disponível para o titular, e o item foi marcado como concluído no `PLAN.md` antes da hora.
+
+O caso que motivou a fase expõe o problema: em 27/07 foram feitas três séries de agachamento para
+duas planejadas.
+
+- RED — 2 testes falharam em `HistoryScreen` sobre acrescentar série e sobre remover série
+  acrescentada por engano sem oferecer remoção das planejadas.
+- GREEN — o formulário passou a manter as séries em estado, com botão de adicionar por exercício.
+  Série acrescentada nasce sem alvo e exibe "Sem alvo planejado"; só ela pode ser removida, porque a
+  série planejada pertence ao plano e não ao lançamento.
+- 52 arquivos e 325 testes unitários, 14 e 66 de integração, 31 E2E verdes.

@@ -285,6 +285,117 @@ describe('calendar and historical editing', () => {
     database.close();
   });
 
+  it('permite adicionar série além do planejado no lançamento retroativo', async () => {
+    const database = await seed();
+    const key = entityKey('workout_session', strengthId);
+    const current = await database.records.get(key);
+    await database.records.put({
+      ...current!,
+      data: {
+        ...current!.data,
+        exercises: [
+          {
+            id: 'a8700000-0000-4000-8000-000000000001',
+            name: 'Agachamento',
+            sets: [
+              {
+                actualRepetitions: null,
+                completed: false,
+                id: 'a8700000-0000-4000-8000-000000000002',
+                plannedRepetitions: 10,
+                setNumber: 1,
+              },
+            ],
+            sortOrder: 0,
+            status: 'planned',
+            trackingMetric: 'repetitions',
+          },
+        ],
+      },
+    });
+    render(
+      <HistoryScreen
+        database={database}
+        initialMonth="2026-07"
+        onBack={vi.fn()}
+        today="2026-07-14"
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /13 de julho/i }));
+    fireEvent.change(screen.getByLabelText('Agachamento · série 1 em 13/07/2026'), {
+      target: { value: '15' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Adicionar série em Agachamento' }));
+    const extra = screen.getByLabelText('Agachamento · série 2 em 13/07/2026');
+    // A série acrescentada não tinha alvo: a tela diz isso em vez de inventar um.
+    expect(within(extra.closest('label')!).getByText(/sem alvo planejado/i)).toBeVisible();
+    fireEvent.change(extra, { target: { value: '15' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Lançar treino de 13/07/2026' }));
+
+    await waitFor(async () => {
+      const operations = await database.outbox.toArray();
+      const session = operations.find((item) => item.entityType === 'workout_session');
+      const payload = session!.payload as {
+        execution: { exercises: { sets: { actualRepetitions: number; setNumber: number }[] }[] };
+      };
+      const sets = payload.execution.exercises[0]!.sets;
+      expect(sets).toHaveLength(2);
+      expect(sets.map((set) => set.setNumber)).toEqual([1, 2]);
+      expect(sets.every((set) => set.actualRepetitions === 15)).toBe(true);
+    });
+    database.close();
+  });
+
+  it('permite remover uma série acrescentada por engano sem tocar nas planejadas', async () => {
+    const database = await seed();
+    const key = entityKey('workout_session', strengthId);
+    const current = await database.records.get(key);
+    await database.records.put({
+      ...current!,
+      data: {
+        ...current!.data,
+        exercises: [
+          {
+            id: 'a8700000-0000-4000-8000-000000000001',
+            name: 'Agachamento',
+            sets: [
+              {
+                actualRepetitions: null,
+                completed: false,
+                id: 'a8700000-0000-4000-8000-000000000002',
+                plannedRepetitions: 10,
+                setNumber: 1,
+              },
+            ],
+            sortOrder: 0,
+            status: 'planned',
+            trackingMetric: 'repetitions',
+          },
+        ],
+      },
+    });
+    render(
+      <HistoryScreen
+        database={database}
+        initialMonth="2026-07"
+        onBack={vi.fn()}
+        today="2026-07-14"
+      />,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /13 de julho/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Adicionar série em Agachamento' }));
+    expect(screen.getByLabelText('Agachamento · série 2 em 13/07/2026')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Remover série 2 de Agachamento' }));
+    expect(screen.queryByLabelText('Agachamento · série 2 em 13/07/2026')).not.toBeInTheDocument();
+    // A série planejada não ganha botão de remoção: ela pertence ao plano.
+    expect(
+      screen.queryByRole('button', { name: 'Remover série 1 de Agachamento' }),
+    ).not.toBeInTheDocument();
+    database.close();
+  });
+
   it('não oferece lançamento para data futura', async () => {
     const database = await seed();
     render(

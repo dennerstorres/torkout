@@ -696,14 +696,56 @@ interface RetroactiveLoggerProps {
  * O servidor decide e grava a marca de retroatividade; a tela nunca a inventa.
  */
 function RetroactiveLogger({ dateLabelText, onSubmit, session }: RetroactiveLoggerProps) {
-  const exercises = loggableExercises(session);
-  const [draft, setDraft] = useState<Record<string, number | null>>(() =>
-    Object.fromEntries(
-      exercises.flatMap((exercise) =>
-        exercise.sets.map((set) => [set.id, set.actualRepetitions] as const),
+  // As séries ficam em estado porque o lançamento pode acrescentar séries além do
+  // plano; série acrescentada nasce sem alvo, para não inventar um planejamento.
+  const [exercises, setExercises] = useState<LoggableExercise[]>(() => loggableExercises(session));
+
+  function updateSet(exerciseId: string, setId: string, actualRepetitions: number | null): void {
+    setExercises((current) =>
+      current.map((exercise) =>
+        exercise.id === exerciseId
+          ? {
+              ...exercise,
+              sets: exercise.sets.map((set) =>
+                set.id === setId ? { ...set, actualRepetitions } : set,
+              ),
+            }
+          : exercise,
       ),
-    ),
-  );
+    );
+  }
+
+  function addSet(exerciseId: string): void {
+    setExercises((current) =>
+      current.map((exercise) =>
+        exercise.id === exerciseId
+          ? {
+              ...exercise,
+              sets: [
+                ...exercise.sets,
+                {
+                  actualRepetitions: null,
+                  completed: false,
+                  id: crypto.randomUUID(),
+                  plannedRepetitions: null,
+                  setNumber: Math.max(0, ...exercise.sets.map((set) => set.setNumber)) + 1,
+                },
+              ],
+            }
+          : exercise,
+      ),
+    );
+  }
+
+  function removeSet(exerciseId: string, setId: string): void {
+    setExercises((current) =>
+      current.map((exercise) =>
+        exercise.id === exerciseId
+          ? { ...exercise, sets: exercise.sets.filter((set) => set.id !== setId) }
+          : exercise,
+      ),
+    );
+  }
 
   return (
     <div className="history-retroactive-form">
@@ -716,28 +758,39 @@ function RetroactiveLogger({ dateLabelText, onSubmit, session }: RetroactiveLogg
         <fieldset className="history-retroactive-exercise" key={exercise.id}>
           <legend>{exercise.name}</legend>
           {exercise.sets.map((set) => (
-            <label key={set.id}>
-              {`${exercise.name} · série ${set.setNumber} em ${dateLabelText}`}
-              <input
-                inputMode="numeric"
-                min={0}
-                aria-label={`${exercise.name} · série ${set.setNumber} em ${dateLabelText}`}
-                type="number"
-                value={draft[set.id] ?? ''}
-                onChange={(event) =>
-                  setDraft((current) => ({
-                    ...current,
-                    [set.id]: event.target.value === '' ? null : Number(event.target.value),
-                  }))
-                }
-              />
-              {set.plannedRepetitions === null ? (
-                <span className="field-hint">Sem alvo planejado.</span>
-              ) : (
-                <span className="field-hint">Planejado: {set.plannedRepetitions}.</span>
+            <div className="history-retroactive-set" key={set.id}>
+              <label>
+                {`${exercise.name} · série ${set.setNumber} em ${dateLabelText}`}
+                <input
+                  inputMode="numeric"
+                  min={0}
+                  aria-label={`${exercise.name} · série ${set.setNumber} em ${dateLabelText}`}
+                  type="number"
+                  value={set.actualRepetitions ?? ''}
+                  onChange={(event) =>
+                    updateSet(
+                      exercise.id,
+                      set.id,
+                      event.target.value === '' ? null : Number(event.target.value),
+                    )
+                  }
+                />
+                {set.plannedRepetitions === null ? (
+                  <span className="field-hint">Sem alvo planejado.</span>
+                ) : (
+                  <span className="field-hint">Planejado: {set.plannedRepetitions}.</span>
+                )}
+              </label>
+              {set.plannedRepetitions === null && (
+                <button type="button" onClick={() => removeSet(exercise.id, set.id)}>
+                  {`Remover série ${set.setNumber} de ${exercise.name}`}
+                </button>
               )}
-            </label>
+            </div>
           ))}
+          <button type="button" onClick={() => addSet(exercise.id)}>
+            {`Adicionar série em ${exercise.name}`}
+          </button>
         </fieldset>
       ))}
       <button
@@ -747,8 +800,8 @@ function RetroactiveLogger({ dateLabelText, onSubmit, session }: RetroactiveLogg
             exercises: exercises.map((exercise) => ({
               id: exercise.id,
               sets: exercise.sets.map((set) => ({
-                actualRepetitions: draft[set.id] ?? null,
-                completed: (draft[set.id] ?? 0) > 0,
+                actualRepetitions: set.actualRepetitions,
+                completed: (set.actualRepetitions ?? 0) > 0,
                 id: set.id,
                 setNumber: set.setNumber,
               })),
