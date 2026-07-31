@@ -1,6 +1,6 @@
-import { mkdtempSync, readdirSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createLocalObjectStorage, progressPhotoStorageKey } from './storage.js';
@@ -69,5 +69,29 @@ describe('local object storage', () => {
     await expect(
       storage.remove(progressPhotoStorageKey(userId, photoId, 'image/jpeg')),
     ).resolves.toBeUndefined();
+  });
+});
+
+describe('empacotamento do diretório de objetos', () => {
+  // Um volume nomeado do Docker herda dono e modo do diretório correspondente na
+  // imagem. Se a imagem não criar o diretório, o volume nasce como root e a API,
+  // que roda sem privilégio, não consegue gravar foto nenhuma.
+  const compose = readFileSync(resolve(process.cwd(), 'compose.production.yml'), 'utf8');
+  const dockerfile = readFileSync(resolve(process.cwd(), 'apps/api/Dockerfile'), 'utf8');
+  const configuredDir = /OBJECT_STORAGE_DIR:\s*(\S+)/.exec(compose)?.[1];
+
+  it('a produção configura um diretório absoluto para o driver local', () => {
+    expect(configuredDir).toBeDefined();
+    expect(configuredDir?.startsWith('/')).toBe(true);
+  });
+
+  it('a imagem cria o diretório configurado e o entrega ao usuário de runtime', () => {
+    const runtimeUser = /^USER\s+(\S+)\s*$/m.exec(dockerfile)?.[1];
+    expect(runtimeUser).toBeDefined();
+    expect(dockerfile).toContain(configuredDir!);
+    const chownIndex = dockerfile.indexOf(`chown -R ${runtimeUser}:${runtimeUser}`);
+    expect(chownIndex).toBeGreaterThan(-1);
+    // O preparo precisa acontecer enquanto ainda somos root.
+    expect(chownIndex).toBeLessThan(dockerfile.lastIndexOf(`USER ${runtimeUser}`));
   });
 });

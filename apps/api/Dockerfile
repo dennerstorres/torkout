@@ -41,6 +41,11 @@ RUN rm -rf \
     /usr/local/lib/node_modules/corepack \
     /usr/local/lib/node_modules/npm \
   && find node_modules/.pnpm -path '*/@esbuild/*/bin/esbuild' -delete
+# Um volume nomeado herda dono e modo deste diretório ao ser criado vazio. Sem o
+# preparo aqui, o volume nasce como root e a API, que roda sem privilégio, não
+# consegue gravar as fotos de evolução.
+RUN mkdir -p /var/lib/torkout/object-storage \
+  && chown -R node:node /var/lib/torkout
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=15s --timeout=3s --start-period=20s --retries=3 CMD wget -q -O - http://127.0.0.1:3000/health/ready || exit 1

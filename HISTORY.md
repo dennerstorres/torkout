@@ -1724,6 +1724,22 @@ idempotência das demais entidades, mantendo o modelo local-first.
   apoiar, e nunca interrompe, altera ou substitui o treino.
 - Os níveis dependem de consistência e de registro; volume extremo, esforço máximo e dor não contam.
 
+### Correção pós-deploy: permissão do volume de fotos
+
+O primeiro deploy em produção subiu com as fotos de evolução inoperantes. A API roda como `node`
+(uid 1000), mas `apps/api/Dockerfile` não criava `/var/lib/torkout/object-storage` na imagem; sem o
+diretório na imagem, o Docker inicializa o volume nomeado como `root:root` em modo 755 e qualquer
+gravação falha com `EACCES`. Nenhum dado foi perdido, porque o volume estava vazio.
+
+Os testes existentes não pegaram o defeito porque criavam o próprio diretório temporário, com o
+usuário do teste, e nunca exercitavam um volume nomeado.
+
+- RED — 1 teste falhou em `storage` sobre o contrato de empacotamento: o `Dockerfile` não continha o
+  diretório declarado em `OBJECT_STORAGE_DIR` no `compose.production.yml`.
+- GREEN — a imagem passou a criar o diretório e entregá-lo a `node:node` antes do `USER node`, e os
+  8 testes de `storage` ficaram verdes.
+- O volume já existente em produção não é reinicializado pelo Docker e precisou de um `chown` único.
+
 ### Pendências
 
 - A confirmação em iPhone físico continua pendente do titular.
