@@ -76,7 +76,9 @@ function createApi(overrides: Record<string, unknown> = {}) {
 describe('public authentication journey', () => {
   it('offers accessible login, registration and recovery forms', async () => {
     const api = createApi();
-    render(<App api={api} />);
+    // O cadastro é opção de implantação e o padrão é fechado; esta jornada descreve a instância que
+    // o habilita. A tela com o cadastro fechado é coberta em `AuthScreen.test.tsx`.
+    render(<App api={api} signUpEnabled />);
 
     expect(
       await screen.findByRole('heading', { name: 'Seu treino, claro até nos dias corridos.' }),

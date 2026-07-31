@@ -1574,7 +1574,7 @@ vermelho ou nunca executado é sinal ruim tanto para quem lê quanto para a oper
 
 ### Fase 28 — Cadastro público fechado
 
-**Status:** pendente
+**Status:** concluída — pendente de deploy da produção sem `PUBLIC_SIGNUP_ENABLED` e de verificação em iPhone físico
 
 **Commit esperado:** `feat(phase-28): close public sign-up`
 
@@ -1592,24 +1592,24 @@ aberto deixa de ser propriedade do produto e passa a ser opção de implantaçã
 
 #### Escopo
 
-- [ ] `SPEC.md` atualizado: cadastro público vira configuração de implantação, não decisão fixa. O
+- [x] `SPEC.md` atualizado: cadastro público vira configuração de implantação, não decisão fixa. O
       perfil Visitante e `AUTH-001` passam a valer somente quando o cadastro estiver habilitado.
-- [ ] Variável de ambiente `PUBLIC_SIGNUP_ENABLED`, padrão desabilitado, documentada no
+- [x] Variável de ambiente `PUBLIC_SIGNUP_ENABLED`, padrão desabilitado, documentada no
       `.env.example` e habilitada no ambiente de desenvolvimento.
-- [ ] `disableSignUp` aplicado no Better Auth quando a variável estiver desabilitada.
-- [ ] A tela de entrada deixa de oferecer "Criar conta" e explica que o cadastro está fechado.
-- [ ] Login, verificação de e-mail e recuperação de senha continuam funcionando para contas
+- [x] `disableSignUp` aplicado no Better Auth quando a variável estiver desabilitada.
+- [x] A tela de entrada deixa de oferecer "Criar conta" e explica que o cadastro está fechado.
+- [x] Login, verificação de e-mail e recuperação de senha continuam funcionando para contas
       existentes.
 
 #### Testes primeiro
 
-- [ ] RED de contrato: com o cadastro desabilitado, `POST /sign-up/email` é recusado com erro
+- [x] RED de contrato: com o cadastro desabilitado, `POST /sign-up/email` é recusado com erro
       próprio, distinto de validação, autenticação e rate limit.
-- [ ] RED de contrato: com o cadastro habilitado, o mesmo endpoint continua criando a conta e
+- [x] RED de contrato: com o cadastro habilitado, o mesmo endpoint continua criando a conta e
       enviando verificação. A variável não pode quebrar a instalação auto-hospedada.
-- [ ] RED negativo: recuperação de senha não pode virar caminho de criação de conta para e-mail
+- [x] RED negativo: recuperação de senha não pode virar caminho de criação de conta para e-mail
       desconhecido, nem revelar se o e-mail existe.
-- [ ] RED de componente: a tela de entrada não expõe o modo de cadastro quando desabilitado.
+- [x] RED de componente: a tela de entrada não expõe o modo de cadastro quando desabilitado.
 
 #### Critérios de saída
 

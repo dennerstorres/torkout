@@ -24,6 +24,9 @@ const auth = createAuth({
   baseURL: origin,
   database: db,
   emailSender,
+  // Esta suíte descreve a instância que habilita o cadastro público. O comportamento com o cadastro
+  // fechado, que é o padrão do produto, está em `signup-closed.integration.test.ts`.
+  publicSignUpEnabled: true,
   secret: 'test-only-secret-that-is-at-least-thirty-two-characters',
   trustedOrigins: [origin],
 });

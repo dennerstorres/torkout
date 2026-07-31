@@ -22,6 +22,7 @@ const auth = createAuth({
   baseURL: environment.AUTH_BASE_URL,
   database: db,
   emailSender,
+  publicSignUpEnabled: environment.PUBLIC_SIGNUP_ENABLED,
   secret: environment.AUTH_SECRET,
   trustedOrigins: environment.TRUSTED_ORIGINS,
 });

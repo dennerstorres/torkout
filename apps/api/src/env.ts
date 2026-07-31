@@ -15,6 +15,16 @@ const environmentSchema = z
     /** Diretório do driver local de armazenamento de objetos; use um volume persistente. */
     OBJECT_STORAGE_DIR: z.string().min(1).default('./var/object-storage'),
     PORT: z.coerce.number().int().min(1).max(65_535).default(3000),
+    /**
+     * Cadastro público. O padrão é fechado: a instância de referência é pessoal e não opera como
+     * controladora de dados de saúde de terceiros. Uma instância auto-hospedada pode habilitá-lo
+     * assumindo essa responsabilidade. Só o valor `true` abre; qualquer outro texto é recusado em
+     * vez de ser interpretado como verdadeiro.
+     */
+    PUBLIC_SIGNUP_ENABLED: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((value) => value === 'true'),
     SMTP_FROM: z.string().min(3),
     SMTP_HOST: z.string().min(1),
     SMTP_PASSWORD: z.string().min(1),
@@ -51,6 +61,7 @@ export function parseEnvironment(
     NODE_ENV: input.NODE_ENV,
     OBJECT_STORAGE_DIR: input.OBJECT_STORAGE_DIR,
     PORT: input.PORT,
+    PUBLIC_SIGNUP_ENABLED: input.PUBLIC_SIGNUP_ENABLED,
     SMTP_FROM: input.SMTP_FROM,
     SMTP_HOST: input.SMTP_HOST,
     SMTP_PASSWORD: input.SMTP_PASSWORD,

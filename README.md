@@ -7,11 +7,9 @@ offline e sincronização posterior.
 **Instância de produção:** <https://torkout.dennerstorres.dev>
 
 > **Projeto pessoal.** Construí o Torkout para o meu próprio acompanhamento de treino. A instância
-> acima é minha e não é um serviço mantido para terceiros: não há garantia de disponibilidade,
-> suporte ou preservação dos dados. O cadastro será fechado e substituído por um modo de
-> demonstração local (Fases 28 e 29 do [`PLAN.md`](PLAN.md)); até lá, se você criar uma conta,
-> prefira dados que não se importe em perder. O código está público para quem quiser ler, aprender
-> ou hospedar a própria cópia.
+> acima é minha, o cadastro nela está fechado e ela não é um serviço mantido para terceiros. O
+> código está público para quem quiser ler, aprender ou hospedar a própria cópia — o cadastro é uma
+> opção de implantação (`PUBLIC_SIGNUP_ENABLED`), desabilitada por padrão.
 
 > **Não é software médico.** O Torkout registra e resume o que você informa. Ele não diagnostica,
 > não prescreve e não substitui orientação médica, fisioterapêutica, nutricional ou de educação
@@ -95,6 +93,24 @@ Para derrubar os containers: `pnpm dev:down`.
 
 Os valores de `.env.example` servem apenas para desenvolvimento local. Nenhum deles deve ser
 reaproveitado em ambiente exposto — em especial `AUTH_SECRET` e as credenciais do banco.
+
+### Cadastro público
+
+O cadastro nasce **fechado**. Em desenvolvimento, `.env.example` já o habilita para que o fluxo
+completo continue exercitável. Para abrir o cadastro em uma instância própria, defina as duas
+variáveis, que precisam concordar:
+
+| Variável                     | Efeito                                            |
+| ---------------------------- | ------------------------------------------------- |
+| `PUBLIC_SIGNUP_ENABLED`      | libera `POST /auth/sign-up/email` na API          |
+| `VITE_PUBLIC_SIGNUP_ENABLED` | faz a tela de entrada oferecer o cadastro (build) |
+
+Somente o valor `true` habilita; qualquer outro texto é recusado na validação de ambiente em vez de
+ser interpretado como verdadeiro. Com o cadastro fechado, entrada, confirmação de e-mail e
+recuperação de senha continuam funcionando para contas já existentes.
+
+Abrir o cadastro em uma instância exposta significa assumir a responsabilidade pelos dados de saúde
+de quem se cadastrar, incluindo os documentos em [`docs/legal/`](docs/legal/).
 
 ## Testes e qualidade
 

@@ -126,6 +126,8 @@ describe('environment validation', () => {
       NODE_ENV: 'development',
       OBJECT_STORAGE_DIR: './var/object-storage',
       PORT: 3100,
+      // Sem configuração explícita, o cadastro público nasce fechado.
+      PUBLIC_SIGNUP_ENABLED: false,
       SMTP_FROM: 'Torkout <no-reply@example.invalid>',
       SMTP_HOST: 'smtp.example.invalid',
       SMTP_PASSWORD: 'smtp-test-password',

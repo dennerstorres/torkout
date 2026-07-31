@@ -1953,3 +1953,75 @@ soltos no meio de um vão — o efeito relatado pelo titular como tela quebrada 
 ### Commit de encerramento
 
 `fix(phase-25): make the progress panel readable`
+
+## Fase 28 — Cadastro público fechado
+
+**Commit de encerramento:** `feat(phase-28): close public sign-up`
+
+### Escopo entregue
+
+- Revisão da decisão nº 1 do `SPEC.md`: cadastro aberto deixou de ser propriedade fixa do produto e
+  passou a ser opção de implantação, com padrão fechado. O perfil Visitante e `AUTH-001` foram
+  reescritos em função dessa configuração.
+- `PUBLIC_SIGNUP_ENABLED` na API, com padrão desabilitado, aplicando `disableSignUp` no Better Auth.
+- `VITE_PUBLIC_SIGNUP_ENABLED` no frontend, propagado de `App` para `AuthScreen`.
+- Tela de entrada sem nenhum caminho para o cadastro quando fechado, com texto explicando a situação
+  e apontando a auto-hospedagem.
+- `.env.example` e `README.md` documentando as duas variáveis e a responsabilidade assumida por quem
+  habilita o cadastro em instância exposta.
+
+### Evidência Red
+
+- RED unitário (`apps/api/src/env.test.ts`): 3 testes falharam porque `PUBLIC_SIGNUP_ENABLED` não
+  existia no ambiente validado.
+- RED de componente (`apps/web/src/components/AuthScreen.test.tsx`): 3 de 5 falharam; a tela oferecia
+  "Criar conta" e "Começar agora" independentemente da configuração.
+- RED de contrato (`apps/api/src/signup-closed.integration.test.ts`): 3 de 5 falharam contra
+  PostgreSQL real. Sem o comportamento, o cadastro criava a conta e a resposta ecoava o e-mail
+  informado, permitindo distinguir endereço existente de inexistente.
+
+### Evidência Green
+
+- Unitários: 340 testes em 54 arquivos.
+- Integração: 71 testes em 15 arquivos contra PostgreSQL real.
+- E2E: 33 testes Playwright, 2 pulados.
+- Formatação, lint com `--max-warnings 0`, typecheck de todos os pacotes, build e scan de segredos
+  verdes.
+
+### Decisões
+
+- Somente o texto `true` habilita o cadastro. Qualquer outro valor é recusado na validação de
+  ambiente em vez de ser interpretado como falso, para que um erro de digitação não abra nem feche o
+  cadastro silenciosamente.
+- A guarda não está apenas na ausência dos botões: `AuthScreen.open` recusa o modo de registro quando
+  o cadastro está fechado, de modo que nenhum caminho da tela alcance o formulário.
+- A suíte de integração existente e o E2E passaram a declarar explicitamente que descrevem a
+  instância com cadastro habilitado. Nenhuma assertiva foi enfraquecida; o caso fechado ganhou suíte
+  própria.
+- O E2E roda com o cadastro habilitado para não exigir um segundo build. A tela com cadastro fechado
+  é coberta por teste de componente.
+
+### Desvios
+
+- O RED do teste de contrato foi observado depois da implementação das camadas de ambiente e de
+  interface, e não antes. Para não declarar uma evidência que não existiu, o comportamento foi
+  desativado temporariamente em `auth.ts`, a falha foi observada e o comportamento restaurado.
+- Um dos cinco casos de contrato passava por vacuidade no RED, porque `200` não é `401` nem `429`.
+  A assertiva de recusa foi acrescentada antes do Green.
+
+### Limites preservados
+
+- Nenhuma conta existente perdeu acesso: entrada, verificação de e-mail e recuperação de senha
+  continuam funcionando, comprovado por teste.
+- A recusa de cadastro não revela se o e-mail já pertence a alguma conta: status e corpo são
+  idênticos para endereço conhecido e desconhecido.
+- A recuperação de senha não cria conta para endereço desconhecido nem envia mensagem para ele.
+- Nenhum dado de saúde ou segredo entrou em log, teste ou fixture.
+
+### Pendências
+
+- Verificação em iPhone físico da tela de entrada com o cadastro fechado.
+- A instância de produção precisa ser implantada sem `PUBLIC_SIGNUP_ENABLED` para que o fechamento
+  tenha efeito. Enquanto o deploy não ocorrer, o cadastro segue aberto em produção.
+- Uma execução de `TodayScreen.test.tsx` falhou de forma isolada e passou nas execuções seguintes sem
+  alteração de código. Instabilidade local não relacionada a esta fase; não foi investigada.

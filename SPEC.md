@@ -44,7 +44,7 @@ Esses itens somente entram no produto mediante revisão desta especificação.
 
 ## 4. Decisões aprovadas
 
-1. O cadastro será aberto a outras pessoas.
+1. O cadastro aberto a outras pessoas é uma opção de implantação, controlada por configuração, e não uma propriedade fixa do produto. O padrão é fechado. Revisada em 31/07/2026: a decisão original previa cadastro aberto, mas a instância de referência passou a ser de uso pessoal do titular, que não pretende operar como controlador de dados de saúde de terceiros. Uma instância auto-hospedada pode habilitar o cadastro assumindo essa responsabilidade.
 2. Um aparelho previamente autenticado poderá consultar e alterar dados locais offline.
 3. Sugestões automáticas de progressão fazem parte do produto inicial.
 4. Toda sugestão é opcional; nenhuma progressão altera o plano sem aceite explícito.
@@ -113,11 +113,13 @@ O projeto será um monorepo gerenciado por `pnpm`. A estrutura poderá ser simpl
 
 ### 6.1 Visitante
 
-- Criar conta.
+- Criar conta, somente quando o cadastro estiver habilitado na instância.
 - Confirmar e-mail.
 - Entrar.
 - Solicitar recuperação de senha.
 - Consultar documentos públicos de privacidade e termos.
+
+Com o cadastro desabilitado, o visitante mantém confirmação de e-mail, entrada e recuperação de senha para contas já existentes. Nenhuma dessas rotas pode servir de caminho alternativo para criar conta.
 
 ### 6.2 Usuário autenticado
 
@@ -138,7 +140,7 @@ O projeto será um monorepo gerenciado por `pnpm`. A estrutura poderá ser simpl
 
 ### 7.1 Autenticação e conta
 
-**AUTH-001 — Cadastro:** permitir cadastro com nome, e-mail e senha.
+**AUTH-001 — Cadastro:** permitir cadastro com nome, e-mail e senha quando o cadastro estiver habilitado na instância. O padrão é desabilitado. Com o cadastro desabilitado, a tentativa é recusada com erro próprio, distinto de validação, autenticação e limite de taxa, sem revelar se o e-mail informado já pertence a alguma conta.
 
 **AUTH-002 — Verificação:** exigir confirmação de e-mail antes do uso completo.
 

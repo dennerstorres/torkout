@@ -18,6 +18,12 @@ export interface CreateAuthOptions {
   baseURL: string;
   database: DatabaseClient;
   emailSender: EmailSender;
+  /**
+   * Cadastro público. O padrão é fechado; a instância precisa habilitá-lo explicitamente. Com o
+   * cadastro fechado, entrada, verificação de e-mail e recuperação de senha continuam disponíveis
+   * para contas já existentes.
+   */
+  publicSignUpEnabled?: boolean;
   secret: string;
   trustedOrigins: string[];
 }
@@ -49,6 +55,7 @@ export function createAuth(options: CreateAuthOptions) {
     }),
     emailAndPassword: {
       autoSignIn: false,
+      disableSignUp: options.publicSignUpEnabled !== true,
       enabled: true,
       maxPasswordLength: 128,
       minPasswordLength: 12,

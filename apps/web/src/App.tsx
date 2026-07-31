@@ -85,7 +85,14 @@ async function cacheDailyData(
   }
 }
 
-export function App({ api = browserApi }: { api?: AppApi }) {
+export function App({
+  api = browserApi,
+  signUpEnabled = import.meta.env.VITE_PUBLIC_SIGNUP_ENABLED === 'true',
+}: {
+  api?: AppApi;
+  /** Cadastro público; o padrão é fechado. Ver `PUBLIC_SIGNUP_ENABLED` na API. */
+  signUpEnabled?: boolean;
+}) {
   if (window.location.pathname === '/design-system') return <DesignSystemLab />;
   return (
     <>
@@ -94,13 +101,13 @@ export function App({ api = browserApi }: { api?: AppApi }) {
       </a>
       <PwaExperience />
       <div id="main-content" tabIndex={-1}>
-        <AppContent api={api} />
+        <AppContent api={api} signUpEnabled={signUpEnabled} />
       </div>
     </>
   );
 }
 
-function AppContent({ api }: { api: AppApi }) {
+function AppContent({ api, signUpEnabled }: { api: AppApi; signUpEnabled: boolean }) {
   const resetToken =
     window.location.pathname === '/reset-password'
       ? new URLSearchParams(window.location.search).get('token')
@@ -264,7 +271,7 @@ function AppContent({ api }: { api: AppApi }) {
       </main>
     );
   }
-  if (view === 'public') return <AuthScreen api={api} />;
+  if (view === 'public') return <AuthScreen api={api} signUpEnabled={signUpEnabled} />;
   if (view === 'offline-locked') {
     return (
       <main className="centered-layout">

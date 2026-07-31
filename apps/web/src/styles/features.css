@@ -832,6 +832,14 @@
   margin-top: var(--space-6);
 }
 
+.auth-signup-closed {
+  max-width: 54ch;
+  margin: var(--space-4) 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
 .auth-assurances {
   display: flex;
   flex-wrap: wrap;

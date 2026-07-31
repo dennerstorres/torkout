@@ -13,9 +13,15 @@ const modeTitle: Record<Mode, string> = {
 
 export function AuthScreen({
   api,
+  signUpEnabled = import.meta.env.VITE_PUBLIC_SIGNUP_ENABLED === 'true',
   version = import.meta.env.VITE_APP_VERSION ?? 'desenvolvimento',
 }: {
   api: AppApi;
+  /**
+   * Cadastro público. O padrão é fechado, acompanhando `PUBLIC_SIGNUP_ENABLED` da API: a ausência
+   * de configuração nunca pode abrir o cadastro por engano.
+   */
+  signUpEnabled?: boolean;
   version?: string;
 }) {
   const [mode, setMode] = useState<Mode | null>(null);
@@ -30,6 +36,9 @@ export function AuthScreen({
   }, [mode]);
 
   function open(nextMode: Mode): void {
+    // O cadastro fechado não depende só da ausência dos botões: nenhum caminho da tela pode abrir
+    // o formulário de registro enquanto a instância não o habilitar.
+    if (nextMode === 'register' && !signUpEnabled) return;
     if (!mode && document.activeElement instanceof HTMLElement) {
       openerRef.current = document.activeElement;
     }
@@ -83,12 +92,18 @@ export function AuthScreen({
           <span>Torkout</span>
         </a>
         <nav aria-label="Acesso" className="auth-navigation">
-          <button type="button" onClick={() => open('login')}>
+          <button
+            className={signUpEnabled ? undefined : 'primary'}
+            type="button"
+            onClick={() => open('login')}
+          >
             Entrar
           </button>
-          <button className="primary" type="button" onClick={() => open('register')}>
-            Criar conta
-          </button>
+          {signUpEnabled && (
+            <button className="primary" type="button" onClick={() => open('register')}>
+              Criar conta
+            </button>
+          )}
         </nav>
       </header>
 
@@ -101,13 +116,25 @@ export function AuthScreen({
             inclusive offline.
           </p>
           <div className="auth-hero-actions">
-            <button className="primary" type="button" onClick={() => open('register')}>
-              Começar agora
-            </button>
-            <button type="button" onClick={() => open('login')}>
-              Já tenho conta
+            {signUpEnabled && (
+              <button className="primary" type="button" onClick={() => open('register')}>
+                Começar agora
+              </button>
+            )}
+            <button
+              className={signUpEnabled ? undefined : 'primary'}
+              type="button"
+              onClick={() => open('login')}
+            >
+              {signUpEnabled ? 'Já tenho conta' : 'Entrar na minha conta'}
             </button>
           </div>
+          {!signUpEnabled && (
+            <p className="auth-signup-closed">
+              O cadastro está fechado nesta instância, que é de uso pessoal. O Torkout é software
+              livre: você pode hospedar a sua própria cópia.
+            </p>
+          )}
           <ul className="auth-assurances" aria-label="Características do Torkout">
             <li>Dados sob seu controle</li>
             <li>Funciona offline</li>
@@ -221,7 +248,7 @@ export function AuthScreen({
             </form>
             {message && <p role="status">{message}</p>}
             <div className="link-actions auth-dialog-links">
-              {mode !== 'register' && (
+              {signUpEnabled && mode !== 'register' && (
                 <button type="button" onClick={() => open('register')}>
                   Criar conta
                 </button>
