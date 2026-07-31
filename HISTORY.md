@@ -1614,8 +1614,8 @@ merge` e o teste no container confirmaram CSP e HSTS.
 - O zoom do usuário permanece disponível; a correção não usa `user-scalable=no` nem `maximum-scale`,
   preservando o critério WCAG 2.2 AA de redimensionamento de texto.
 - A retomada lê apenas a réplica local do titular autenticado, particionada por usuário.
-- Pendência: a confirmação em iPhone físico do fim do zoom e da retomada depende do titular; os
-  gates automatizados cobrem a geometria e o ciclo de vida, não o aparelho real.
+- A confirmação em iPhone físico do fim do zoom e da retomada foi dada pelo titular em 31/07/2026;
+  os gates automatizados cobrem a geometria e o ciclo de vida, não o aparelho real.
 
 ## Fase 22 — Refinamento de acompanhamento, nutrição e evolução corporal
 
@@ -1742,7 +1742,7 @@ usuário do teste, e nunca exercitavam um volume nomeado.
 
 ### Pendências
 
-- A confirmação em iPhone físico continua pendente do titular.
+- A verificação em iPhone físico foi confirmada pelo titular em 31/07/2026.
 - A aderência trata todo cancelamento como justificado, porque o app ainda não coleta justificativa.
   O contrato já aceita `cancellationJustified: false` para quando esse campo existir.
 
@@ -1806,7 +1806,7 @@ com conflito de concorrência. A posse passou a ser verificada antes da versão,
 
 ### Pendências
 
-- A confirmação em iPhone físico continua pendente do titular.
+- A verificação em iPhone físico foi confirmada pelo titular em 31/07/2026.
 - O lançamento retroativo ainda não permite criar sessão avulsa em data passada quando não existe
   sessão na data (WORKOUT-012); hoje depende de a sessão já existir no calendário.
 - A etapa de recuperação e o esforço percebido ainda não aparecem no formulário retroativo.
@@ -1886,7 +1886,7 @@ continuava.
 
 ### Pendências
 
-- A confirmação em iPhone físico continua pendente do titular.
+- A verificação em iPhone físico foi confirmada pelo titular em 31/07/2026.
 - Os testes de integração com PostgreSQL não foram executados nesta fase: a mudança é restrita ao
   frontend e não toca API, schema nem contratos.
 
@@ -1946,7 +1946,7 @@ soltos no meio de um vão — o efeito relatado pelo titular como tela quebrada 
 
 ### Pendências
 
-- A confirmação em iPhone físico continua pendente do titular.
+- A verificação em iPhone físico foi confirmada pelo titular em 31/07/2026.
 - Os testes de integração com PostgreSQL não foram executados nesta fase: a mudança é restrita ao
   frontend e não toca API, schema nem contratos.
 

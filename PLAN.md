@@ -1279,7 +1279,7 @@ permitindo o mesmo CRUD local-first aplicado aos exercícios cadastrados posteri
 
 ### Fase 21 — Estabilidade de foco no iOS e ciclo de vida da sessão
 
-**Status:** implementação concluída — confirmação em iPhone físico pendente do titular
+**Status:** concluída — verificação em iPhone físico confirmada pelo titular em 31/07/2026
 
 **Commit esperado:** `fix(phase-21): stabilize ios focus and session lifecycle`
 
@@ -1314,7 +1314,8 @@ que continua oferecendo iniciar um treino já encerrado e perde a execução ao 
 
 ### Fase 22 — Refinamento de acompanhamento, nutrição e evolução corporal
 
-**Status:** concluída e em produção — confirmação em iPhone físico pendente do titular
+**Status:** concluída e em produção — verificação em iPhone físico confirmada pelo titular
+em 31/07/2026
 
 **Commit esperado:** `feat(phase-22): refine tracking, nutrition and body evolution`
 
@@ -1364,7 +1365,7 @@ não contar sessões futuras.
 
 ### Fase 23 — Lançamento retroativo de treino
 
-**Status:** implementação concluída — confirmação em iPhone físico pendente do titular
+**Status:** concluída — verificação em iPhone físico confirmada pelo titular em 31/07/2026
 
 **Commit esperado:** `feat(phase-23): allow retroactive workout logging`
 
@@ -1418,7 +1419,7 @@ repetir.
 
 ### Fase 24 — Réplica local observada pelas telas
 
-**Status:** implementação concluída — confirmação em iPhone físico pendente do titular
+**Status:** concluída — verificação em iPhone físico confirmada pelo titular em 31/07/2026
 
 **Commit esperado:** `fix(phase-24): keep authenticated screens in sync with the local replica`
 
@@ -1460,7 +1461,7 @@ chegavam à interface.
 
 ### Fase 25 — Leitura visual do painel de Progresso
 
-**Status:** implementação concluída — confirmação em iPhone físico pendente do titular
+**Status:** concluída — verificação em iPhone físico confirmada pelo titular em 31/07/2026
 
 **Commit esperado:** `fix(phase-25): make the progress panel readable`
 
