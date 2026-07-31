@@ -7,8 +7,11 @@ offline e sincronização posterior.
 **Instância de produção:** <https://torkout.dennerstorres.dev>
 
 > **Projeto pessoal.** Construí o Torkout para o meu próprio acompanhamento de treino. A instância
-> acima é minha e é de uso pessoal — não é um serviço aberto a cadastros. O código está público
-> para quem quiser ler, aprender ou hospedar a própria cópia.
+> acima é minha e não é um serviço mantido para terceiros: não há garantia de disponibilidade,
+> suporte ou preservação dos dados. O cadastro será fechado e substituído por um modo de
+> demonstração local (Fases 28 e 29 do [`PLAN.md`](PLAN.md)); até lá, se você criar uma conta,
+> prefira dados que não se importe em perder. O código está público para quem quiser ler, aprender
+> ou hospedar a própria cópia.
 
 > **Não é software médico.** O Torkout registra e resume o que você informa. Ele não diagnostica,
 > não prescreve e não substitui orientação médica, fisioterapêutica, nutricional ou de educação

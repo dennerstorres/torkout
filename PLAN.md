@@ -6,7 +6,7 @@
 
 **Unidade de entrega:** fase completa com commit de encerramento
 
-**Status geral:** Fases 0–25 concluídas e validação física aprovada; a instância de produção está no ar em <https://torkout.dennerstorres.dev>. Restam as Fases 26 (backup externo comprovado) e 27 (CI de segurança verde), abertas na preparação do repositório para uso público.
+**Status geral:** Fases 0–25 concluídas e validação física aprovada; a instância de produção está no ar em <https://torkout.dennerstorres.dev>. Restam as Fases 26 (backup externo comprovado), 27 (CI de segurança verde), 28 (cadastro público fechado) e 29 (modo demonstração local), abertas na preparação do repositório para uso público.
 
 ## 1. Regras de execução
 
@@ -1572,15 +1572,122 @@ vermelho ou nunca executado é sinal ruim tanto para quem lê quanto para a oper
 - Qualquer vulnerabilidade não corrigível está registrada com motivo, severidade e data de revisão.
 - `HISTORY.md` atualizado e fase encerrada em commit próprio.
 
+### Fase 28 — Cadastro público fechado
+
+**Status:** pendente
+
+**Commit esperado:** `feat(phase-28): close public sign-up`
+
+**Objetivo:** encerrar o cadastro aberto na instância de produção, mantendo o fluxo completo
+disponível em desenvolvimento e em qualquer instância auto-hospedada.
+
+**Motivação:** a decisão aprovada nº 1 do `SPEC.md` previa cadastro aberto, e hoje
+`emailAndPassword.enabled` está ativo sem `disableSignUp`, sem allowlist e sem convite. Com o
+repositório público, qualquer visitante cria conta e passa a gravar dados de saúde na instância
+pessoal do titular, que se torna controlador desses dados. O titular decidiu operar a instância
+apenas para uso próprio.
+
+**Precondição documental:** revisar a decisão nº 1 do `SPEC.md` antes de qualquer código. O cadastro
+aberto deixa de ser propriedade do produto e passa a ser opção de implantação, com o padrão fechado.
+
+#### Escopo
+
+- [ ] `SPEC.md` atualizado: cadastro público vira configuração de implantação, não decisão fixa. O
+      perfil Visitante e `AUTH-001` passam a valer somente quando o cadastro estiver habilitado.
+- [ ] Variável de ambiente `PUBLIC_SIGNUP_ENABLED`, padrão desabilitado, documentada no
+      `.env.example` e habilitada no ambiente de desenvolvimento.
+- [ ] `disableSignUp` aplicado no Better Auth quando a variável estiver desabilitada.
+- [ ] A tela de entrada deixa de oferecer "Criar conta" e explica que o cadastro está fechado.
+- [ ] Login, verificação de e-mail e recuperação de senha continuam funcionando para contas
+      existentes.
+
+#### Testes primeiro
+
+- [ ] RED de contrato: com o cadastro desabilitado, `POST /sign-up/email` é recusado com erro
+      próprio, distinto de validação, autenticação e rate limit.
+- [ ] RED de contrato: com o cadastro habilitado, o mesmo endpoint continua criando a conta e
+      enviando verificação. A variável não pode quebrar a instalação auto-hospedada.
+- [ ] RED negativo: recuperação de senha não pode virar caminho de criação de conta para e-mail
+      desconhecido, nem revelar se o e-mail existe.
+- [ ] RED de componente: a tela de entrada não expõe o modo de cadastro quando desabilitado.
+
+#### Critérios de saída
+
+- Nenhuma conta existente perde acesso.
+- A recusa de cadastro não vaza se um e-mail já está registrado.
+- `README.md` e `docs/legal/` coerentes com o novo comportamento.
+- Lint, formatação, typecheck, testes unitários, integração, E2E e build verdes.
+- `HISTORY.md` atualizado e fase encerrada em commit próprio.
+
+### Fase 29 — Modo demonstração local
+
+**Status:** pendente
+
+**Commit esperado:** `feat(phase-29): add local demonstration mode`
+
+**Objetivo:** permitir que um visitante conheça o produto real, com dados de exemplo, sem criar conta
+e sem que nada saia do aparelho.
+
+**Motivação:** com o cadastro fechado pela Fase 28, quem chega ao domínio encontra apenas uma tela de
+login. Como a aplicação já é local-first, a experiência completa pode ser executada contra a réplica
+local, reaproveitando planejamento, Hoje, dor, hábitos, medidas e Progresso em vez de construir uma
+maquete que envelheceria em paralelo ao produto.
+
+**Restrição central:** nenhuma mutação da demonstração pode alcançar o servidor. A garantia é em três
+camadas independentes, e a fase só fecha com as três demonstradas por teste.
+
+#### Escopo
+
+- [ ] Sessão de demonstração local, sem cookie de autenticação e sem qualquer chamada autenticada a
+      `/api/v1`.
+- [ ] Réplica isolada em banco próprio, reaproveitando o particionamento de
+      `createUserSyncDatabase`, com identificador de demonstração reservado.
+- [ ] `SyncTransport` de demonstração que recusa todo envio, em vez de apenas não ser acionado.
+- [ ] Semente com o plano de referência de `docs/GUIA_DO_USUARIO.md` e histórico fictício suficiente
+      para o painel de Progresso mostrar volume, aderência e variação de medidas.
+- [ ] Aviso permanente e perceptível de que é demonstração e de que nada é salvo, sem depender só de
+      cor.
+- [ ] Ação "Recomeçar" que semeia novamente, e saída que apaga a réplica com
+      `deleteUserSyncDatabase`.
+- [ ] Entrar em uma conta real no mesmo navegador apaga qualquer réplica de demonstração residual.
+- [ ] A demonstração não pede aceite de documentos legais nem coleta consentimento de dados de saúde.
+
+#### Testes primeiro
+
+- [ ] RED camada 1: o transporte de demonstração recusa envio, e nenhuma requisição de rede é emitida
+      durante uma jornada completa de registro.
+- [ ] RED camada 2: após exercitar a demonstração, o outbox da réplica de uma conta real permanece
+      vazio; `retryFailed` na demonstração não produz nenhum envio.
+- [ ] RED camada 3: uma operação de sincronização apresentada sem sessão autenticada é recusada pelo
+      servidor. A demonstração não vira caminho de escrita anônima.
+- [ ] RED de ciclo de vida: sair da demonstração remove o banco local, e entrar em conta real com
+      resíduo de demonstração presente o descarta antes de qualquer leitura de tela.
+- [ ] RED de componente: toda tela autenticada exibe o aviso de demonstração enquanto o modo estiver
+      ativo.
+- [ ] RED de acessibilidade: o aviso é anunciado por leitor de tela e não depende de cor.
+
+#### Critérios de saída
+
+- Nenhum dado de demonstração chega ao PostgreSQL, comprovado pelas três camadas.
+- Nenhuma tela apresenta dado de demonstração como registro real do usuário.
+- Os dados semeados são fictícios e não descrevem pessoa real.
+- A demonstração usa as mesmas regras de domínio do produto, sem ramo paralelo de cálculo.
+- Lint, formatação, typecheck, testes unitários, integração, E2E, acessibilidade e build verdes.
+- Verificação final em iPhone físico.
+- `HISTORY.md` atualizado e fase encerrada em commit próprio.
+
 ## 5. Dependências entre fases
 
 ```text
 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21
-  → 22 → 23 → 24 → 25 → 26 → 27
+  → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29
 ```
 
 As Fases 26 e 27 são independentes entre si e podem ser executadas em qualquer ordem; ambas dependem
 apenas da instância de produção já existente.
+
+A Fase 29 depende da 28: o modo demonstração existe justamente porque o cadastro deixou de ser
+aberto. A 28 depende da revisão da decisão nº 1 do `SPEC.md`, não de código anterior.
 
 Trabalhos internos de uma mesma fase podem ser paralelos somente quando não compartilham arquivos ou contratos instáveis. O encerramento continua único.
 
