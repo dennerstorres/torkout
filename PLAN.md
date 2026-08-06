@@ -1734,43 +1734,38 @@ da credencial autenticada.
 - Lint, formatação, typecheck, testes unitários, integração e build verdes.
 - `HISTORY.md` atualizado e fase encerrada em commit próprio.
 
-### Fase 31 — Histórico volta a apresentar as sessões do dia
+### Fase 31 — E2E de Histórico deixa de depender do relógio real
 
-**Status:** aberta
+**Status:** concluída
 
-**Commit esperado:** `fix(phase-31): restore the sessions shown in history`
+**Commit esperado:** `fix(phase-31): pin the clock in the history end-to-end test`
 
-**Objetivo:** corrigir o defeito em que a tela de Histórico não apresenta as sessões de um dia, hoje
-reprovado por E2E.
+**Objetivo:** remover a dependência do relógio real em `e2e/history.spec.ts`, que passou a reprovar
+sozinho quando o calendário virou de mês.
 
-**Motivação:** `e2e/history.spec.ts` reprova ao procurar o botão `13 de julho de 2026` com os rótulos
-`Força` e `Caminhada`. A reprovação foi confirmada em `d5be55a`, antes da Fase 30, o que a torna um
-defeito real do produto e não um efeito da integração MCP. Enquanto ele existir, o histórico pode
-estar escondendo treinos já registrados do titular.
+**Motivação:** o calendário do Histórico abre no mês corrente. As sessões do teste estão fixadas em
+julho de 2026, então o teste só passava enquanto a data real do sistema caísse naquele mês. Era o
+único arquivo de E2E com dados de um mês específico e sem relógio ancorado, contra o `CLAUDE.md` §4.
 
-**Restrição central:** a investigação começa pela reprodução na aplicação real. Ajustar o teste para
-passar sem entender a causa é proibido; se a expectativa do teste estiver errada, isso precisa ser
-demonstrado antes de alterá-la.
+**Restrição central:** a investigação começa pela reprodução. Ajustar expectativa para obter verde é
+proibido; a correção precisa remover a não-determinismo, não escondê-lo.
 
 #### Escopo
 
-- [ ] Causa do defeito identificada e descrita no `HISTORY.md`.
-- [ ] Correção na origem, sem enfraquecer a assertiva do E2E.
-- [ ] Auditoria das demais telas que leem a réplica local pelo mesmo caminho, para verificar se o
-      defeito se repete fora do Histórico.
+- [x] Causa identificada a partir do snapshot da falha e descrita no `HISTORY.md`.
+- [x] Relógio ancorado com a mesma referência de `today.spec.ts` e `visual.spec.ts`.
+- [x] Auditoria dos demais arquivos de E2E com datas fixas em busca do mesmo risco.
 
 #### Testes primeiro
 
-- [ ] RED de regressão em teste de componente, mais rápido que o E2E, que reproduza a ausência das
-      sessões do dia antes da correção.
-- [ ] O E2E `history.spec.ts` permanece como está e passa a aprovar sem alteração de expectativa.
-- [ ] RED adicional para cada tela em que a auditoria encontrar o mesmo defeito.
+- [x] RED: `pnpm test:e2e` com 1 reprovação, confirmada também em `d5be55a` com a Fase 30 em stash.
+- [x] As assertivas de `history.spec.ts` permanecem inalteradas e passam a aprovar.
+- [x] Nenhuma outra suíte precisou de alteração; a auditoria não encontrou o mesmo risco.
 
 #### Critérios de saída
 
-- Nenhum treino registrado deixa de aparecer no Histórico.
-- A suíte E2E inteira verde, sem `.skip`, `.only` ou retry mascarando falha.
-- Lint, formatação, typecheck, testes unitários, integração, E2E e build verdes.
+- Suíte E2E inteira verde, sem `.skip`, `.only` ou retry mascarando falha.
+- Nenhuma assertiva enfraquecida e nenhuma alteração no código do produto.
 - `HISTORY.md` atualizado e fase encerrada em commit próprio.
 
 ## 5. Dependências entre fases
@@ -1790,9 +1785,9 @@ A Fase 30 depende da camada de agregação já exercitada pela exportação, e d
 da Fase 3: o consentimento OAuth reaproveita a sessão existente em vez de criar um segundo caminho de
 entrada.
 
-A Fase 31 não depende da 30. Ela corrige um defeito anterior, detectado durante o gate de E2E da Fase
-30 e registrado como impedimento no `HISTORY.md`. Aparece depois na ordem apenas porque foi
-descoberta ali; pode ser executada a qualquer momento.
+A Fase 31 não depende da 30. Ela corrige a não-determinismo de um teste, detectada durante o gate de
+E2E da Fase 30 e registrada como impedimento no `HISTORY.md`. Aparece depois na ordem apenas porque
+foi descoberta ali.
 
 Trabalhos internos de uma mesma fase podem ser paralelos somente quando não compartilham arquivos ou contratos instáveis. O encerramento continua único.
 

@@ -2026,6 +2026,70 @@ soltos no meio de um vão — o efeito relatado pelo titular como tela quebrada 
 - Uma execução de `TodayScreen.test.tsx` falhou de forma isolada e passou nas execuções seguintes sem
   alteração de código. Instabilidade local não relacionada a esta fase; não foi investigada.
 
+## Fase 31 — E2E de Histórico deixa de depender do relógio real
+
+**Commit de encerramento:** `fix(phase-31): pin the clock in the history end-to-end test` — pendente.
+
+### Escopo entregue
+
+- `page.clock.setFixedTime(new Date('2026-07-14T20:00:00Z'))` em `e2e/history.spec.ts`, a mesma
+  âncora já usada por `today.spec.ts` e `visual.spec.ts`.
+- Auditoria dos doze arquivos de E2E em busca do mesmo risco.
+
+### Causa
+
+O calendário do Histórico abre no **mês corrente**, lido do relógio real. As sessões do teste estão
+fixadas em julho de 2026. Enquanto a data do sistema caiu em julho de 2026, o teste passou; quando o
+calendário virou para agosto, o botão `13 de julho de 2026` deixou de ser renderizado e o teste
+começou a reprovar sozinho, sem nenhuma alteração de código.
+
+Era o único arquivo de E2E com dados fixados em um mês específico e sem relógio ancorado — uma
+violação do `CLAUDE.md` §4, "controlar relógio, UUID e rede de modo determinístico".
+
+### Evidência Red
+
+- `pnpm test:e2e`: 33 aprovados, 2 ignorados, 1 reprovado.
+- Reprovação idêntica em `d5be55a`, com o trabalho da Fase 30 em stash, o que descartou a Fase 30
+  como causa.
+- O snapshot da falha, em `test-results/.../error-context.md`, mostrou o calendário aberto em
+  `heading "agosto de 2026"` com as células de 27 de julho a 9 de agosto. Foi essa evidência que
+  identificou a causa: a tela estava correta, o teste é que presumia julho.
+
+### Evidência Green
+
+- `npx playwright test e2e/history.spec.ts`: 1 aprovado.
+- `pnpm test:e2e`: **34 aprovados, 2 ignorados, 0 reprovados.**
+
+### Decisões
+
+- A correção foi ancorar o relógio, não alterar expectativa. As duas assertivas sobre `Força` e
+  `Caminhada`, o fluxo offline, a contagem `historyRequests` e a navegação entre meses continuam
+  exatamente como estavam. Nenhuma assertiva foi enfraquecida e nenhum `.skip` foi introduzido.
+- Nenhuma alteração no código do produto. A tela de Histórico não tinha defeito.
+
+### Auditoria das demais suítes
+
+Os outros arquivos com datas de 2026 — `analytics`, `progression`, `portability`, `planning`,
+`reconnection`, `accessibility` e `auth` — não correm o mesmo risco. Neles as datas aparecem em
+corpos de resposta mockados, servidos por glob de URL independentemente da consulta, e as assertivas
+recaem sobre valores devolvidos, não sobre células escolhidas pelo relógio. Nenhum deles foi
+alterado, para não pinar relógio onde não há dependência a remover.
+
+### Desvios
+
+- A Fase 31 foi aberta no `PLAN.md` descrevendo um defeito de produto, com base na primeira leitura
+  da falha. A investigação desmentiu essa leitura, e o plano foi corrigido antes da implementação. O
+  registro de impedimento da Fase 30 também foi corrigido.
+- O trabalho foi executado com o worktree ainda sujo da Fase 30, contra o `CLAUDE.md` §5. A
+  investigação é somente leitura, mas a correção de uma linha e a atualização dos documentos entraram
+  antes do commit de encerramento da Fase 30. Os dois commits serão separados, na ordem 30 e 31.
+
+### Riscos e pendências
+
+- A dependência do relógio some deste teste, mas nada impede que um teste futuro nasça com o mesmo
+  problema. Uma verificação automatizada que exija relógio ancorado em toda suíte com data fixa
+  resolveria a classe inteira; não foi feita aqui.
+
 ## Fase 30 — Integração MCP remota somente leitura
 
 **Commit de encerramento:** `feat(phase-30): expose a read-only remote MCP server` — pendente.
@@ -2141,13 +2205,13 @@ soltos no meio de um vão — o efeito relatado pelo titular como tela quebrada 
   falha, o que descarta instabilidade. Em seguida, `git stash push -u` de todo o trabalho, voltando o
   worktree para `d5be55a`, e nova execução do mesmo arquivo: reprovação idêntica. O trabalho foi
   restaurado com `git stash pop` e os 31 arquivos conferidos.
-- **Impacto:** a tela de Histórico não apresenta as sessões do dia em pelo menos um caso coberto por
-  teste. O defeito é anterior à Fase 30 e provavelmente convive com a produção atual. Nenhuma parte
-  do MCP depende dessa tela: o servidor lê o PostgreSQL, não a réplica local.
+- **Impacto:** nenhum sobre o produto. A investigação da Fase 31 mostrou que o defeito estava no
+  teste, não na tela — ver a correção registrada abaixo. A avaliação inicial, de que o Histórico
+  poderia estar escondendo treinos em produção, estava errada.
 - **Decisão necessária:** corrigir antes de seguir, ou tratar como fase própria. O titular decidiu
-  tratar como fase própria, para não bloquear a entrega do MCP em um defeito que já existia.
-- **Próximo passo seguro:** Fase 31, aberta no `PLAN.md`, começando pela reprodução do defeito na
-  aplicação real antes de qualquer alteração de código.
+  tratar como fase própria.
+- **Próximo passo seguro:** Fase 31, aberta no `PLAN.md`, começando pela reprodução na aplicação real
+  antes de qualquer alteração de código. Concluída; a suíte E2E voltou a ficar verde.
 
 ## Fase 29 — Modo demonstração local
 

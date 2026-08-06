@@ -1,6 +1,10 @@
 import { expect, test } from '@playwright/test';
 
 test('browses and edits cached history offline on mobile', async ({ page }) => {
+  // O calendário abre no mês corrente. Sem relógio fixo, este teste passava apenas enquanto a data
+  // real do sistema caísse em julho de 2026, o mês das sessões abaixo, e passou a reprovar sozinho
+  // quando o calendário virou. A âncora é a mesma de `today.spec.ts` e `visual.spec.ts`.
+  await page.clock.setFixedTime(new Date('2026-07-14T20:00:00Z'));
   const userId = 'ba000000-0000-4000-8000-000000000001';
   let networkAvailable = true;
   let historyRequests = 0;
