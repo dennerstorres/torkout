@@ -4,6 +4,7 @@ export * from './analytics.js';
 export * from './auth.js';
 export * from './daily.js';
 export * from './history.js';
+export * from './mcp.js';
 export * from './nutrition.js';
 export * from './photos.js';
 export * from './planning.js';

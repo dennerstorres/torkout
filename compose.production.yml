@@ -33,6 +33,10 @@ services:
       DATABASE_URL: postgresql://${APP_DATABASE_USER:-torkout_app}:${APP_DATABASE_PASSWORD}@postgres:5432/${POSTGRES_DB:-torkout}
       HOST: 0.0.0.0
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      # Integração MCP somente leitura. Fica desligada até o titular habilitá-la; ligada, o servidor
+      # passa a aceitar clientes externos autorizados por OAuth. Nenhuma ferramenta escreve dados.
+      MCP_ENABLED: ${MCP_ENABLED:-false}
+      MCP_PUBLIC_URL: ${MCP_PUBLIC_URL:-}
       NODE_ENV: production
       OBJECT_STORAGE_DIR: /var/lib/torkout/object-storage
       PORT: 3000

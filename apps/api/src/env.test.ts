@@ -34,3 +34,38 @@ describe('public sign-up configuration', () => {
     expect(() => parseEnvironment({ ...baseEnvironment, PUBLIC_SIGNUP_ENABLED: 'yes' })).toThrow();
   });
 });
+
+describe('mcp configuration', () => {
+  it('keeps the integration disabled when the instance does not configure it', () => {
+    expect(parseEnvironment({ ...baseEnvironment }).MCP_ENABLED).toBe(false);
+  });
+
+  it('enables the integration only for the explicit "true" value', () => {
+    expect(parseEnvironment({ ...baseEnvironment, MCP_ENABLED: 'true' }).MCP_ENABLED).toBe(true);
+    expect(parseEnvironment({ ...baseEnvironment, MCP_ENABLED: 'false' }).MCP_ENABLED).toBe(false);
+  });
+
+  it('rejects an ambiguous value instead of silently exposing the data', () => {
+    expect(() => parseEnvironment({ ...baseEnvironment, MCP_ENABLED: 'yes' })).toThrow();
+  });
+
+  it('treats a declared but blank public url as unconfigured', () => {
+    expect(
+      parseEnvironment({ ...baseEnvironment, MCP_PUBLIC_URL: '' }).MCP_PUBLIC_URL,
+    ).toBeUndefined();
+  });
+
+  it('rejects a public url that is not https outside localhost', () => {
+    expect(() =>
+      parseEnvironment({ ...baseEnvironment, MCP_PUBLIC_URL: 'http://torkout.example.test' }),
+    ).toThrow();
+  });
+
+  it('accepts a dedicated https subdomain', () => {
+    const environment = parseEnvironment({
+      ...baseEnvironment,
+      MCP_PUBLIC_URL: 'https://mcp.torkout.example.test',
+    });
+    expect(environment.MCP_PUBLIC_URL).toBe('https://mcp.torkout.example.test');
+  });
+});

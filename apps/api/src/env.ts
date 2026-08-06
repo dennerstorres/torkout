@@ -11,6 +11,23 @@ const environmentSchema = z
     LOG_LEVEL: z
       .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
       .default('info'),
+    /**
+     * Integração MCP somente leitura. O padrão é desligado: uma instância só passa a aceitar
+     * clientes externos quando o titular decide isso explicitamente. Só o valor `true` habilita.
+     */
+    MCP_ENABLED: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((value) => value === 'true'),
+    /**
+     * URL pública sob a qual o MCP e o servidor OAuth são alcançados. Ausente, usa `AUTH_BASE_URL`;
+     * um subdomínio dedicado como `https://mcp.exemplo.com` também é válido. O domínio real nunca
+     * fica no código.
+     */
+    MCP_PUBLIC_URL: z
+      .url()
+      .refine((value) => value.startsWith('https://') || value.startsWith('http://localhost'))
+      .optional(),
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     /** Diretório do driver local de armazenamento de objetos; use um volume persistente. */
     OBJECT_STORAGE_DIR: z.string().min(1).default('./var/object-storage'),
@@ -58,6 +75,10 @@ export function parseEnvironment(
     DATABASE_URL: input.DATABASE_URL,
     HOST: input.HOST,
     LOG_LEVEL: input.LOG_LEVEL,
+    MCP_ENABLED: input.MCP_ENABLED,
+    // Uma variável declarada e deixada em branco no `.env` significa "não configurada"; sem esta
+    // normalização, a string vazia seria validada como URL e derrubaria a subida do processo.
+    MCP_PUBLIC_URL: input.MCP_PUBLIC_URL === '' ? undefined : input.MCP_PUBLIC_URL,
     NODE_ENV: input.NODE_ENV,
     OBJECT_STORAGE_DIR: input.OBJECT_STORAGE_DIR,
     PORT: input.PORT,

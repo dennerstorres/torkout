@@ -44,6 +44,11 @@ describe('initial PostgreSQL schema', () => {
       'habit_definitions',
       'habit_entries',
       'habit_options',
+      // Credenciais da integração MCP. Não guardam dado de saúde e não são sincronizáveis.
+      'mcp_authorization_codes',
+      'mcp_consents',
+      'mcp_oauth_clients',
+      'mcp_tokens',
       'pain_reports',
       'privacy_acceptances',
       'privacy_documents',

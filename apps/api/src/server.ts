@@ -35,6 +35,9 @@ const app = buildApp(
   },
   {
     logger: createLoggerOptions(environment.LOG_LEVEL),
+    mcp: environment.MCP_ENABLED
+      ? { publicUrl: environment.MCP_PUBLIC_URL ?? environment.AUTH_BASE_URL }
+      : undefined,
     production: environment.NODE_ENV === 'production',
     readiness: async () => {
       await pool.query('select 1');

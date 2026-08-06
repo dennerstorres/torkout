@@ -15,10 +15,13 @@ import { registerPhotoRoutes } from './photo-routes.js';
 import { registerPlanningRoutes } from './planning-routes.js';
 import { registerPortabilityRoutes } from './portability-routes.js';
 import { registerSyncRoutes } from './sync-routes.js';
+import { registerMcpRoutes, type McpRouteOptions } from './mcp/routes.js';
 import { OperationalMetrics, securityHeaders } from './operational.js';
 
 export interface BuildAppOptions {
   logger?: FastifyServerOptions['logger'];
+  /** Integração MCP somente leitura; ausente mantém o servidor MCP fora da aplicação. */
+  mcp?: McpRouteOptions | undefined;
   production?: boolean;
   readiness?: () => Promise<void>;
   trustProxy?: FastifyServerOptions['trustProxy'];
@@ -39,6 +42,9 @@ export function buildApp(
   app.addHook('onResponse', async (request, reply) => metrics.finish(request, reply.statusCode));
   app.addHook('onSend', async (_request, reply) => {
     for (const [name, value] of Object.entries(securityHeaders(options.production ?? false))) {
+      // A política global vale para tudo, exceto onde a própria rota já declarou uma. Hoje só a
+      // página de consentimento do MCP faz isso, e a dela é mais restritiva que esta.
+      if (name === 'content-security-policy' && reply.hasHeader(name)) continue;
       reply.header(name, value);
     }
   });
@@ -76,6 +82,7 @@ export function buildApp(
     registerAdminRoutes(app, dependencies);
     registerAccountRoutes(app, dependencies);
     registerSyncRoutes(app, dependencies);
+    if (options.mcp) registerMcpRoutes(app, dependencies, options.mcp);
   }
 
   app.setErrorHandler((error, request, reply) => {

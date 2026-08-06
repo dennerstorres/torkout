@@ -123,6 +123,9 @@ describe('environment validation', () => {
       DATABASE_URL: 'postgresql://user:password@localhost:5432/torkout',
       HOST: '127.0.0.1',
       LOG_LEVEL: 'info',
+      // Sem configuração explícita, a integração MCP nasce desligada.
+      MCP_ENABLED: false,
+      MCP_PUBLIC_URL: undefined,
       NODE_ENV: 'development',
       OBJECT_STORAGE_DIR: './var/object-storage',
       PORT: 3100,

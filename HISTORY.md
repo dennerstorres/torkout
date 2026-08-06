@@ -2026,6 +2026,129 @@ soltos no meio de um vão — o efeito relatado pelo titular como tela quebrada 
 - Uma execução de `TodayScreen.test.tsx` falhou de forma isolada e passou nas execuções seguintes sem
   alteração de código. Instabilidade local não relacionada a esta fase; não foi investigada.
 
+## Fase 30 — Integração MCP remota somente leitura
+
+**Commit de encerramento:** `feat(phase-30): expose a read-only remote MCP server` — pendente.
+
+### Escopo entregue
+
+- Servidor MCP sobre Streamable HTTP sem estado, registrado na aplicação Fastify existente em
+  `POST /mcp`. Sem segunda aplicação, sem imagem nova e sem porta adicional.
+- `loadExport` extraída de `portability-routes.ts` para `apps/api/src/data-snapshot.ts`, agora
+  compartilhada entre o `RELATORIO_EVOLUCAO.md` e o MCP. A função ganhou recorte de período opcional:
+  a exportação continua sem recorte, o MCP sempre usa um.
+- Catorze ferramentas somente leitura e três recursos, todos declarando `readOnlyHint`.
+- Servidor de autorização OAuth 2.1 próprio: descoberta das RFC 8414 e 9728, registro dinâmico da
+  RFC 7591, PKCE `S256` obrigatório, revogação da RFC 7009 e tela de consentimento que reaproveita a
+  sessão do Better Auth.
+- Escopo único `torkout:read`; qualquer outro é recusado com `invalid_scope`.
+- Migração `0013_phase_30_mcp_oauth` com quatro tabelas de credencial e o respectivo `.down.sql`.
+- `docs/MCP.md` e ADR-0005.
+
+### Evidência Red
+
+- `packages/contracts/src/mcp.test.ts`: com as três refinações de período removidas, três casos
+  falharam por comportamento — intervalo invertido aceito, intervalo pela metade aceito e `days`
+  convivendo com `from`/`to`. Restauradas as refinações, 22 casos verdes.
+- `apps/api/src/mcp/queries.test.ts`: o módulo foi criado primeiro como esboço devolvendo objetos
+  vazios, justamente para que a falha fosse comportamental e não de importação. 23 de 24 casos
+  falharam, cobrindo aderência, recuperação, café, medidas, limites e privacidade. Depois da
+  implementação, 24 verdes.
+- `apps/api/src/mcp.integration.test.ts`: primeira execução reprovou 12 casos porque o limitador de
+  registro, então global de módulo, era compartilhado entre instâncias da aplicação e estourava
+  dentro da própria suíte.
+
+### Evidência Green
+
+- Unitários: 427 em 61 arquivos.
+- Integração contra PostgreSQL real: 94 em 16 arquivos, incluindo os 22 novos do MCP.
+- `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm build`, `pnpm security:scan`,
+  `pnpm verify:governance`, `pnpm verify:schema-freeze` e as quinze verificações de fase: verdes.
+
+### Migrações e endpoints
+
+- Migração: `0013_phase_30_mcp_oauth` — `mcp_oauth_clients`, `mcp_authorization_codes`, `mcp_tokens`,
+  `mcp_consents`. Aditiva; nenhuma tabela existente foi tocada.
+- Índices criados junto das tabelas: unicidade em `code_hash` e `token_hash`, unicidade parcial de
+  consentimento vigente por usuário e cliente, e índices de expiração e de `user_id` com `kind`.
+  Nenhum índice foi acrescentado a tabela existente; as consultas do MCP reaproveitam os índices de
+  `user_id` com data que já existiam.
+- Endpoints: `POST /mcp`, `GET /mcp/health`, `POST /oauth/register`, `GET` e `POST /oauth/authorize`,
+  `POST /oauth/token`, `POST /oauth/revoke` e os dois documentos `/.well-known/oauth-*`.
+
+### Decisões e ADRs
+
+- ADR-0005 registra transporte, hospedagem e autenticação.
+- `client_id` é a chave primária de `mcp_oauth_clients`. Com chave surrogate, a migração gerada
+  emitia as chaves estrangeiras antes do índice único que elas referenciam, e falharia em banco
+  vazio.
+- Os limitadores passaram a pertencer à aplicação, não ao módulo, e ficaram configuráveis. O contador
+  global era um defeito de projeto revelado pelo teste, não um incômodo do teste.
+- A conversão de tipo do transporte ficou isolada em `connectTransport`. O SDK declara `onclose` como
+  acessor obrigatório de tipo opcional, incompatível com `exactOptionalPropertyTypes`; afrouxar o
+  `tsconfig` do projeto inteiro por isso seria desproporcional.
+- O gancho global de cabeçalhos deixou de sobrescrever uma CSP já declarada pela rota, para que a
+  página de consentimento use uma política mais restritiva que a global.
+
+### Impactos de segurança e privacidade
+
+- Credenciais nunca são guardadas em claro: só hashes SHA-256 de valores aleatórios de 256 bits.
+  Argon2id segue exclusivo de senha.
+- O `userId` vem apenas do token verificado. Teste de integração envia `userId` e `email` de outra
+  conta nos argumentos e confirma que o retorno continua sendo apenas do dono do token.
+- Reuso de código de autorização ou de refresh revoga toda a concessão do cliente.
+- Nenhuma resposta de ferramenta contém e-mail, hash, token, cookie ou identificador de sessão,
+  verificado sobre nove ferramentas.
+- Logs registram método, duração, `client_id` e os oito primeiros caracteres do usuário. Tokens,
+  cabeçalho `Authorization`, corpo e dados de saúde continuam redigidos.
+- A integração nasce desligada: `MCP_ENABLED` só habilita com o valor `true`.
+
+### Desvios
+
+- O `.test.ts` de contratos foi escrito junto do schema, não antes. O RED foi obtido depois,
+  removendo as refinações e observando a falha, e está registrado acima. Nas demais unidades a ordem
+  Red → Green foi seguida.
+- O banco de teste local não pôde usar a porta 55432 do `compose.test.yml`: o Windows desta máquina
+  reserva a faixa 55367–55466. A suíte rodou em porta alternativa por override temporário, fora do
+  repositório. O `compose.test.yml` não foi alterado.
+- E2E do Playwright: 33 aprovados, 2 ignorados e 1 reprovado —
+  `history.spec.ts › browses and edits cached history offline on mobile`, que não encontra o botão
+  `13 de julho de 2026` no histórico. A reprovação é anterior a esta fase: com todo o trabalho da
+  Fase 30 guardado em stash, o mesmo teste reprova de forma idêntica em `d5be55a`. Nenhuma tela do
+  produto foi alterada aqui, e a página de consentimento é servida pela API, fora da aplicação web.
+  Registrado como impedimento; não é causado por esta fase e não foi corrigido nela.
+
+### Riscos e pendências
+
+- Conexão real a partir do ChatGPT ainda não exercitada contra a instância de produção. O fluxo tem
+  cobertura de integração ponta a ponta, mas o conector real não foi testado.
+- A página de consentimento não usa o design system e não passou por verificação de acessibilidade
+  automatizada.
+- Sem redirecionamento automático após o login: não estando autenticado, o titular precisa entrar no
+  Torkout e voltar ao link de autorização.
+- O limitador é por processo; com mais de uma réplica o limite efetivo se multiplica.
+- Credenciais vencidas só saem da base por `purgeExpiredCredentials`, que ainda não tem acionamento
+  agendado.
+- Falta implantar com `MCP_ENABLED=true` e `MCP_PUBLIC_URL` no Coolify.
+
+### Impedimento registrado — E2E de Histórico reprovada antes desta fase
+
+- **Fase e tarefa:** Fase 30, gate de E2E do critério de saída.
+- **Evidência observada:** `e2e/history.spec.ts › browses and edits cached history offline on mobile`
+  reprova em `expect(day13).toContainText('Força')` — o botão `13 de julho de 2026` não é encontrado
+  na tela de Histórico. Demais 33 casos aprovados e 2 ignorados.
+- **Tentativas realizadas:** duas execuções com o trabalho da Fase 30 presente, ambas com a mesma
+  falha, o que descarta instabilidade. Em seguida, `git stash push -u` de todo o trabalho, voltando o
+  worktree para `d5be55a`, e nova execução do mesmo arquivo: reprovação idêntica. O trabalho foi
+  restaurado com `git stash pop` e os 31 arquivos conferidos.
+- **Impacto:** a tela de Histórico não apresenta as sessões do dia em pelo menos um caso coberto por
+  teste. O defeito é anterior à Fase 30 e provavelmente convive com a produção atual. Nenhuma parte
+  do MCP depende dessa tela: o servidor lê o PostgreSQL, não a réplica local.
+- **Decisão necessária:** corrigir antes de seguir, ou tratar como fase própria. O titular decidiu
+  tratar como fase própria, para não bloquear a entrega do MCP em um defeito que já existia.
+- **Próximo passo seguro:** Fase 31, aberta no `PLAN.md`, começando pela reprodução do defeito na
+  aplicação real antes de qualquer alteração de código.
+
 ## Fase 29 — Modo demonstração local
 
 **Commit de encerramento:** `feat(phase-29): add local demonstration mode`

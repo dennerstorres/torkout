@@ -1676,11 +1676,108 @@ camadas independentes, e a fase só fecha com as três demonstradas por teste.
 - Verificação final em iPhone físico.
 - `HISTORY.md` atualizado e fase encerrada em commit próprio.
 
+### Fase 30 — Integração MCP remota somente leitura
+
+**Status:** concluída — pendente de implantação com `MCP_ENABLED=true` e de conexão real pelo ChatGPT
+
+**Commit esperado:** `feat(phase-30): expose a read-only remote MCP server`
+
+**Objetivo:** permitir que um cliente MCP externo — ChatGPT, Claude e equivalentes — consulte os
+dados já registrados no produto durante uma conversa, sem depender da exportação manual do
+`RELATORIO_EVOLUCAO.md`.
+
+**Motivação:** o relatório Markdown responde bem a uma leitura completa, mas não a uma pergunta
+pontual. O titular quer perguntar "como foram meus últimos 14 dias" e receber a resposta a partir do
+dado real, não de um arquivo colado à mão que envelhece no instante em que é gerado.
+
+**Restrição central:** esta versão é estritamente de leitura. Nenhuma tool escreve, altera ou apaga
+qualquer registro, e o usuário dono dos dados nunca vem de parâmetro do modelo — vem exclusivamente
+da credencial autenticada.
+
+#### Escopo
+
+- [x] Servidor MCP sobre Streamable HTTP montado na aplicação Fastify existente, em `/mcp`, sem
+      segunda aplicação e sem porta adicional.
+- [x] Camada de agregação de `portability-routes.ts` extraída para módulo próprio e compartilhada
+      entre o relatório Markdown e o MCP, sem duplicar regra de negócio.
+- [x] Treze tools somente leitura: perfil, resumo de treino, treinos, último treino, progressão por
+      exercício, medidas, resumo de medidas, caminhadas, alimentação, whey, recuperação, progresso e
+      comparação de períodos, além de mudanças recentes.
+- [x] Servidor de autorização OAuth 2.1 próprio, com PKCE obrigatório, registro dinâmico de cliente e
+      tela de consentimento que reaproveita a sessão Better Auth existente.
+- [x] Escopo único `torkout:read`; o servidor recusa qualquer outro.
+- [x] Tokens opacos guardados apenas como hash, com expiração, rotação de refresh e revogação.
+- [x] Recorte de período resolvido no fuso do usuário com `Temporal`, nunca por conversão UTC.
+- [x] Limites de paginação e degradação para resumo agregado em períodos longos.
+- [x] `docs/MCP.md` e ADR da decisão de transporte e autenticação.
+
+#### Testes primeiro
+
+- [x] RED de segurança: requisição a `/mcp` sem token, com token inválido, expirado ou revogado é
+      recusada com `401` e `WWW-Authenticate`, sem vazar detalhe interno.
+- [x] RED de isolamento: token do usuário A não alcança nenhum dado do usuário B, mesmo quando o
+      argumento da tool tenta indicar outro usuário.
+- [x] RED de aderência: treino futuro não entra no denominador; cancelado sai do denominador;
+      parcial vale 0,5.
+- [x] RED de recuperação: ausência de registro de dor nunca é apresentada como "sem dor".
+- [x] RED de nutrição: café sem açúcar nunca é contado como café não consumido.
+- [x] RED de validação: período invertido, dias negativos, data inválida e limite acima do máximo são
+      recusados com erro próprio.
+- [x] RED de privacidade: nenhuma resposta de tool contém hash de senha, token, cookie ou
+      identificador interno de sessão.
+- [x] RED de OAuth: `code` sem `code_verifier` correspondente é recusado; `code` já usado é recusado.
+
+#### Critérios de saída
+
+- Nenhuma tool desta versão modifica dados, comprovado por inventário de tools no teste.
+- A exportação `RELATORIO_EVOLUCAO.md` continua funcionando sem alteração de saída.
+- Lint, formatação, typecheck, testes unitários, integração e build verdes.
+- `HISTORY.md` atualizado e fase encerrada em commit próprio.
+
+### Fase 31 — Histórico volta a apresentar as sessões do dia
+
+**Status:** aberta
+
+**Commit esperado:** `fix(phase-31): restore the sessions shown in history`
+
+**Objetivo:** corrigir o defeito em que a tela de Histórico não apresenta as sessões de um dia, hoje
+reprovado por E2E.
+
+**Motivação:** `e2e/history.spec.ts` reprova ao procurar o botão `13 de julho de 2026` com os rótulos
+`Força` e `Caminhada`. A reprovação foi confirmada em `d5be55a`, antes da Fase 30, o que a torna um
+defeito real do produto e não um efeito da integração MCP. Enquanto ele existir, o histórico pode
+estar escondendo treinos já registrados do titular.
+
+**Restrição central:** a investigação começa pela reprodução na aplicação real. Ajustar o teste para
+passar sem entender a causa é proibido; se a expectativa do teste estiver errada, isso precisa ser
+demonstrado antes de alterá-la.
+
+#### Escopo
+
+- [ ] Causa do defeito identificada e descrita no `HISTORY.md`.
+- [ ] Correção na origem, sem enfraquecer a assertiva do E2E.
+- [ ] Auditoria das demais telas que leem a réplica local pelo mesmo caminho, para verificar se o
+      defeito se repete fora do Histórico.
+
+#### Testes primeiro
+
+- [ ] RED de regressão em teste de componente, mais rápido que o E2E, que reproduza a ausência das
+      sessões do dia antes da correção.
+- [ ] O E2E `history.spec.ts` permanece como está e passa a aprovar sem alteração de expectativa.
+- [ ] RED adicional para cada tela em que a auditoria encontrar o mesmo defeito.
+
+#### Critérios de saída
+
+- Nenhum treino registrado deixa de aparecer no Histórico.
+- A suíte E2E inteira verde, sem `.skip`, `.only` ou retry mascarando falha.
+- Lint, formatação, typecheck, testes unitários, integração, E2E e build verdes.
+- `HISTORY.md` atualizado e fase encerrada em commit próprio.
+
 ## 5. Dependências entre fases
 
 ```text
 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21
-  → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29
+  → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29 → 30 → 31
 ```
 
 As Fases 26 e 27 são independentes entre si e podem ser executadas em qualquer ordem; ambas dependem
@@ -1688,6 +1785,14 @@ apenas da instância de produção já existente.
 
 A Fase 29 depende da 28: o modo demonstração existe justamente porque o cadastro deixou de ser
 aberto. A 28 depende da revisão da decisão nº 1 do `SPEC.md`, não de código anterior.
+
+A Fase 30 depende da camada de agregação já exercitada pela exportação, e da autenticação por sessão
+da Fase 3: o consentimento OAuth reaproveita a sessão existente em vez de criar um segundo caminho de
+entrada.
+
+A Fase 31 não depende da 30. Ela corrige um defeito anterior, detectado durante o gate de E2E da Fase
+30 e registrado como impedimento no `HISTORY.md`. Aparece depois na ordem apenas porque foi
+descoberta ali; pode ser executada a qualquer momento.
 
 Trabalhos internos de uma mesma fase podem ser paralelos somente quando não compartilham arquivos ou contratos instáveis. O encerramento continua único.
 

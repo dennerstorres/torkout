@@ -25,3 +25,4 @@ Esta pasta registra decisões arquiteturais relevantes do Torkout. ADRs explicam
 - [ADR-0002 — Sincronização local-first](0002-local-first-synchronization.md)
 - [ADR-0003 — Autenticação e autorização](0003-authentication.md)
 - [ADR-0004 — Exercícios iniciais pertencentes à conta](0004-user-owned-initial-exercises.md)
+- [ADR-0005 — Integração MCP remota somente leitura](0005-read-only-mcp-integration.md)
