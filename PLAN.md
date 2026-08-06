@@ -1770,7 +1770,7 @@ proibido; a correção precisa remover a não-determinismo, não escondê-lo.
 
 ### Fase 32 — Camada REST somente leitura para GPT Actions
 
-**Status:** concluída — pendente de implantação e de conexão real pelo editor de GPT Actions
+**Status:** concluída e verificada em produção, com o GPT conectado pelo editor de GPT Actions
 
 **Commit esperado:** `feat(phase-32): expose a read-only REST layer for GPT Actions`
 

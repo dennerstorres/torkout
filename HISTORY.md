@@ -2506,7 +2506,7 @@ Com o schema aceito, o fluxo OAuth real revelou o terceiro e maior problema. Cor
   de todo cliente — regra vinda da especificação MCP. A camada REST inteira foi construída sobre a
   suposição não verificada de que o GPT Actions faria o mesmo que um cliente MCP faz.
 - A correção, decidida com o titular e registrada no
-  [ADR-0006](adr/0006-pkce-optional-for-confidential-clients.md), mantém PKCE obrigatório para
+  [ADR-0006](docs/adr/0006-pkce-optional-for-confidential-clients.md), mantém PKCE obrigatório para
   cliente **público** — todo cliente do MCP, nascido de registro dinâmico — e o dispensa para
   cliente **confidencial**, cujo código interceptado é inútil sem o `client_secret`. Um desafio
   enviado continua sempre honrado: `plain` é recusado, e código emitido com desafio exige o
@@ -2532,10 +2532,26 @@ antes de qualquer linha de código REST ser escrita.
 
 ### Riscos e pendências
 
-- Nada foi exercitado contra o ChatGPT real: a URL de callback definitiva só existe depois que a
-  ação é salva no editor, e precisa ser registrada à mão no cliente OAuth.
 - O `servers[0].url` do documento OpenAPI aponta para o domínio de referência. Uma instância em
   outro domínio precisa editá-lo antes de colar no editor.
 - O limitador continua por processo. Com mais de uma réplica, o teto efetivo se multiplica — agora
   para as duas portas ao mesmo tempo.
-- Falta confirmar em produção, no Coolify, que `/api/ai/*` chega à API pelo proxy do serviço `web`.
+- A descrição de `getWorkouts` está em exatamente 300 caracteres, no limite do editor. Qualquer
+  palavra acrescentada reprova o gate; o teste avisa, mas convém encurtá-la ao mexer nela.
+- O campo de instruções do GPT continua vazio. O documento OpenAPI carrega as distinções semânticas,
+  mas reforçá-las nas instruções reduz a chance de o modelo tratar ausência de registro como
+  ausência de sintoma.
+
+### Verificação em produção
+
+Concluída em 2026-08-06, contra a instância real e o editor do ChatGPT Plus:
+
+- `GET /api/ai/health` respondeu `{"scope":"torkout:read","status":"ok"}` pelo proxy do serviço
+  `web`, confirmando que `/api/ai/*` chega à API sem alteração de `nginx.conf`.
+- O documento OpenAPI foi aceito pelo editor sem nenhum erro, com as quinze ações listadas.
+- O cliente OAuth confidencial foi criado pelo comando dentro do contêiner da API, com a URL de
+  callback definitiva que o editor revelou.
+- O fluxo de autorização completou e as ações passaram a responder.
+
+Restam de fora do que foi exercitado: o comportamento do modelo diante das distinções semânticas em
+conversa real, e a verificação em iPhone físico, que não se aplica a esta camada.
