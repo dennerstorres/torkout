@@ -2451,6 +2451,26 @@ compare-periods,health}`.
   colateral, desenvolvimento e teste de restauração deixaram de disputar a mesma porta e passam a
   poder subir ao mesmo tempo. O CI não é afetado: lá o serviço de banco escuta na 5432.
 
+### Correções posteriores ao commit de encerramento
+
+Duas falhas apareceram ao preparar a implantação, quando o comando de criação do cliente foi
+executado de verdade em vez de apenas descrito. Corrigidas em
+`fix(phase-32): make the GPT Actions client reachable in production`:
+
+- **O comando documentado não roda em produção.** O `GPT_ACTIONS.md` mandava usar
+  `pnpm ai:create-gpt-client`, mas a imagem da API é montada com `pnpm deploy --prod` e ainda remove
+  `pnpm`, `npm` e `corepack` do runtime: não há código-fonte nem `tsx` lá dentro. O caminho correto é
+  o JavaScript compilado, `node dist/ai/create-gpt-client.js`, o mesmo padrão que o serviço `migrate`
+  já usava. O documento passou a separar o comando de produção do de desenvolvimento, e os dois foram
+  executados contra um PostgreSQL descartável antes de serem descritos.
+- **`AI_REST_ENABLED` não existia no `compose.production.yml`.** Sem efeito funcional — ausente, o
+  schema assume `true` e a camada REST sobe —, mas o desligamento seletivo documentado era
+  inalcançável pelo Coolify. A variável foi acrescentada ao serviço `api` como
+  `${AI_REST_ENABLED:-true}` e verificada com `docker compose config` nos dois estados.
+
+A lição registrada: um comando operacional só está entregue depois de executado no ambiente em que
+foi prometido. Descrever o caminho não substitui percorrê-lo.
+
 ### Riscos e pendências
 
 - Nada foi exercitado contra o ChatGPT real: a URL de callback definitiva só existe depois que a

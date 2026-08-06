@@ -151,13 +151,30 @@ O editor de GPT Actions **não faz registro dinâmico** (RFC 7591): ele pede `cl
 `client_secret` digitados à mão. Por isso existe um cliente fixo, separado do que o conector MCP
 registra sozinho.
 
+### Em produção, dentro do contêiner da API
+
+É o caminho normal: o contêiner já tem `DATABASE_URL` no ambiente, então nada de credencial precisa
+ser digitado. A imagem de produção não carrega o código-fonte nem `pnpm`, por isso o comando é o
+JavaScript já compilado — o mesmo padrão do serviço `migrate`:
+
+```bash
+docker exec -it <contêiner-da-api> \
+  node dist/ai/create-gpt-client.js \
+  --redirect-uri https://chatgpt.com/aip/g-XXXXXXXX/oauth/callback \
+  --name "Meu GPT do Torkout"
+```
+
+No Coolify, abra o terminal do serviço `api` e rode a partir de `node dist/...`.
+
+### Em desenvolvimento, a partir do repositório
+
 ```bash
 DATABASE_URL=postgresql://... pnpm ai:create-gpt-client \
   --redirect-uri https://chatgpt.com/aip/g-XXXXXXXX/oauth/callback \
   --name "Meu GPT do Torkout"
 ```
 
-O comando devolve:
+Nos dois casos o comando devolve:
 
 ```text
   client_id:     ...
@@ -276,6 +293,8 @@ A camada usa a **mesma imagem, o mesmo serviço e a mesma porta 3000** da API. N
 `0013_phase_30_mcp_oauth`.
 
 1. Em _Environment Variables_ do serviço `api`, confirme `MCP_ENABLED=true` e `MCP_PUBLIC_URL`.
+   `AI_REST_ENABLED` não precisa ser definida: ausente, vale `true`. Defina como `false` apenas se
+   quiser manter o MCP sem expor o REST.
 2. Se o `nginx.conf` do serviço `web` encaminha por prefixo, garanta que `/api` já vá para
    `api:3000` — é o mesmo prefixo das rotas de produto, então normalmente já vai.
 3. Reimplante e confirme: `curl https://<seu-dominio>/api/ai/health`.

@@ -37,6 +37,9 @@ services:
       # passa a aceitar clientes externos autorizados por OAuth. Nenhuma ferramenta escreve dados.
       MCP_ENABLED: ${MCP_ENABLED:-false}
       MCP_PUBLIC_URL: ${MCP_PUBLIC_URL:-}
+      # Camada REST somente leitura de `/api/ai`, para GPT Actions. Acompanha `MCP_ENABLED`: com o
+      # MCP desligado ela não existe. Serve como desligamento seletivo, mantendo o MCP sem o REST.
+      AI_REST_ENABLED: ${AI_REST_ENABLED:-true}
       NODE_ENV: production
       OBJECT_STORAGE_DIR: /var/lib/torkout/object-storage
       PORT: 3000
