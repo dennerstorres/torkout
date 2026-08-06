@@ -16,14 +16,17 @@ import {
 import { daysBetween, isWithin } from './period.js';
 
 /**
- * Camada de leitura do MCP. Só transforma o retrato já carregado do banco em JSON previsível;
+ * Camada de leitura compartilhada. Só transforma o retrato já carregado do banco em JSON previsível;
  * nenhuma função aqui escreve, e nenhuma emite juízo, recomendação ou prescrição — a interpretação é
  * responsabilidade de quem conversa com o modelo.
+ *
+ * Não conhece protocolo. As ferramentas MCP e as rotas REST de `/api/ai` consomem exatamente estas
+ * funções, de modo que uma correção de regra vale para as duas saídas ao mesmo tempo.
  */
 
 type Row = Record<string, unknown>;
 
-export interface McpQueryContext {
+export interface QueryContext {
   now: Date;
   period: McpPeriod;
   snapshot: DataExport;
@@ -99,7 +102,7 @@ function comparison(previous: number | null, current: number | null) {
   };
 }
 
-function sessionsInPeriod(context: McpQueryContext): Row[] {
+function sessionsInPeriod(context: QueryContext): Row[] {
   return rows(context.snapshot.entities.workoutSessions as Row[])
     .filter((session) => isWithin(localDate(session.plannedLocalDate), context.period))
     .sort((left, right) =>
@@ -131,7 +134,7 @@ function breakdownView(breakdown: AdherenceBreakdown) {
 }
 
 /** Junta cada sessão aos seus exercícios e séries, na ordem registrada. */
-function exercisesOf(context: McpQueryContext, sessionId: unknown) {
+function exercisesOf(context: QueryContext, sessionId: unknown) {
   const sets = rows(context.snapshot.entities.exerciseSets as Row[]);
   return rows(context.snapshot.entities.sessionExercises as Row[])
     .filter((item) => item.sessionId === sessionId)
@@ -174,7 +177,7 @@ function exercisesOf(context: McpQueryContext, sessionId: unknown) {
     });
 }
 
-function painReportsOf(context: McpQueryContext, sessionId: unknown): Row[] {
+function painReportsOf(context: QueryContext, sessionId: unknown): Row[] {
   return rows(context.snapshot.entities.painReports as Row[]).filter(
     (report) => report.sessionId === sessionId,
   );
@@ -204,7 +207,7 @@ function painView(report: Row) {
   };
 }
 
-function workoutView(context: McpQueryContext, session: Row) {
+function workoutView(context: QueryContext, session: Row) {
   const walk = rows(context.snapshot.entities.walkingDetails as Row[]).find(
     (item) => item.sessionId === session.id,
   );
@@ -237,7 +240,7 @@ function workoutView(context: McpQueryContext, session: Row) {
   };
 }
 
-function matchesExercise(context: McpQueryContext, session: Row, needle: string): boolean {
+function matchesExercise(context: QueryContext, session: Row, needle: string): boolean {
   const wanted = normalize(needle);
   return rows(context.snapshot.entities.sessionExercises as Row[]).some(
     (item) =>
@@ -245,7 +248,7 @@ function matchesExercise(context: McpQueryContext, session: Row, needle: string)
   );
 }
 
-export function getProfile(context: McpQueryContext) {
+export function getProfile(context: QueryContext) {
   const profile = rows(context.snapshot.entities.userProfiles as Row[])[0];
   return {
     goal: text(profile?.goal),
@@ -260,7 +263,7 @@ export function getProfile(context: McpQueryContext) {
   };
 }
 
-export function getTrainingSummary(context: McpQueryContext) {
+export function getTrainingSummary(context: QueryContext) {
   const sessions = sessionsInPeriod(context);
   const adherence = calculateAdherence({
     from: context.period.from,
@@ -360,7 +363,7 @@ export interface GetWorkoutsOptions {
   status?: string | undefined;
 }
 
-export function getWorkouts(context: McpQueryContext, options: GetWorkoutsOptions) {
+export function getWorkouts(context: QueryContext, options: GetWorkoutsOptions) {
   const limit = boundedLimit(options.limit);
   let sessions = sessionsInPeriod(context);
   if (options.status) sessions = sessions.filter((s) => s.status === options.status);
@@ -381,10 +384,7 @@ export function getWorkouts(context: McpQueryContext, options: GetWorkoutsOption
   };
 }
 
-export function getLastWorkout(
-  context: McpQueryContext,
-  options: { exercise?: string | undefined },
-) {
+export function getLastWorkout(context: QueryContext, options: { exercise?: string | undefined }) {
   let concluded = sessionsInPeriod(context).filter(
     (session) => session.status === 'completed' || session.status === 'partial',
   );
@@ -399,7 +399,7 @@ export function getLastWorkout(
   };
 }
 
-export function getExerciseProgress(context: McpQueryContext, options: { exercise: string }) {
+export function getExerciseProgress(context: QueryContext, options: { exercise: string }) {
   const wanted = normalize(options.exercise);
   const perSession: Array<{
     best_set: number | null;
@@ -453,7 +453,7 @@ export function getExerciseProgress(context: McpQueryContext, options: { exercis
   };
 }
 
-function measurementRows(context: McpQueryContext): Row[] {
+function measurementRows(context: QueryContext): Row[] {
   return rows(context.snapshot.entities.bodyMeasurements as Row[])
     .filter((row) => isWithin(localDate(row.localDate), context.period))
     .sort((left, right) => String(left.localDate).localeCompare(String(right.localDate)));
@@ -487,7 +487,7 @@ function additionalOf(row: Row): Record<string, number | null> {
   return result;
 }
 
-export function getMeasurements(context: McpQueryContext, options: { limit?: number | undefined }) {
+export function getMeasurements(context: QueryContext, options: { limit?: number | undefined }) {
   const limit = boundedLimit(options.limit);
   const all = measurementRows(context);
   const page = [...all].reverse().slice(0, limit);
@@ -540,7 +540,7 @@ export type MeasurementSummary = Record<MeasureKey, MeasureSummary | null> & {
   period: McpPeriod;
 };
 
-export function getMeasurementSummary(context: McpQueryContext): MeasurementSummary {
+export function getMeasurementSummary(context: QueryContext): MeasurementSummary {
   const all = measurementRows(context);
   const measures = {} as Record<MeasureKey, MeasureSummary | null>;
 
@@ -583,7 +583,7 @@ export function getMeasurementSummary(context: McpQueryContext): MeasurementSumm
   };
 }
 
-export function getWalks(context: McpQueryContext) {
+export function getWalks(context: QueryContext) {
   const walkDetails = rows(context.snapshot.entities.walkingDetails as Row[]);
   const sessions = sessionsInPeriod(context).filter((session) => session.type === 'walk');
   const walks = sessions.map((session) => {
@@ -626,7 +626,7 @@ export function getWalks(context: McpQueryContext) {
   };
 }
 
-export function getNutrition(context: McpQueryContext) {
+export function getNutrition(context: QueryContext) {
   const coffee = rows(context.snapshot.entities.coffeeIntakes as Row[]).filter((row) =>
     isWithin(localDate(row.localDate), context.period),
   );
@@ -692,7 +692,7 @@ export function getNutrition(context: McpQueryContext) {
   };
 }
 
-export function getWheyHistory(context: McpQueryContext, options: { limit?: number | undefined }) {
+export function getWheyHistory(context: QueryContext, options: { limit?: number | undefined }) {
   const limit = boundedLimit(options.limit);
   const all = rows(context.snapshot.entities.wheyIntakes as Row[])
     .filter((row) => isWithin(localDate(row.localDate), context.period))
@@ -724,7 +724,7 @@ export function getWheyHistory(context: McpQueryContext, options: { limit?: numb
   };
 }
 
-export function getRecovery(context: McpQueryContext, options: { limit?: number | undefined }) {
+export function getRecovery(context: QueryContext, options: { limit?: number | undefined }) {
   const limit = boundedLimit(options.limit);
   const sessions = sessionsInPeriod(context);
   const answerable = sessions.filter(
@@ -776,7 +776,7 @@ export function getRecovery(context: McpQueryContext, options: { limit?: number 
   };
 }
 
-export function getProgress(context: McpQueryContext) {
+export function getProgress(context: QueryContext) {
   const sessions = sessionsInPeriod(context);
   const measurements = measurementRows(context);
   const panel = summarizeProgressPanel({
@@ -861,7 +861,7 @@ export function getProgress(context: McpQueryContext) {
   };
 }
 
-export function comparePeriods(input: { current: McpQueryContext; previous: McpQueryContext }) {
+export function comparePeriods(input: { current: QueryContext; previous: QueryContext }) {
   const current = getTrainingSummary(input.current);
   const previous = getTrainingSummary(input.previous);
   const currentMeasures = getMeasurementSummary(input.current);
@@ -934,7 +934,7 @@ export function comparePeriods(input: { current: McpQueryContext; previous: McpQ
 /**
  * Detecta eventos recentes nos dados. Só descreve o que mudou; não diagnostica e não recomenda.
  */
-export function getRecentChanges(context: McpQueryContext) {
+export function getRecentChanges(context: QueryContext) {
   const events: Array<{ date: string | null; detail: Record<string, unknown>; kind: string }> = [];
   const sessions = sessionsInPeriod(context);
 

@@ -30,3 +30,38 @@ export class FixedWindowRateLimiter {
     }
   }
 }
+
+/** Limites por endereço de origem; a integração é pessoal e não precisa de folga generosa. */
+export interface McpRateLimits {
+  callsPerMinute: number;
+  registrationsPerHour: number;
+  tokensPerMinute: number;
+}
+
+export const DEFAULT_MCP_RATE_LIMITS: McpRateLimits = {
+  callsPerMinute: 120,
+  registrationsPerHour: 5,
+  tokensPerMinute: 30,
+};
+
+export interface McpRateLimiters {
+  /** Compartilhado por `/mcp` e por `/api/ai/*`: as duas portas são a mesma integração. */
+  calls: FixedWindowRateLimiter;
+  registrations: FixedWindowRateLimiter;
+  tokens: FixedWindowRateLimiter;
+}
+
+/**
+ * Os limitadores pertencem à aplicação, não ao módulo: duas instâncias no mesmo processo, como
+ * acontece nos testes, não podem compartilhar contador.
+ */
+export function createMcpRateLimiters(
+  limits?: Partial<McpRateLimits> | undefined,
+): McpRateLimiters {
+  const effective = { ...DEFAULT_MCP_RATE_LIMITS, ...limits };
+  return {
+    calls: new FixedWindowRateLimiter(effective.callsPerMinute, 60 * 1_000),
+    registrations: new FixedWindowRateLimiter(effective.registrationsPerHour, 60 * 60 * 1_000),
+    tokens: new FixedWindowRateLimiter(effective.tokensPerMinute, 60 * 1_000),
+  };
+}

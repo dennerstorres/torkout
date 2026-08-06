@@ -1,6 +1,6 @@
 import { defineConfig } from 'drizzle-kit';
 
-const localDevelopmentUrl = 'postgresql://torkout:torkout_local_only@localhost:55432/torkout_test';
+const localDevelopmentUrl = 'postgresql://torkout:torkout_local_only@localhost:15432/torkout_test';
 
 export default defineConfig({
   dbCredentials: {

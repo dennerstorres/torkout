@@ -14,7 +14,7 @@ import {
   getTrainingSummary,
   getWalks,
   getWorkouts,
-  type McpQueryContext,
+  type QueryContext,
 } from './queries.js';
 import { resolvePeriod } from './period.js';
 
@@ -77,7 +77,7 @@ function snapshot(entities: Partial<DataExport['entities']>): DataExport {
   } as unknown as DataExport;
 }
 
-function context(entities: Partial<DataExport['entities']>, days = 14): McpQueryContext {
+function context(entities: Partial<DataExport['entities']>, days = 14): QueryContext {
   const data = snapshot(entities);
   return { now: NOW, period: resolvePeriod({ days }, TIME_ZONE, NOW), snapshot: data };
 }

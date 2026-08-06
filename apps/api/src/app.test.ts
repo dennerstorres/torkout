@@ -118,6 +118,8 @@ describe('environment validation', () => {
         TRUSTED_ORIGINS: 'https://torkout.example.test',
       }),
     ).toEqual({
+      // A camada REST de `/api/ai` acompanha o MCP; com o MCP desligado ela não é registrada.
+      AI_REST_ENABLED: true,
       AUTH_BASE_URL: 'https://torkout.example.test',
       AUTH_SECRET: 'test-only-secret-that-is-at-least-thirty-two-characters',
       DATABASE_URL: 'postgresql://user:password@localhost:5432/torkout',

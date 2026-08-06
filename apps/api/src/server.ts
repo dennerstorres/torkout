@@ -34,6 +34,7 @@ const app = buildApp(
     trustedOrigins: environment.TRUSTED_ORIGINS,
   },
   {
+    aiRest: environment.AI_REST_ENABLED,
     logger: createLoggerOptions(environment.LOG_LEVEL),
     mcp: environment.MCP_ENABLED
       ? { publicUrl: environment.MCP_PUBLIC_URL ?? environment.AUTH_BASE_URL }

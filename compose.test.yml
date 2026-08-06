@@ -11,6 +11,8 @@ services:
       timeout: 3s
       retries: 15
     ports:
-      - '55432:5432'
+      # 15432 e não 55432: o Windows reserva faixas altas de porta efêmera (55367–55466 nesta
+      # máquina), e o bind falhava com "socket access forbidden" antes de o contêiner subir.
+      - '15432:5432'
     tmpfs:
       - /var/lib/postgresql

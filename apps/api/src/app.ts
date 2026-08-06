@@ -15,10 +15,17 @@ import { registerPhotoRoutes } from './photo-routes.js';
 import { registerPlanningRoutes } from './planning-routes.js';
 import { registerPortabilityRoutes } from './portability-routes.js';
 import { registerSyncRoutes } from './sync-routes.js';
+import { registerAiRoutes } from './ai/routes.js';
 import { registerMcpRoutes, type McpRouteOptions } from './mcp/routes.js';
+import { createMcpRateLimiters } from './mcp/rate-limit.js';
 import { OperationalMetrics, securityHeaders } from './operational.js';
 
 export interface BuildAppOptions {
+  /**
+   * Camada REST somente leitura de `/api/ai`, para clientes que falam OpenAPI em vez de MCP. Só
+   * existe junto com `mcp`, porque depende do mesmo servidor OAuth e do mesmo escopo.
+   */
+  aiRest?: boolean | undefined;
   logger?: FastifyServerOptions['logger'];
   /** Integração MCP somente leitura; ausente mantém o servidor MCP fora da aplicação. */
   mcp?: McpRouteOptions | undefined;
@@ -82,7 +89,16 @@ export function buildApp(
     registerAdminRoutes(app, dependencies);
     registerAccountRoutes(app, dependencies);
     registerSyncRoutes(app, dependencies);
-    if (options.mcp) registerMcpRoutes(app, dependencies, options.mcp);
+    if (options.mcp) {
+      // Um único conjunto de limitadores serve `/mcp` e `/api/ai/*`: são a mesma integração vista
+      // por dois protocolos, e um segundo contador dobraria o teto sem que ninguém pedisse.
+      const rateLimiters =
+        options.mcp.rateLimiters ?? createMcpRateLimiters(options.mcp.rateLimits);
+      registerMcpRoutes(app, dependencies, { ...options.mcp, rateLimiters });
+      if (options.aiRest !== false) {
+        registerAiRoutes(app, dependencies, { publicUrl: options.mcp.publicUrl, rateLimiters });
+      }
+    }
   }
 
   app.setErrorHandler((error, request, reply) => {

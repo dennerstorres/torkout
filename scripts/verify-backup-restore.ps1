@@ -11,7 +11,7 @@ try {
     & docker compose -f $compose up -d --wait
     if ($LASTEXITCODE -ne 0) { throw 'Restore test databases did not become healthy.' }
 
-    $env:DATABASE_URL = 'postgresql://restore_test:restore_test@127.0.0.1:55433/torkout_restore_source'
+    $env:DATABASE_URL = 'postgresql://restore_test:restore_test@127.0.0.1:15434/torkout_restore_source'
     & pnpm --dir $root db:migrate
     if ($LASTEXITCODE -ne 0) { throw 'Source migrations failed.' }
 

@@ -13,7 +13,9 @@ Cliente MCP (ChatGPT, Claude)
   ↓ HTTPS, JSON-RPC 2.0 sobre Streamable HTTP, Authorization: Bearer
 POST /mcp na aplicação Fastify existente
   ↓ userId resolvido a partir do token, nunca de argumento
-apps/api/src/mcp/queries.ts  — camada de leitura
+apps/api/src/ai/operations.ts — operações neutras de protocolo
+  ↓
+apps/api/src/ai/queries.ts    — camada de leitura
   ↓
 apps/api/src/data-snapshot.ts — mesma agregação usada pelo RELATORIO_EVOLUCAO.md
   ↓ consultas parametrizadas e recortadas por período, via Drizzle
@@ -31,12 +33,18 @@ tipadas sobre um retrato já carregado e limitado ao período pedido.
 | -------------------------------- | ----------------------------------------------------------------------- |
 | `apps/api/src/mcp/routes.ts`     | Rotas Fastify: descoberta OAuth, autorização, token, revogação e `/mcp` |
 | `apps/api/src/mcp/server.ts`     | Construção do `McpServer` e do transporte sem estado                    |
-| `apps/api/src/mcp/tools.ts`      | Registro das ferramentas e dos recursos                                 |
-| `apps/api/src/mcp/queries.ts`    | Camada de leitura pura sobre o retrato de dados                         |
-| `apps/api/src/mcp/period.ts`     | Resolução de período no fuso do usuário                                 |
+| `apps/api/src/mcp/tools.ts`      | Fachada do protocolo: nome, descrição, anotação e schema de entrada     |
 | `apps/api/src/mcp/oauth.ts`      | Servidor de autorização OAuth 2.1                                       |
 | `apps/api/src/mcp/rate-limit.ts` | Limitador de janela fixa em memória                                     |
+| `apps/api/src/ai/operations.ts`  | Operações neutras: validação, recorte e guardas de janela               |
+| `apps/api/src/ai/context.ts`     | Montagem do contexto: fuso, período e retrato de dados                  |
+| `apps/api/src/ai/queries.ts`     | Camada de leitura pura sobre o retrato de dados                         |
+| `apps/api/src/ai/period.ts`      | Resolução de período no fuso do usuário                                 |
 | `apps/api/src/data-snapshot.ts`  | Agregação compartilhada com a exportação                                |
+
+Os arquivos em `ai/` não conhecem MCP. A camada REST de `/api/ai`, descrita em
+[`GPT_ACTIONS.md`](GPT_ACTIONS.md), consome exatamente as mesmas operações — não existe segunda
+implementação de nenhuma regra, e o limitador de chamadas é o mesmo objeto para as duas portas.
 
 ## 2. Transporte
 
@@ -253,6 +261,9 @@ corporais, notas, dores ou hábitos. A redação de `LOGGER_REDACT_PATHS` contin
 | `MCP_ENABLED`    | `false` | Só `true` habilita. Desligada, as rotas não existem.                             |
 | `MCP_PUBLIC_URL` | vazio   | URL pública do MCP. Vazia, usa `AUTH_BASE_URL`. Exige HTTPS fora de `localhost`. |
 
+`MCP_ENABLED=true` também registra a camada REST de `/api/ai`, que compartilha este OAuth e este
+escopo. Para manter o MCP sem expor o REST, defina `AI_REST_ENABLED=false`.
+
 Nenhum segredo novo é necessário. Não commite `.env`; o domínio real não aparece no código.
 
 ## 11. Health check
@@ -409,5 +420,7 @@ uma correção de regra vale para as duas saídas ao mesmo tempo:
 ```text
 data-snapshot.ts + @torkout/domain
    ├── evolution-report.ts → RELATORIO_EVOLUCAO.md
-   └── mcp/queries.ts      → JSON das ferramentas MCP
+   └── ai/queries.ts → ai/operations.ts
+                          ├── mcp/tools.ts → JSON das ferramentas MCP
+                          └── ai/routes.ts → JSON da camada REST /api/ai
 ```

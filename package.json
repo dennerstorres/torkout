@@ -8,6 +8,7 @@
     "node": ">=22.12 <25"
   },
   "scripts": {
+    "ai:create-gpt-client": "tsx apps/api/src/ai/create-gpt-client.ts",
     "build": "pnpm --filter @torkout/contracts build && pnpm --filter @torkout/domain build && pnpm --filter @torkout/database build && pnpm --filter @torkout/test-utils build && pnpm --filter @torkout/api build && pnpm --filter @torkout/web build",
     "build:packages": "pnpm --filter @torkout/contracts build && pnpm --filter @torkout/domain build && pnpm --filter @torkout/database build && pnpm --filter @torkout/test-utils build",
     "check": "pnpm verify:governance && pnpm verify:phase-1 && pnpm verify:phase-2 && pnpm verify:phase-3 && pnpm verify:phase-4 && pnpm verify:phase-5 && pnpm verify:phase-6 && pnpm verify:phase-7 && pnpm verify:phase-8 && pnpm verify:phase-9 && pnpm verify:phase-10 && pnpm verify:phase-11 && pnpm verify:phase-12 && pnpm verify:phase-13 && pnpm verify:phase-14 && pnpm verify:phase-15 && pnpm security:scan && pnpm format:check && pnpm lint && pnpm build:packages && pnpm typecheck && pnpm test && pnpm build",

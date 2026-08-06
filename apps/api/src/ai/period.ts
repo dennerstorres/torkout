@@ -4,7 +4,7 @@ import { instantToLocalDate } from '@torkout/domain';
 const DAY_MS = 86_400_000;
 
 /** Padrão quando a pergunta não traz recorte: duas semanas cobrem a conversa típica sem exagero. */
-export const MCP_DEFAULT_RANGE_DAYS = 14;
+export const DEFAULT_RANGE_DAYS = 14;
 
 export function addDays(localDate: string, amount: number): string {
   return new Date(Date.parse(`${localDate}T00:00:00Z`) + amount * DAY_MS)
@@ -37,7 +37,7 @@ export function resolvePeriod(range: McpRangeInput, timeZone: string, now: Date)
     }
     return { days: span, from: range.from, time_zone: timeZone, to: range.to };
   }
-  const days = range.days ?? MCP_DEFAULT_RANGE_DAYS;
+  const days = range.days ?? DEFAULT_RANGE_DAYS;
   return { days, from: addDays(today, -(days - 1)), time_zone: timeZone, to: today };
 }
 

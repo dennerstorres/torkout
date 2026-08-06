@@ -1768,11 +1768,66 @@ proibido; a correção precisa remover a não-determinismo, não escondê-lo.
 - Nenhuma assertiva enfraquecida e nenhuma alteração no código do produto.
 - `HISTORY.md` atualizado e fase encerrada em commit próprio.
 
+### Fase 32 — Camada REST somente leitura para GPT Actions
+
+**Status:** concluída — pendente de implantação e de conexão real pelo editor de GPT Actions
+
+**Commit esperado:** `feat(phase-32): expose a read-only REST layer for GPT Actions`
+
+**Objetivo:** permitir que um GPT personalizado do ChatGPT Plus consulte os mesmos dados por GPT
+Actions, que fala OpenAPI sobre REST e não fala MCP.
+
+**Motivação:** o conector MCP da Fase 30 exige modo de desenvolvedor e não está disponível no editor
+de GPT personalizado. Sem uma camada REST, o titular não consegue montar um GPT próprio sobre os
+próprios dados.
+
+**Restrição central:** uma única fonte de verdade. A camada REST não pode reimplementar consulta,
+recorte de período, limite nem guarda de janela; tudo isso passa a viver numa camada neutra que o MCP
+também consome. O MCP continua funcionando exatamente como antes, e nada nesta fase escreve dados.
+
+#### Escopo
+
+- [x] Camada neutra `apps/api/src/ai/` com `queries.ts` e `period.ts` movidos de `mcp/`, mais
+      `context.ts` (montagem de contexto, hoje duplicada em `tools.ts`) e `operations.ts` com as
+      catorze operações e suas guardas de janela.
+- [x] `mcp/tools.ts` reduzido a descrição, anotação e delegação; nenhuma regra permanece nele.
+- [x] Catorze rotas `GET /api/ai/*` mais `GET /api/ai/health`, todas somente leitura.
+- [x] Autenticação por `Authorization: Bearer` sobre o mesmo servidor OAuth 2.1 do MCP, com o mesmo
+      escopo `torkout:read`. Nenhum token estático global.
+- [x] Limitador de chamadas compartilhado com `/mcp`, sem segundo contador.
+- [x] Client OAuth fixo para GPT Actions criado por `pnpm ai:create-gpt-client`, com segredo exibido
+      uma única vez e guardado em hash.
+- [x] `docs/torkout-gpt-actions.openapi.yaml` em OpenAPI 3.1.0 e `docs/GPT_ACTIONS.md`.
+- [x] Composes locais em 15432, 15433 e 15434/15435, fora da faixa de porta reservada pelo Windows
+      que já havia impedido a Fase 30 de subir o serviço.
+
+#### Testes primeiro
+
+- [x] RED de autenticação: `401` sem `Authorization`, `401` com token inválido, `403` com escopo
+      insuficiente.
+- [x] RED de isolamento: o token do usuário A nunca devolve dado do usuário B.
+- [x] RED de contrato: cada endpoint devolve JSON com o período resolvido e os campos do MCP.
+- [x] RED de semântica: treino futuro fora do denominador, café sem açúcar distinto de não
+      consumido, ausência de registro de dor distinta de sem dor, cintura distinta de barriga.
+- [x] RED de validação: intervalo invertido, `days` com `from`/`to`, limite acima do teto, período
+      acima da janela — todos `400` com JSON curto e sem stack, SQL ou caminho.
+- [x] RED de superfície: `POST`, `PUT`, `PATCH` e `DELETE` em `/api/ai/*` não existem.
+- [x] RED de equivalência: a mesma pergunta pelo MCP e pelo REST devolve o mesmo objeto.
+- [x] RED de documento: o OpenAPI é válido e cobre exatamente os endpoints implementados.
+
+#### Critérios de saída
+
+- Nenhuma rota `/api/ai/*` modifica dados, comprovado por inventário de rotas no teste.
+- A suíte da Fase 30 continua verde sem alteração de assertiva.
+- A exportação `RELATORIO_EVOLUCAO.md` continua com a mesma saída.
+- Lint, formatação, typecheck, testes unitários, integração e build verdes.
+- `HISTORY.md` atualizado e fase encerrada em commit próprio.
+
 ## 5. Dependências entre fases
 
 ```text
 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21
-  → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29 → 30 → 31
+  → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29 → 30 → 31 → 32
 ```
 
 As Fases 26 e 27 são independentes entre si e podem ser executadas em qualquer ordem; ambas dependem
@@ -1788,6 +1843,9 @@ entrada.
 A Fase 31 não depende da 30. Ela corrige a não-determinismo de um teste, detectada durante o gate de
 E2E da Fase 30 e registrada como impedimento no `HISTORY.md`. Aparece depois na ordem apenas porque
 foi descoberta ali.
+
+A Fase 32 depende da 30. Ela não acrescenta consulta nem regra: extrai a camada de leitura que o MCP
+já usa e a expõe também por REST, para um cliente que fala OpenAPI em vez de MCP.
 
 Trabalhos internos de uma mesma fase podem ser paralelos somente quando não compartilham arquivos ou contratos instáveis. O encerramento continua único.
 

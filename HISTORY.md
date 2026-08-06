@@ -2340,3 +2340,123 @@ O E2E confirma o conjunto em um build real: durante a jornada `/demo`, nenhuma r
 - Confirmar os dois jobs verdes no GitHub Actions após o push desta fase. O verde local usa os
   mesmos parâmetros, mas não substitui a execução no CI.
 - Os badges do `README.md` só renderizam depois que o repositório for público.
+
+## Fase 32 — Camada REST somente leitura para GPT Actions
+
+**Commit de encerramento:** `feat(phase-32): expose a read-only REST layer for GPT Actions`
+
+### Escopo entregue
+
+- Camada neutra `apps/api/src/ai/`: `queries.ts` e `period.ts` movidos de `mcp/` sem alteração de
+  conteúdo, mais `context.ts` (montagem de contexto, que estava duplicada em `tools.ts`),
+  `operations.ts` (as catorze operações com validação e guardas de janela), `bearer.ts`,
+  `query-params.ts` e `routes.ts`.
+- `mcp/tools.ts` reduzido a fachada de protocolo: nome, descrição, anotação e schema de entrada.
+  Nenhuma regra permaneceu nele.
+- Catorze rotas `GET /api/ai/*` mais `GET /api/ai/health`, todas somente leitura.
+- Autenticação por `Authorization: Bearer` sobre o mesmo servidor OAuth 2.1 do MCP, mesmo escopo
+  `torkout:read`, mesmo armazenamento de tokens. Nenhum emissor novo e nenhum token estático.
+- Limitadores extraídos para `mcp/rate-limit.ts` e construídos uma única vez em `app.ts`: `/mcp` e
+  `/api/ai/*` compartilham o mesmo contador de chamadas.
+- Variável `AI_REST_ENABLED`, padrão `true`, como desligamento seletivo do REST mantendo o MCP.
+- Comando `pnpm ai:create-gpt-client`, que registra o cliente OAuth confidencial fixo exigido pelo
+  editor do GPT Actions, com segredo exibido uma única vez e guardado em hash.
+- `docs/torkout-gpt-actions.openapi.yaml` em OpenAPI 3.1.0 e `docs/GPT_ACTIONS.md`.
+- `docs/MCP.md` atualizado para descrever a camada compartilhada.
+
+### Evidência Red
+
+- Suíte nova `apps/api/src/ai.integration.test.ts` executada com a camada REST desligada
+  (`aiRest: false`): **32 reprovações e 3 aprovações**, todas as reprovações por
+  `Route GET:/api/ai/... not found`. As três que passaram são as que exigem ausência de verbo de
+  escrita, satisfeitas trivialmente sem as rotas.
+- Antes disso, a primeira execução reprovou por semeadura errada (`invalid input value for enum
+pain_intensity: "mild"`). Corrigido para `light` e repetido até obter a falha comportamental.
+- `apps/api/src/ai/openapi.test.ts` reprovou na primeira execução por padrão de indentação de
+  `servers`, corrigido no teste; os demais sete casos já exerciam o documento.
+
+### Evidência Green
+
+- `ai.integration.test.ts`: 35 aprovações, incluindo `401` sem credencial em todos os endpoints,
+  `401` com token desconhecido e expirado, `403` com escopo `torkout:write`, isolamento entre duas
+  contas, recusa de `userId`/`email` como seletor de titular, treino futuro fora do denominador,
+  café sem açúcar distinto de não consumido, ausência de resposta distinta de sem dor, cintura
+  distinta de barriga, período invertido, `days` com `from`/`to`, data civil inexistente, `days` não
+  inteiro, limite acima do teto, janela acima de 180 e de 730 dias, ausência de verbo de escrita e
+  contador de chamadas compartilhado com `/mcp`.
+- Caso de equivalência: `GET /api/ai/training-summary` e a tool `get_training_summary` devolvem
+  objetos idênticos para a mesma pergunta, comparados com `toEqual`.
+- `query-params.test.ts`: 13 aprovações. `openapi.test.ts`: 8 aprovações.
+
+### Evidência Refactor
+
+- A suíte da Fase 30 continuou verde sem alteração de assertiva, antes e depois da extração.
+- Gates completos: `pnpm format:check`, `pnpm lint --max-warnings 0`, `pnpm typecheck`,
+  `pnpm test` (63 arquivos, 448 casos), `pnpm test:integration` contra PostgreSQL real (17 arquivos,
+  129 casos), `pnpm build` e `pnpm security:scan` (371 arquivos) — todos verdes.
+
+### Migrações e endpoints
+
+- **Nenhuma migração.** O esquema OAuth veio na `0013_phase_30_mcp_oauth` e foi reaproveitado
+  inteiro, inclusive para o cliente do GPT Actions.
+- Endpoints novos: `GET /api/ai/{profile,training-summary,workouts,last-workout,exercise-progress,
+measurements,measurement-summary,walks,nutrition,whey-history,recovery,progress,recent-changes,
+compare-periods,health}`.
+
+### Decisões
+
+- **Extrair em vez de duplicar.** As guardas de janela (180 dias no detalhe, 360 por período
+  comparado, 365 no último treino) eram regra vivendo no registro de ferramentas MCP. Foram para a
+  camada neutra: uma divergência entre MCP e REST passou a ser impossível por construção, e não
+  apenas evitada por disciplina.
+- **Um único servidor OAuth.** Criar um segundo emissor para o REST significaria dois
+  armazenamentos de token e duas telas de consentimento sobre os mesmos dados. O escopo, o
+  consentimento e a revogação são os mesmos.
+- **Um único limitador.** Dois contadores dobrariam o teto efetivo sem que ninguém tivesse pedido
+  isso.
+- **Cliente OAuth fixo para o GPT.** O editor de GPT Actions não faz registro dinâmico; pede
+  `client_id` e `client_secret` digitados. O cliente é confidencial, separado do que o conector MCP
+  registra sozinho, e o `redirect_uri` continua sem curinga.
+- **`AI_REST_ENABLED` com padrão `true`.** Quem habilitou o MCP já consentiu com a leitura pelos
+  mesmos dados e escopo; a variável existe como desligamento seletivo, não como segunda permissão.
+- **O documento OpenAPI é escrito à mão**, porque é ele que o editor do ChatGPT consome. O teste
+  documental impede que ele se descole da implementação nos dois sentidos.
+
+### Impactos de segurança e privacidade
+
+- Superfície estritamente somente leitura: só `GET`, comprovado por inventário de rotas no teste.
+- O titular vem exclusivamente do token verificado; `userId`, `email` e `username` são descartados
+  na validação, com teste que exercita o ataque.
+- Erro nunca traz stack trace, SQL, nome de tabela, caminho local nem segredo; há assertiva de
+  ausência desses padrões na resposta de erro.
+- Log de `ai_request` registra `operationId`, duração, status, `client_id` e oito caracteres do
+  identificador do usuário. Não registra `Authorization`, token, corpo, medidas, dores nem hábitos.
+- CORS não foi tocado: continua restrito a `TRUSTED_ORIGINS`. Bearer servidor-servidor não depende
+  de cookie e não exige CSRF; o consentimento no navegador manteve as proteções atuais.
+- O segredo do cliente do GPT existe em claro apenas na saída do comando de criação; no banco só
+  existe o hash SHA-256.
+
+### Desvios
+
+- `McpQueryContext` virou `QueryContext` e `MCP_DEFAULT_RANGE_DAYS` virou `DEFAULT_RANGE_DAYS`: a
+  camada deixou de ser do MCP, e o nome acompanhou. As constantes de `@torkout/contracts` mantiveram
+  o prefixo `MCP_` para não propagar renomeação por três pacotes e seus testes.
+- Os três composes locais saíram da faixa de porta efêmera reservada pelo Windows (55367–55466 nesta
+  máquina), onde o bind falhava com "socket access forbidden" antes de o contêiner subir:
+  `compose.test.yml` de 55432 para **15432**, `compose.development.yml` de 55433 para **15433** e
+  `compose.restore-test.yml` de 55433/55434 para **15434/15435**. O mesmo impedimento já havia sido
+  registrado na Fase 30 e contornado fora do repositório; desta vez foi corrigido na origem.
+  Acompanharam a mudança `.env.example`, o padrão de último recurso de `drizzle.config.ts`, a tabela
+  de endereços do `README.md` e a URL de origem em `scripts/verify-backup-restore.ps1`. Como efeito
+  colateral, desenvolvimento e teste de restauração deixaram de disputar a mesma porta e passam a
+  poder subir ao mesmo tempo. O CI não é afetado: lá o serviço de banco escuta na 5432.
+
+### Riscos e pendências
+
+- Nada foi exercitado contra o ChatGPT real: a URL de callback definitiva só existe depois que a
+  ação é salva no editor, e precisa ser registrada à mão no cliente OAuth.
+- O `servers[0].url` do documento OpenAPI aponta para o domínio de referência. Uma instância em
+  outro domínio precisa editá-lo antes de colar no editor.
+- O limitador continua por processo. Com mais de uma réplica, o teto efetivo se multiplica — agora
+  para as duas portas ao mesmo tempo.
+- Falta confirmar em produção, no Coolify, que `/api/ai/*` chega à API pelo proxy do serviço `web`.

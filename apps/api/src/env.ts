@@ -2,6 +2,16 @@ import { z } from 'zod';
 
 const environmentSchema = z
   .strictObject({
+    /**
+     * Camada REST somente leitura de `/api/ai`, usada por GPT Actions. Só existe quando
+     * `MCP_ENABLED` é `true`, porque depende do mesmo servidor OAuth, do mesmo escopo e da mesma
+     * camada de consulta. O padrão é ligada: quem habilitou a integração já consentiu com a leitura;
+     * a variável existe como desligamento seletivo, para manter o MCP sem expor o REST.
+     */
+    AI_REST_ENABLED: z
+      .enum(['true', 'false'])
+      .default('true')
+      .transform((value) => value === 'true'),
     AUTH_BASE_URL: z
       .url()
       .refine((value) => value.startsWith('https://') || value.startsWith('http://localhost')),
@@ -70,6 +80,7 @@ export function parseEnvironment(
   input: Record<string, string | undefined> = process.env,
 ): Environment {
   return environmentSchema.parse({
+    AI_REST_ENABLED: input.AI_REST_ENABLED,
     AUTH_BASE_URL: input.AUTH_BASE_URL,
     AUTH_SECRET: input.AUTH_SECRET,
     DATABASE_URL: input.DATABASE_URL,

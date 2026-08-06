@@ -1,0 +1,1150 @@
+openapi: 3.1.0
+
+info:
+  title: Torkout — leitura de treino
+  version: 1.0.0
+  description: |
+    API somente leitura dos dados de treino, medidas, caminhadas, alimentação e recuperação do
+    titular autenticado.
+
+    Regras de interpretação que valem para toda resposta:
+
+    - `null` significa ausência de registro, nunca zero.
+    - Ausência de registro de dor nunca significa ausência de dor.
+    - Café sem açúcar é consumo registrado; nunca é somado a "não consumi".
+    - Treino futuro não é treino perdido: aparece em `future_not_counted`.
+    - Cancelamento justificado sai do denominador da aderência; parcial vale 0,5; concluído vale 1.
+    - Cintura e barriga são medidas distintas e nunca se substituem.
+
+    As respostas trazem fatos e métricas. Não diagnostique, não prescreva treino e não faça
+    recomendação clínica a partir delas.
+
+servers:
+  - url: https://torkout.dennerstorres.dev
+    description: Instância de produção
+
+security:
+  - TorkoutOAuth:
+      - torkout:read
+
+tags:
+  - name: treino
+    description: Sessões de força, exercícios e séries
+  - name: corpo
+    description: Medidas corporais
+  - name: rotina
+    description: Caminhadas, alimentação e whey
+  - name: recuperação
+    description: Esforço percebido e registros de dor
+  - name: panorama
+    description: Progresso, comparações e mudanças recentes
+
+paths:
+  /api/ai/health:
+    get:
+      operationId: getHealth
+      summary: Confirma que a integração está disponível
+      description: >-
+        Verificação de disponibilidade. Não expõe banco, versão nem configuração interna. É o único
+        endpoint que não exige credencial.
+      security: []
+      responses:
+        '200':
+          description: Integração disponível
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    examples: [ok]
+                  scope:
+                    type: string
+                    examples: [torkout:read]
+
+  /api/ai/profile:
+    get:
+      operationId: getProfile
+      tags: [panorama]
+      summary: Perfil de treino do titular
+      description: >-
+        Contexto de treino do titular: altura, objetivo declarado, horário preferido, sistema de
+        unidades, fuso horário e data de início. Não devolve e-mail, senha, hash nem token. Use antes
+        de interpretar medidas, para saber a unidade e o fuso corretos.
+      responses:
+        '200':
+          description: Perfil do dono do token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/ai/training-summary:
+    get:
+      operationId: getTrainingSummary
+      tags: [treino]
+      summary: Resumo agregado dos treinos do período
+      description: >-
+        Retorna um resumo agregado dos treinos de força dentro de um período, incluindo aderência,
+        sessões concluídas, parciais, perdidas, canceladas, sessões futuras não contabilizadas,
+        séries, repetições, RPE e recuperação. Sessões futuras nunca contam como falta: elas aparecem
+        em `future_not_counted` e ficam fora do denominador. Prefira este endpoint a `getWorkouts`
+        para períodos longos ou perguntas de visão geral.
+      parameters:
+        - $ref: '#/components/parameters/Days'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+      responses:
+        '200':
+          description: Resumo do período
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrainingSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/ai/workouts:
+    get:
+      operationId: getWorkouts
+      tags: [treino]
+      summary: Treinos estruturados do período
+      description: >-
+        Retorna os treinos do período, do mais recente para o mais antigo, com exercícios, séries
+        planejadas e realizadas, RPE e recuperação associada. Limitado a 180 dias: acima disso use
+        `getTrainingSummary`, que devolve o agregado sem carregar cada série. Use `limit` para
+        controlar o tamanho da resposta.
+      parameters:
+        - $ref: '#/components/parameters/Days'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Exercise'
+        - $ref: '#/components/parameters/Status'
+      responses:
+        '200':
+          description: Treinos do período
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Workouts'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/ai/last-workout:
+    get:
+      operationId: getLastWorkout
+      tags: [treino]
+      summary: Treino concluído mais recente
+      description: >-
+        Retorna o treino concluído mais recente do último ano, opcionalmente restrito a um exercício.
+        Devolve `workout: null` quando nada foi concluído nesse intervalo — o que significa ausência
+        de registro, não ausência de treino.
+      parameters:
+        - $ref: '#/components/parameters/Exercise'
+      responses:
+        '200':
+          description: Último treino concluído
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                properties:
+                  workout:
+                    type: ['object', 'null']
+                    additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/ai/exercise-progress:
+    get:
+      operationId: getExerciseProgress
+      tags: [treino]
+      summary: Progressão de um exercício
+      description: >-
+        Retorna a série histórica de um exercício: datas, séries, valor por série, total por treino,
+        maior série, média por sessão, volume total e tendência simples. O parâmetro `exercise` é
+        obrigatório e casa por parte do nome, ignorando acentos e maiúsculas. A tendência descreve o
+        que foi registrado; não é avaliação de qualidade nem prescrição.
+      parameters:
+        - $ref: '#/components/parameters/ExerciseRequired'
+        - $ref: '#/components/parameters/Days'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+      responses:
+        '200':
+          description: Progressão do exercício
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExerciseProgress'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/ai/measurements:
+    get:
+      operationId: getMeasurements
+      tags: [corpo]
+      summary: Medidas corporais registradas
+      description: >-
+        Retorna as medidas corporais registradas no período: peso, cintura, barriga, quadril, coxa,
+        bíceps, data, horário, jejum e observações. Cintura e barriga são métricas distintas e nunca
+        devem ser somadas nem trocadas uma pela outra. Um valor nulo significa medida não registrada,
+        nunca zero.
+      parameters:
+        - $ref: '#/components/parameters/Days'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Medidas do período
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Measurements'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/ai/measurement-summary:
+    get:
+      operationId: getMeasurementSummary
+      tags: [corpo]
+      summary: Resumo por medida corporal
+      description: >-
+        Para cada medida — peso, cintura, barriga, quadril, coxa e bíceps — retorna primeiro e último
+        valor, diferença absoluta e percentual, mínimo, máximo e quantidade de registros. Uma medida
+        sem nenhum registro no período vem como `null`, e isso não significa zero. Não interprete
+        oscilação pequena como ganho ou perda real.
+      parameters:
+        - $ref: '#/components/parameters/Days'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+      responses:
+        '200':
+          description: Resumo das medidas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeasurementSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/ai/walks:
+    get:
+      operationId: getWalks
+      tags: [rotina]
+      summary: Caminhadas do período
+      description: >-
+        Retorna as caminhadas do período com data, distância, duração, estado, RPE e observações,
+        mais o resumo de concluídas, parciais, canceladas, distância total, duração total e distância
+        média. Caminhada é atividade separada do treino de força e tem aderência própria.
+      parameters:
+        - $ref: '#/components/parameters/Days'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+      responses:
+        '200':
+          description: Caminhadas do período
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Walks'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/ai/nutrition:
+    get:
+      operationId: getNutrition
+      tags: [rotina]
+      summary: Café, hábitos registrados e presença de whey
+      description: >-
+        Retorna somente o que o aplicativo realmente registra: estado do café (não consumido, sem
+        açúcar, com açúcar), hábitos configurados pelo titular e presença de whey. Café sem açúcar é
+        consumo e nunca é somado a "não consumi"; um dia sem linha entra em `days_without_record`.
+        Nenhum macronutriente é estimado — `macronutrients` é sempre `null`, e você não deve calcular
+        calorias ou proteína a partir daqui.
+      parameters:
+        - $ref: '#/components/parameters/Days'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+      responses:
+        '200':
+          description: Alimentação e hábitos do período
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Nutrition'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/ai/whey-history:
+    get:
+      operationId: getWheyHistory
+      tags: [rotina]
+      summary: Histórico de consumo de whey
+      description: >-
+        Retorna os registros de whey do período: consumo ou recusa, quantidade, horário, mistura,
+        volume de líquido, marca, produto, proteína informada por dose, tolerância e observações. Um
+        registro com `consumed: false` é uma recusa registrada, diferente de um dia sem registro.
+      parameters:
+        - $ref: '#/components/parameters/Days'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Registros de whey
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WheyHistory'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/ai/recovery:
+    get:
+      operationId: getRecovery
+      tags: [recuperação]
+      summary: Recuperação, esforço percebido e registros de dor
+      description: >-
+        Retorna os registros de recuperação e dor. Distingue explicitamente entre ausência de
+        registro, resposta sem dor, dor muscular e dor articular. Em `answers`,
+        `explicitly_without_pain` conta apenas quem respondeu "sem dor"; `not_answered` conta as
+        sessões sem resposta, e essas nunca devem ser tratadas como sessões sem dor. Traz também o
+        RPE por sessão e os campos gravados em cada relato: tipo, intensidade, região, momento,
+        inchaço, dificuldade para apoiar e exercício interrompido.
+      parameters:
+        - $ref: '#/components/parameters/Days'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Recuperação do período
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Recovery'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/ai/progress:
+    get:
+      operationId: getProgress
+      tags: [panorama]
+      summary: Progresso consolidado do período
+      description: >-
+        Retorna a visão consolidada do período: treinos concluídos, aderência, sequência atual e
+        melhor sequência, evolução de flexões e agachamentos, peso, cintura, barriga, caminhadas,
+        RPE, recuperação e nível atual. Sequências e nível são calculados dentro do período pedido;
+        uma sequência anterior ao recorte não é considerada.
+      parameters:
+        - $ref: '#/components/parameters/Days'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+      responses:
+        '200':
+          description: Progresso consolidado
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                properties:
+                  period:
+                    $ref: '#/components/schemas/Period'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/ai/recent-changes:
+    get:
+      operationId: getRecentChanges
+      tags: [panorama]
+      summary: Eventos relevantes recentes
+      description: >-
+        Retorna os eventos recentes detectados nos dados: recorde de repetições, novo peso, nova
+        medida, treino perdido, caminhada concluída, dor registrada e whey consumido ou recusado. A
+        janela padrão é de 14 dias. Apenas detecta mudanças; não diagnostica e não recomenda
+        tratamento.
+      parameters:
+        - $ref: '#/components/parameters/Days'
+      responses:
+        '200':
+          description: Mudanças recentes
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                properties:
+                  period:
+                    $ref: '#/components/schemas/Period'
+                  changes:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/ai/compare-periods:
+    get:
+      operationId: comparePeriods
+      tags: [panorama]
+      summary: Compara dois períodos explícitos
+      description: >-
+        Compara dois períodos informados por extenso e devolve, para cada indicador, o valor atual, o
+        anterior, a diferença absoluta e a percentual quando matematicamente válida. Os quatro
+        limites são obrigatórios e cada período precisa caber em 360 dias. Uma diferença percentual
+        `null` significa que ela não é calculável — por exemplo, quando o valor anterior é zero ou
+        não foi registrado. Não produz recomendação médica nem prescrição de treino.
+      parameters:
+        - name: current_from
+          in: query
+          required: true
+          description: Início do período atual, YYYY-MM-DD, inclusivo.
+          schema:
+            type: string
+            format: date
+        - name: current_to
+          in: query
+          required: true
+          description: Fim do período atual, YYYY-MM-DD, inclusivo.
+          schema:
+            type: string
+            format: date
+        - name: previous_from
+          in: query
+          required: true
+          description: Início do período anterior, YYYY-MM-DD, inclusivo.
+          schema:
+            type: string
+            format: date
+        - name: previous_to
+          in: query
+          required: true
+          description: Fim do período anterior, YYYY-MM-DD, inclusivo.
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Comparação entre os dois períodos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PeriodComparison'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  securitySchemes:
+    TorkoutOAuth:
+      type: oauth2
+      description: >-
+        OAuth 2.1 com PKCE obrigatório, servido pela própria aplicação. Existe um único escopo, e ele
+        é somente leitura: qualquer outro pedido é recusado com `invalid_scope`.
+      flows:
+        authorizationCode:
+          authorizationUrl: https://torkout.dennerstorres.dev/oauth/authorize
+          tokenUrl: https://torkout.dennerstorres.dev/oauth/token
+          refreshUrl: https://torkout.dennerstorres.dev/oauth/token
+          scopes:
+            torkout:read: Leitura dos dados de treino do titular autenticado
+
+  parameters:
+    Days:
+      name: days
+      in: query
+      required: false
+      description: >-
+        Número de dias contados para trás a partir de hoje, no fuso do titular. Não pode ser
+        combinado com `from` e `to`.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 730
+    From:
+      name: from
+      in: query
+      required: false
+      description: Início do período, YYYY-MM-DD, inclusivo. Informe junto com `to`.
+      schema:
+        type: string
+        format: date
+    To:
+      name: to
+      in: query
+      required: false
+      description: Fim do período, YYYY-MM-DD, inclusivo. Informe junto com `from`.
+      schema:
+        type: string
+        format: date
+    Limit:
+      name: limit
+      in: query
+      required: false
+      description: Máximo de registros detalhados devolvidos. Padrão 20, teto 100.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+    Exercise:
+      name: exercise
+      in: query
+      required: false
+      description: Nome ou parte do nome do exercício; ignora acentos e maiúsculas.
+      schema:
+        type: string
+        maxLength: 120
+    ExerciseRequired:
+      name: exercise
+      in: query
+      required: true
+      description: Nome ou parte do nome do exercício; ignora acentos e maiúsculas.
+      schema:
+        type: string
+        maxLength: 120
+    Status:
+      name: status
+      in: query
+      required: false
+      description: Filtra por estado da sessão.
+      schema:
+        type: string
+        enum: [cancelled, completed, in_progress, missed, partial, planned]
+
+  responses:
+    BadRequest:
+      description: Parâmetro ou período inválido
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Credencial ausente, inválida ou expirada
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: O token não carrega o escopo torkout:read
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    RateLimited:
+      description: Limite de chamadas atingido; respeite o cabeçalho Retry-After
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InternalError:
+      description: Erro interno inesperado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    Error:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          description: Código estável da falha.
+          enum:
+            - invalid_parameter
+            - period_too_long
+            - unauthorized
+            - invalid_token
+            - insufficient_scope
+            - rate_limited
+            - internal_error
+        message:
+          type: string
+          description: Frase curta em português explicando a recusa.
+
+    Period:
+      type: object
+      description: Período efetivamente analisado, já resolvido no fuso do titular.
+      required: [days, from, time_zone, to]
+      properties:
+        days:
+          type: integer
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        time_zone:
+          type: string
+          description: Identificador IANA, por exemplo America/Cuiaba.
+
+    AdherenceBreakdown:
+      type: object
+      description: >-
+        Contagem de sessões por estado. `future_not_counted` fica fora do denominador: treino futuro
+        não é treino perdido. Cancelamento justificado também sai do denominador. Parcial vale 0,5 e
+        concluído vale 1.
+      properties:
+        completed:
+          type: integer
+        partial:
+          type: integer
+        missed:
+          type: integer
+        cancelled:
+          type: integer
+        denominator:
+          type: integer
+        due:
+          type: integer
+        future_not_counted:
+          type: integer
+        overdue_unresolved:
+          type: integer
+        adherence_percent:
+          type: ['number', 'null']
+          description: Nulo quando não havia sessão devida no período; nunca zero por ausência.
+
+    Profile:
+      type: object
+      additionalProperties: true
+      properties:
+        goal:
+          type: ['string', 'null']
+        height_cm:
+          type: ['number', 'null']
+        preferred_workout_time:
+          type: ['string', 'null']
+        started_at:
+          type: ['string', 'null']
+          format: date
+        time_zone:
+          type: string
+        unit_system:
+          type: string
+        week_starts_on:
+          type: ['integer', 'null']
+
+    TrainingSummary:
+      type: object
+      additionalProperties: true
+      properties:
+        requested_period:
+          $ref: '#/components/schemas/Period'
+        evaluated_period:
+          $ref: '#/components/schemas/Period'
+        strength:
+          $ref: '#/components/schemas/AdherenceBreakdown'
+        walk:
+          $ref: '#/components/schemas/AdherenceBreakdown'
+        general:
+          $ref: '#/components/schemas/AdherenceBreakdown'
+        adherence_explanation:
+          type: string
+        totals:
+          type: object
+          properties:
+            sets:
+              type: integer
+            repetitions:
+              type: integer
+            distinct_exercises:
+              type: integer
+        perceived_exertion:
+          type: object
+          properties:
+            average:
+              type: ['number', 'null']
+            samples:
+              type: integer
+        recovery:
+          type: object
+          description: >-
+            Só `sessions_answered_without_pain` significa "sem dor". Sessões sem resposta ficam em
+            `sessions_without_recovery_answer` e não devem ser lidas como ausência de dor.
+          properties:
+            sessions_answered_without_pain:
+              type: integer
+            sessions_with_discomfort_reported:
+              type: integer
+            sessions_without_recovery_answer:
+              type: integer
+            muscular_pain_reports:
+              type: integer
+            joint_pain_reports:
+              type: integer
+            other_discomfort_reports:
+              type: integer
+            notice:
+              type: string
+        exercises:
+          type: object
+          description: Resumo por exercício, com a chave sendo o nome registrado.
+          additionalProperties:
+            type: object
+            properties:
+              sessions:
+                type: integer
+              sets:
+                type: integer
+              total_repetitions:
+                type: integer
+              best_set:
+                type: ['integer', 'null']
+
+    Workouts:
+      type: object
+      additionalProperties: true
+      properties:
+        period:
+          $ref: '#/components/schemas/Period'
+        limit:
+          type: integer
+        returned:
+          type: integer
+        total_in_period:
+          type: integer
+        truncated:
+          type: boolean
+          description: Verdadeiro quando o período tem mais treinos do que o limite devolvido.
+        workouts:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+
+    ExerciseProgress:
+      type: object
+      additionalProperties: true
+      properties:
+        period:
+          $ref: '#/components/schemas/Period'
+        exercise:
+          type: string
+        best_set:
+          type: ['number', 'null']
+        average_per_session:
+          type: ['number', 'null']
+        total_volume:
+          type: number
+        trend:
+          type: string
+          enum: [increasing, decreasing, stable, insufficient_data]
+        sessions:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+
+    Measurement:
+      type: object
+      description: >-
+        Um valor nulo significa medida não registrada, nunca zero. `waist_cm` e `abdomen_cm` são
+        medidas diferentes do corpo e não se substituem.
+      properties:
+        date:
+          type: string
+          format: date
+        time:
+          type: ['string', 'null']
+        weight_kg:
+          type: ['number', 'null']
+        waist_cm:
+          type: ['number', 'null']
+        abdomen_cm:
+          type: ['number', 'null']
+        hip_cm:
+          type: ['number', 'null']
+        thigh_cm:
+          type: ['number', 'null']
+        biceps_cm:
+          type: ['number', 'null']
+        fasting:
+          type: ['boolean', 'null']
+        notes:
+          type: ['string', 'null']
+
+    Measurements:
+      type: object
+      additionalProperties: true
+      properties:
+        period:
+          $ref: '#/components/schemas/Period'
+        limit:
+          type: integer
+        returned:
+          type: integer
+        total_in_period:
+          type: integer
+        truncated:
+          type: boolean
+        note:
+          type: string
+        measurements:
+          type: array
+          items:
+            $ref: '#/components/schemas/Measurement'
+
+    MeasureSummary:
+      type: ['object', 'null']
+      description: Nulo quando a medida não tem nenhum registro no período. Nulo não é zero.
+      properties:
+        first:
+          type: number
+        first_date:
+          type: ['string', 'null']
+        last:
+          type: number
+        last_date:
+          type: ['string', 'null']
+        delta:
+          type: number
+        delta_percent:
+          type: ['number', 'null']
+        min:
+          type: number
+        max:
+          type: number
+        count:
+          type: integer
+
+    MeasurementSummary:
+      type: object
+      additionalProperties: true
+      properties:
+        period:
+          $ref: '#/components/schemas/Period'
+        note:
+          type: string
+        weight_kg:
+          $ref: '#/components/schemas/MeasureSummary'
+        waist_cm:
+          $ref: '#/components/schemas/MeasureSummary'
+        abdomen_cm:
+          $ref: '#/components/schemas/MeasureSummary'
+        hip_cm:
+          $ref: '#/components/schemas/MeasureSummary'
+        thigh_cm:
+          $ref: '#/components/schemas/MeasureSummary'
+        biceps_cm:
+          $ref: '#/components/schemas/MeasureSummary'
+
+    Walks:
+      type: object
+      additionalProperties: true
+      properties:
+        period:
+          $ref: '#/components/schemas/Period'
+        summary:
+          type: object
+          properties:
+            completed:
+              type: integer
+            partial:
+              type: integer
+            cancelled:
+              type: integer
+            total_distance_meters:
+              type: number
+            total_duration_seconds:
+              type: number
+            average_distance_meters:
+              type: ['number', 'null']
+        walks:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+
+    Nutrition:
+      type: object
+      additionalProperties: true
+      properties:
+        period:
+          $ref: '#/components/schemas/Period'
+        coffee:
+          type: object
+          description: >-
+            `without_sugar` é consumo registrado e nunca deve ser somado a `not_consumed`. Um dia sem
+            nenhuma linha entra em `days_without_record`, que é ausência de registro.
+          properties:
+            without_sugar:
+              type: integer
+            with_sugar:
+              type: integer
+            not_consumed:
+              type: integer
+            days_without_record:
+              type: integer
+            note:
+              type: string
+        habits:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        whey:
+          type: object
+          properties:
+            days_recorded:
+              type: integer
+            days_consumed:
+              type: integer
+            days_declined:
+              type: integer
+        macronutrients:
+          type: 'null'
+          description: Sempre nulo. O produto registra hábitos, não quantidades de alimento.
+        note:
+          type: string
+
+    WheyHistory:
+      type: object
+      additionalProperties: true
+      properties:
+        period:
+          $ref: '#/components/schemas/Period'
+        limit:
+          type: integer
+        returned:
+          type: integer
+        total_in_period:
+          type: integer
+        truncated:
+          type: boolean
+        entries:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+
+    Recovery:
+      type: object
+      additionalProperties: true
+      properties:
+        period:
+          $ref: '#/components/schemas/Period'
+        answers:
+          type: object
+          description: >-
+            Os três estados são distintos e não se somam. `not_answered` nunca significa ausência de
+            dor.
+          properties:
+            explicitly_without_pain:
+              type: integer
+            reported_discomfort:
+              type: integer
+            not_answered:
+              type: integer
+            total_answerable_sessions:
+              type: integer
+        counts:
+          type: object
+          properties:
+            muscular:
+              type: integer
+            joint:
+              type: integer
+            other:
+              type: integer
+            deserving_attention:
+              type: integer
+        perceived_exertion:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        reports:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        limit:
+          type: integer
+        returned:
+          type: integer
+        total_in_period:
+          type: integer
+        truncated:
+          type: boolean
+        notice:
+          type: string
+
+    Comparison:
+      type: object
+      description: >-
+        Valor atual, valor anterior e diferença. `delta_percent` é nulo quando a variação percentual
+        não é matematicamente válida.
+      properties:
+        current:
+          type: ['number', 'null']
+        previous:
+          type: ['number', 'null']
+        delta:
+          type: ['number', 'null']
+        delta_percent:
+          type: ['number', 'null']
+
+    PeriodComparison:
+      type: object
+      additionalProperties: true
+      properties:
+        periods:
+          type: object
+          properties:
+            current:
+              $ref: '#/components/schemas/Period'
+            previous:
+              $ref: '#/components/schemas/Period'
+        adherence_percent:
+          $ref: '#/components/schemas/Comparison'
+        workouts_completed:
+          $ref: '#/components/schemas/Comparison'
+        total_sets:
+          $ref: '#/components/schemas/Comparison'
+        total_repetitions:
+          $ref: '#/components/schemas/Comparison'
+        perceived_exertion:
+          $ref: '#/components/schemas/Comparison'
+        weight_kg:
+          $ref: '#/components/schemas/Comparison'
+        waist_cm:
+          $ref: '#/components/schemas/Comparison'
+        abdomen_cm:
+          $ref: '#/components/schemas/Comparison'
+        exercises:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/Comparison'
+        walks:
+          type: object
+          properties:
+            completed:
+              $ref: '#/components/schemas/Comparison'
+            total_distance_meters:
+              $ref: '#/components/schemas/Comparison'
+        recovery:
+          type: object
+          additionalProperties: true
+        note:
+          type: string

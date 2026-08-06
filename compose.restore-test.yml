@@ -12,7 +12,8 @@ services:
       interval: 2s
       timeout: 3s
       retries: 15
-    ports: ['55433:5432']
+    # 15434 e 15435, fora da faixa alta reservada pelo Windows, como nos demais composes locais.
+    ports: ['15434:5432']
     tmpfs: [/var/lib/postgresql]
 
   target:
@@ -26,5 +27,5 @@ services:
       interval: 2s
       timeout: 3s
       retries: 15
-    ports: ['55434:5432']
+    ports: ['15435:5432']
     tmpfs: [/var/lib/postgresql]

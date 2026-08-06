@@ -93,7 +93,7 @@ desenvolvimento, compila os pacotes internos, aplica as migrações e inicia API
 | Web               | <http://localhost:5173> |
 | API               | <http://localhost:3000> |
 | Mailpit (e-mails) | <http://localhost:8025> |
-| PostgreSQL        | `localhost:55433`       |
+| PostgreSQL        | `localhost:15433`       |
 
 Para derrubar os containers: `pnpm dev:down`.
 

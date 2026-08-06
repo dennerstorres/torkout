@@ -5,7 +5,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { randomBytes } from 'node:crypto';
 
 import { type ApiDependencies, requestHeaders } from '../auth-routes.js';
-import { FixedWindowRateLimiter } from './rate-limit.js';
+import { createMcpRateLimiters, type McpRateLimiters, type McpRateLimits } from './rate-limit.js';
 import {
   ACCESS_TOKEN_TTL_SECONDS,
   OAuthError,
@@ -26,23 +26,15 @@ import {
 } from './oauth.js';
 import { connectTransport, createMcpServer, createStatelessTransport } from './server.js';
 
-/** Limites por endereço de origem; o MCP é pessoal e não precisa de folga generosa. */
-export interface McpRateLimits {
-  callsPerMinute: number;
-  registrationsPerHour: number;
-  tokensPerMinute: number;
-}
-
-export const DEFAULT_MCP_RATE_LIMITS: McpRateLimits = {
-  callsPerMinute: 120,
-  registrationsPerHour: 5,
-  tokensPerMinute: 30,
-};
+export type { McpRateLimits } from './rate-limit.js';
+export { DEFAULT_MCP_RATE_LIMITS } from './rate-limit.js';
 
 export interface McpRouteOptions {
   /** URL pública, com esquema e host, sob a qual o MCP e o OAuth são alcançados. */
   publicUrl: string;
   rateLimits?: Partial<McpRateLimits> | undefined;
+  /** Limitadores já construídos, para que `/mcp` e `/api/ai/*` dividam o mesmo contador. */
+  rateLimiters?: McpRateLimiters | undefined;
 }
 
 const MCP_PATH = '/mcp';
@@ -138,12 +130,10 @@ export function registerMcpRoutes(
 ): void {
   const issuer = new URL(options.publicUrl).origin;
   const resourceUrl = `${issuer}${MCP_PATH}`;
-  // Os limitadores pertencem a esta aplicação, não ao módulo: duas instâncias no mesmo processo,
-  // como acontece nos testes, não podem compartilhar contador.
-  const limits = { ...DEFAULT_MCP_RATE_LIMITS, ...options.rateLimits };
-  const registerLimiter = new FixedWindowRateLimiter(limits.registrationsPerHour, 60 * 60 * 1_000);
-  const tokenLimiter = new FixedWindowRateLimiter(limits.tokensPerMinute, 60 * 1_000);
-  const callLimiter = new FixedWindowRateLimiter(limits.callsPerMinute, 60 * 1_000);
+  const limiters = options.rateLimiters ?? createMcpRateLimiters(options.rateLimits);
+  const registerLimiter = limiters.registrations;
+  const tokenLimiter = limiters.tokens;
+  const callLimiter = limiters.calls;
 
   const protectedResourceMetadata = {
     authorization_servers: [issuer],

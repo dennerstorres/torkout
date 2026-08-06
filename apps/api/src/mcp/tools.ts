@@ -1,40 +1,23 @@
 import {
-  MCP_DETAIL_RANGE_DAYS,
-  mcpComparePeriodsInputSchema,
   mcpComparePeriodsShape,
   mcpExerciseNameSchema,
   mcpLimitSchema,
-  mcpRangeInputSchema,
   mcpRangeShape,
   mcpSessionStatusSchema,
-  type McpRangeInput,
 } from '@torkout/contracts';
-import { userProfiles, type DatabaseClient } from '@torkout/database';
+import type { DatabaseClient } from '@torkout/database';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { eq } from 'drizzle-orm';
 
-import { DEFAULT_TIME_ZONE, loadDataSnapshot } from '../data-snapshot.js';
-import { daysBetween, resolvePeriod } from './period.js';
-import {
-  comparePeriods,
-  getExerciseProgress,
-  getLastWorkout,
-  getMeasurementSummary,
-  getMeasurements,
-  getNutrition,
-  getProfile,
-  getProgress,
-  getRecentChanges,
-  getRecovery,
-  getTrainingSummary,
-  getWalks,
-  getWheyHistory,
-  getWorkouts,
-  type McpQueryContext,
-} from './queries.js';
+import { createQueryContextFactory } from '../ai/context.js';
+import { AiRequestError, createAiOperations } from '../ai/operations.js';
+import { getProfile, getProgress, getTrainingSummary } from '../ai/queries.js';
 
 /**
  * Registro das ferramentas MCP.
+ *
+ * Este arquivo é só a fachada do protocolo: nome, descrição, anotação e schema de entrada. A
+ * consulta, o recorte de período e as guardas de janela vivem em `../ai/operations.ts`, que as rotas
+ * REST de `/api/ai` também usam — não existe segunda implementação de nenhuma regra.
  *
  * Toda tool desta versão é somente leitura: as anotações declaram `readOnlyHint`, e não existe
  * caminho de escrita. O usuário dono dos dados vem do `userId` fixado na construção do servidor, que
@@ -68,37 +51,18 @@ function toolResult(payload: unknown) {
   };
 }
 
+/** Erro previsto vira resultado de erro da tool; o inesperado continua subindo para o SDK. */
+async function run(operation: () => Promise<unknown>) {
+  try {
+    return toolResult(await operation());
+  } catch (error) {
+    if (error instanceof AiRequestError) return toolFailure(error.message);
+    throw error;
+  }
+}
+
 export function createMcpToolRegistrar(dependencies: McpToolDependencies) {
-  const clock = dependencies.now ?? (() => new Date());
-
-  async function timeZoneOf(): Promise<string> {
-    const [profile] = await dependencies.database
-      .select({ timeZone: userProfiles.timeZone })
-      .from(userProfiles)
-      .where(eq(userProfiles.userId, dependencies.userId))
-      .limit(1);
-    return profile?.timeZone ?? DEFAULT_TIME_ZONE;
-  }
-
-  /**
-   * Monta o contexto de consulta. O recorte de datas é resolvido antes da consulta e passado ao
-   * carregador, de modo que o banco nunca devolve mais do que o período pedido.
-   */
-  async function contextFor(range: McpRangeInput): Promise<McpQueryContext> {
-    const parsed = mcpRangeInputSchema.parse(range);
-    const now = clock();
-    const timeZone = await timeZoneOf();
-    const period = resolvePeriod(parsed, timeZone, now);
-    const snapshot = await loadDataSnapshot(dependencies.database, dependencies.userId, {
-      now,
-      scope: { from: period.from, through: period.to },
-    });
-    return { now, period, snapshot };
-  }
-
-  async function contextForExplicit(from: string, to: string): Promise<McpQueryContext> {
-    return contextFor({ from, to });
-  }
+  const operations = createAiOperations(dependencies);
 
   return function register(server: McpServer): void {
     server.registerTool(
@@ -109,10 +73,7 @@ export function createMcpToolRegistrar(dependencies: McpToolDependencies) {
           'Contexto de treino do titular: altura, objetivo declarado, horário preferido, sistema de unidades, fuso e data de início. Não devolve e-mail, senha, hash nem token.',
         inputSchema: {},
       },
-      async () => {
-        const context = await contextFor({ days: 1 });
-        return toolResult(getProfile(context));
-      },
+      async () => run(() => operations.getProfile()),
     );
 
     server.registerTool(
@@ -123,7 +84,7 @@ export function createMcpToolRegistrar(dependencies: McpToolDependencies) {
           'Resumo agregado do período: aderência de força e caminhada, sessões concluídas, parciais, perdidas, canceladas e futuras separadamente, total de séries e repetições, RPE médio, resumo por exercício e contagem de recuperação. Sessões futuras nunca contam como falta.',
         inputSchema: mcpRangeShape,
       },
-      async (input) => toolResult(getTrainingSummary(await contextFor(input))),
+      async (input) => run(() => operations.getTrainingSummary(input)),
     );
 
     server.registerTool(
@@ -141,21 +102,7 @@ export function createMcpToolRegistrar(dependencies: McpToolDependencies) {
           status: mcpSessionStatusSchema.optional().describe('Filtra por estado da sessão.'),
         },
       },
-      async (input) => {
-        const context = await contextFor(input);
-        if (context.period.days > MCP_DETAIL_RANGE_DAYS) {
-          return toolFailure(
-            `O período pedido tem ${context.period.days} dias. Acima de ${MCP_DETAIL_RANGE_DAYS} dias use get_training_summary, que devolve o agregado sem carregar cada série.`,
-          );
-        }
-        return toolResult(
-          getWorkouts(context, {
-            exercise: input.exercise,
-            limit: input.limit,
-            status: input.status,
-          }),
-        );
-      },
+      async (input) => run(() => operations.getWorkouts(input)),
     );
 
     server.registerTool(
@@ -170,12 +117,7 @@ export function createMcpToolRegistrar(dependencies: McpToolDependencies) {
             .describe('Restringe ao treino mais recente que contenha este exercício.'),
         },
       },
-      async (input) => {
-        // Sem recorte pedido, olha um ano para trás: suficiente para "qual foi meu último treino"
-        // sem varrer toda a história da conta.
-        const context = await contextFor({ days: 365 });
-        return toolResult(getLastWorkout(context, { exercise: input.exercise }));
-      },
+      async (input) => run(() => operations.getLastWorkout(input)),
     );
 
     server.registerTool(
@@ -189,8 +131,7 @@ export function createMcpToolRegistrar(dependencies: McpToolDependencies) {
           exercise: mcpExerciseNameSchema.describe('Nome ou parte do nome do exercício.'),
         },
       },
-      async (input) =>
-        toolResult(getExerciseProgress(await contextFor(input), { exercise: input.exercise })),
+      async (input) => run(() => operations.getExerciseProgress(input)),
     );
 
     server.registerTool(
@@ -201,7 +142,7 @@ export function createMcpToolRegistrar(dependencies: McpToolDependencies) {
           'Medidas registradas no período: peso, cintura, barriga, quadril, coxa, bíceps, data, horário, jejum e observações. Um valor nulo significa medida não registrada, nunca zero.',
         inputSchema: { ...mcpRangeShape, limit: mcpLimitSchema },
       },
-      async (input) => toolResult(getMeasurements(await contextFor(input), { limit: input.limit })),
+      async (input) => run(() => operations.getMeasurements(input)),
     );
 
     server.registerTool(
@@ -212,7 +153,7 @@ export function createMcpToolRegistrar(dependencies: McpToolDependencies) {
           'Para cada medida: primeiro e último valor, diferença absoluta e percentual, mínimo, máximo e quantidade de registros. Não interpreta oscilações pequenas como ganho ou perda real.',
         inputSchema: mcpRangeShape,
       },
-      async (input) => toolResult(getMeasurementSummary(await contextFor(input))),
+      async (input) => run(() => operations.getMeasurementSummary(input)),
     );
 
     server.registerTool(
@@ -223,7 +164,7 @@ export function createMcpToolRegistrar(dependencies: McpToolDependencies) {
           'Caminhadas do período com data, distância, duração, estado, RPE e observações, mais o resumo de concluídas, parciais, canceladas, distância total, duração total e distância média.',
         inputSchema: mcpRangeShape,
       },
-      async (input) => toolResult(getWalks(await contextFor(input))),
+      async (input) => run(() => operations.getWalks(input)),
     );
 
     server.registerTool(
@@ -234,7 +175,7 @@ export function createMcpToolRegistrar(dependencies: McpToolDependencies) {
           'Somente o que o aplicativo realmente registra: estado do café (não consumido, sem açúcar, com açúcar), hábitos configurados pelo titular e presença de whey. Nenhum macronutriente é estimado. Café sem açúcar nunca é somado a café não consumido.',
         inputSchema: mcpRangeShape,
       },
-      async (input) => toolResult(getNutrition(await contextFor(input))),
+      async (input) => run(() => operations.getNutrition(input)),
     );
 
     server.registerTool(
@@ -245,7 +186,7 @@ export function createMcpToolRegistrar(dependencies: McpToolDependencies) {
           'Registros de whey no período: consumo, quantidade, horário, mistura, volume de líquido, marca, produto, proteína informada, tolerância e observações.',
         inputSchema: { ...mcpRangeShape, limit: mcpLimitSchema },
       },
-      async (input) => toolResult(getWheyHistory(await contextFor(input), { limit: input.limit })),
+      async (input) => run(() => operations.getWheyHistory(input)),
     );
 
     server.registerTool(
@@ -256,7 +197,7 @@ export function createMcpToolRegistrar(dependencies: McpToolDependencies) {
           'RPE e registros de desconforto do período, com tipo, intensidade, região, momento, inchaço, dificuldade para apoiar e exercício interrompido. Distingue explicitamente três estados: respondeu "sem dor", relatou desconforto e não respondeu. Ausência de registro nunca é tratada como ausência de dor.',
         inputSchema: { ...mcpRangeShape, limit: mcpLimitSchema },
       },
-      async (input) => toolResult(getRecovery(await contextFor(input), { limit: input.limit })),
+      async (input) => run(() => operations.getRecovery(input)),
     );
 
     server.registerTool(
@@ -267,7 +208,7 @@ export function createMcpToolRegistrar(dependencies: McpToolDependencies) {
           'Visão consolidada do período: treinos concluídos, aderência, sequência atual e melhor sequência, evolução de flexões e agachamentos, peso, cintura, barriga, caminhadas, RPE, recuperação e nível atual.',
         inputSchema: mcpRangeShape,
       },
-      async (input) => toolResult(getProgress(await contextFor(input))),
+      async (input) => run(() => operations.getProgress(input)),
     );
 
     server.registerTool(
@@ -278,22 +219,7 @@ export function createMcpToolRegistrar(dependencies: McpToolDependencies) {
           'Compara dois períodos explícitos e devolve, para cada indicador, o valor atual, o anterior, a diferença absoluta e a percentual quando matematicamente válida. Não produz recomendação médica nem prescrição de treino.',
         inputSchema: mcpComparePeriodsShape,
       },
-      async (input) => {
-        const parsed = mcpComparePeriodsInputSchema.parse(input);
-        for (const [from, to] of [
-          [parsed.current_from, parsed.current_to],
-          [parsed.previous_from, parsed.previous_to],
-        ] as const) {
-          if (daysBetween(from, to) > MCP_DETAIL_RANGE_DAYS * 2) {
-            return toolFailure('Cada período comparado precisa caber em até 360 dias.');
-          }
-        }
-        const [current, previous] = await Promise.all([
-          contextForExplicit(parsed.current_from, parsed.current_to),
-          contextForExplicit(parsed.previous_from, parsed.previous_to),
-        ]);
-        return toolResult(comparePeriods({ current, previous }));
-      },
+      async (input) => run(() => operations.comparePeriods(input)),
     );
 
     server.registerTool(
@@ -306,7 +232,7 @@ export function createMcpToolRegistrar(dependencies: McpToolDependencies) {
           days: mcpRangeShape.days.describe('Janela em dias. Padrão 14.'),
         },
       },
-      async (input) => toolResult(getRecentChanges(await contextFor({ days: input.days ?? 14 }))),
+      async (input) => run(() => operations.getRecentChanges(input)),
     );
   };
 }
@@ -316,22 +242,7 @@ export function createMcpToolRegistrar(dependencies: McpToolDependencies) {
  * contexto sem chamar tool; nenhuma regra nova vive aqui.
  */
 export function registerMcpResources(server: McpServer, dependencies: McpToolDependencies): void {
-  const clock = dependencies.now ?? (() => new Date());
-
-  async function context(days: number): Promise<McpQueryContext> {
-    const now = clock();
-    const [profile] = await dependencies.database
-      .select({ timeZone: userProfiles.timeZone })
-      .from(userProfiles)
-      .where(eq(userProfiles.userId, dependencies.userId))
-      .limit(1);
-    const period = resolvePeriod({ days }, profile?.timeZone ?? DEFAULT_TIME_ZONE, now);
-    const snapshot = await loadDataSnapshot(dependencies.database, dependencies.userId, {
-      now,
-      scope: { from: period.from, through: period.to },
-    });
-    return { now, period, snapshot };
-  }
+  const contexts = createQueryContextFactory(dependencies);
 
   server.registerResource(
     'profile',
@@ -341,7 +252,12 @@ export function registerMcpResources(server: McpServer, dependencies: McpToolDep
       mimeType: 'application/json',
     },
     async (uri) => ({
-      contents: [{ text: JSON.stringify(getProfile(await context(1))), uri: uri.href }],
+      contents: [
+        {
+          text: JSON.stringify(getProfile(await contexts.forRange({ days: 1 }))),
+          uri: uri.href,
+        },
+      ],
     }),
   );
 
@@ -353,7 +269,12 @@ export function registerMcpResources(server: McpServer, dependencies: McpToolDep
       mimeType: 'application/json',
     },
     async (uri) => ({
-      contents: [{ text: JSON.stringify(getTrainingSummary(await context(14))), uri: uri.href }],
+      contents: [
+        {
+          text: JSON.stringify(getTrainingSummary(await contexts.forRange({ days: 14 }))),
+          uri: uri.href,
+        },
+      ],
     }),
   );
 
@@ -365,7 +286,12 @@ export function registerMcpResources(server: McpServer, dependencies: McpToolDep
       mimeType: 'application/json',
     },
     async (uri) => ({
-      contents: [{ text: JSON.stringify(getProgress(await context(90))), uri: uri.href }],
+      contents: [
+        {
+          text: JSON.stringify(getProgress(await contexts.forRange({ days: 90 }))),
+          uri: uri.href,
+        },
+      ],
     }),
   );
 }
