@@ -2498,6 +2498,38 @@ A segunda lição: um teste que passa por acidente é pior que teste nenhum, por
 que não sustenta. Um oráculo externo — aqui, o validador do próprio ChatGPT — é o que revela esse
 tipo de furo; concordar consigo mesmo não é evidência.
 
+Com o schema aceito, o fluxo OAuth real revelou o terceiro e maior problema. Corrigido em
+`feat(phase-32): allow confidential clients to authorize without PKCE`:
+
+- **O editor de GPT Actions não implementa PKCE.** Ele montou `/oauth/authorize` sem
+  `code_challenge` nem `code_challenge_method`, e o servidor recusava, porque a Fase 30 exigia PKCE
+  de todo cliente — regra vinda da especificação MCP. A camada REST inteira foi construída sobre a
+  suposição não verificada de que o GPT Actions faria o mesmo que um cliente MCP faz.
+- A correção, decidida com o titular e registrada no
+  [ADR-0006](adr/0006-pkce-optional-for-confidential-clients.md), mantém PKCE obrigatório para
+  cliente **público** — todo cliente do MCP, nascido de registro dinâmico — e o dispensa para
+  cliente **confidencial**, cujo código interceptado é inútil sem o `client_secret`. Um desafio
+  enviado continua sempre honrado: `plain` é recusado, e código emitido com desafio exige o
+  verificador na troca.
+- Migração `0014_phase_32_optional_pkce`, que torna `code_challenge` e `code_challenge_method`
+  opcionais, com reversão escrita. Freeze de schema promovido a 2.5.0; o digest de contratos não
+  mudou, porque nenhum contrato público foi tocado.
+
+### Evidência Red e Green da dispensa de PKCE
+
+- RED: seis casos novos em `mcp.integration.test.ts`, bloco `cliente confidencial sem PKCE`. Três
+  reprovaram pela ausência do comportamento — `expected 'invalid_request' to be null`, `expected 400
+to be 200`, `expected 400 to be 401`. Os três negativos já aprovavam, como deviam: cliente público
+  sem desafio recusado, `plain` recusado, e desafio enviado sem verificador recusado.
+- GREEN: 28 casos do arquivo, e 135 de integração no total.
+- A migração foi aplicada em banco vazio e a nulidade das duas colunas conferida por consulta ao
+  `information_schema`.
+
+A terceira lição, e a mais cara desta fase: a suposição sobre o cliente externo deveria ter sido o
+primeiro item verificado, não o último. Um `curl` no `/oauth/authorize` que o próprio ChatGPT monta
+— ou a leitura da documentação de autenticação do GPT Actions — teria revelado a ausência de PKCE
+antes de qualquer linha de código REST ser escrita.
+
 ### Riscos e pendências
 
 - Nada foi exercitado contra o ChatGPT real: a URL de callback definitiva só existe depois que a

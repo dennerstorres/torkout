@@ -170,8 +170,9 @@ export async function findClient(database: DatabaseClient, clientId: string) {
 
 export interface CreateAuthorizationCodeInput {
   clientId: string;
-  codeChallenge: string;
-  codeChallengeMethod: string;
+  /** Ausente apenas para cliente confidencial, que se autentica com segredo. Ver ADR-0006. */
+  codeChallenge?: string | undefined;
+  codeChallengeMethod?: string | undefined;
   redirectUri: string;
   resource?: string | undefined;
   scope: string;
@@ -183,14 +184,20 @@ export async function createAuthorizationCode(
   input: CreateAuthorizationCodeInput,
   now = new Date(),
 ): Promise<string> {
-  if (!SUPPORTED_CODE_CHALLENGE_METHODS.includes(input.codeChallengeMethod as 'S256')) {
+  const withChallenge = input.codeChallenge !== undefined;
+  if (
+    withChallenge &&
+    !SUPPORTED_CODE_CHALLENGE_METHODS.includes(input.codeChallengeMethod as 'S256')
+  ) {
     throw new OAuthError('invalid_request', 'Este servidor exige PKCE com `S256`.');
   }
   const code = issueCredential();
   await database.insert(mcpAuthorizationCodes).values({
     clientId: input.clientId,
-    codeChallenge: input.codeChallenge,
-    codeChallengeMethod: input.codeChallengeMethod,
+    // O desafio é gravado no servidor. Um atacante que intercepte o código não consegue apagá-lo
+    // depois para escapar da verificação: quem emitiu sem desafio foi a autorização, não a troca.
+    codeChallenge: input.codeChallenge ?? null,
+    codeChallengeMethod: withChallenge ? (input.codeChallengeMethod ?? null) : null,
     codeHash: hashCredential(code),
     expiresAt: new Date(now.getTime() + AUTHORIZATION_CODE_TTL_SECONDS * 1_000),
     redirectUri: input.redirectUri,
@@ -302,7 +309,7 @@ export async function exchangeAuthorizationCode(
   },
   now = new Date(),
 ): Promise<IssuedTokens> {
-  await authenticateClient(database, input.clientId, input.clientSecret);
+  const client = await authenticateClient(database, input.clientId, input.clientSecret);
 
   const [record] = await database
     .select()
@@ -324,8 +331,15 @@ export async function exchangeAuthorizationCode(
   if (input.redirectUri !== undefined && input.redirectUri !== record.redirectUri) {
     throw new OAuthError('invalid_grant', 'O `redirect_uri` não confere com o da autorização.');
   }
-  if (!verifyPkce(record.codeChallenge, record.codeChallengeMethod, input.codeVerifier)) {
-    throw new OAuthError('invalid_grant', 'O `code_verifier` não confere com o desafio PKCE.');
+  // Um código emitido com desafio sempre exige o verificador; a dispensa vale só para o código que
+  // nasceu sem desafio, de cliente confidencial já autenticado acima por `authenticateClient`.
+  if (record.codeChallenge !== null) {
+    if (!verifyPkce(record.codeChallenge, record.codeChallengeMethod ?? '', input.codeVerifier)) {
+      throw new OAuthError('invalid_grant', 'O `code_verifier` não confere com o desafio PKCE.');
+    }
+  } else if (client.clientSecretHash === null) {
+    // Defesa em profundidade: um código sem desafio nunca deveria existir para cliente público.
+    throw new OAuthError('invalid_grant', 'Este cliente exige PKCE.');
   }
 
   // Consumo condicionado ao estado anterior: duas trocas simultâneas não emitem dois tokens.

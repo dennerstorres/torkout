@@ -48,8 +48,13 @@ export const mcpAuthorizationCodes = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     redirectUri: text('redirect_uri').notNull(),
-    codeChallenge: text('code_challenge').notNull(),
-    codeChallengeMethod: text('code_challenge_method').notNull(),
+    /**
+     * Desafio PKCE. Nulo apenas para cliente confidencial, que não o envia e cujo código
+     * interceptado é inútil sem o `client_secret`. Cliente público continua obrigado a preenchê-lo.
+     * Ver ADR-0006.
+     */
+    codeChallenge: text('code_challenge'),
+    codeChallengeMethod: text('code_challenge_method'),
     scope: text('scope').notNull(),
     resource: text('resource'),
     expiresAt: timestamp('expires_at', { mode: 'date', withTimezone: true }).notNull(),

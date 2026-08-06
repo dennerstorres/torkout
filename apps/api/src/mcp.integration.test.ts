@@ -576,3 +576,173 @@ describe('token storage', () => {
     }
   });
 });
+
+/**
+ * O editor do GPT Actions não implementa PKCE: ele monta `/oauth/authorize` sem `code_challenge` e
+ * autentica-se no `/oauth/token` com `client_secret`. PKCE continua obrigatório para todo cliente
+ * público — que é justamente o caso em que ele protege —, e a dispensa vale só para o cliente
+ * confidencial, cujo código interceptado é inútil sem o segredo. Ver ADR-0006.
+ */
+describe('cliente confidencial sem PKCE', () => {
+  const redirectUri = 'https://chat.openai.com/aip/g-teste/oauth/callback';
+
+  async function registerConfidentialClient() {
+    const response = await app.inject({
+      method: 'POST',
+      payload: {
+        client_name: 'GPT Actions',
+        redirect_uris: [redirectUri],
+        token_endpoint_auth_method: 'client_secret_post',
+      },
+      url: '/oauth/register',
+    });
+    expect(response.statusCode).toBe(201);
+    return response.json() as { client_id: string; client_secret: string };
+  }
+
+  async function consentWithoutPkce(clientId: string, userId = ownerId) {
+    currentSession = sessionFor(userId);
+    const consent = await app.inject({
+      headers: { origin },
+      method: 'POST',
+      payload: {
+        client_id: clientId,
+        decision: 'allow',
+        redirect_uri: redirectUri,
+        scope: 'torkout:read',
+        state: 'abc',
+      },
+      url: '/oauth/authorize',
+    });
+    currentSession = null;
+    return consent;
+  }
+
+  it('emite código para um cliente confidencial que não mandou desafio', async () => {
+    const client = await registerConfidentialClient();
+    const consent = await consentWithoutPkce(client.client_id);
+
+    expect(consent.statusCode).toBe(302);
+    const location = new URL(consent.headers.location as string);
+    expect(location.searchParams.get('error')).toBeNull();
+    expect(location.searchParams.get('code')).toBeTruthy();
+    expect(location.searchParams.get('state')).toBe('abc');
+  });
+
+  it('troca o código por token quando o segredo do cliente confere', async () => {
+    const client = await registerConfidentialClient();
+    const consent = await consentWithoutPkce(client.client_id);
+    const code = new URL(consent.headers.location as string).searchParams.get('code');
+
+    const token = await app.inject({
+      method: 'POST',
+      payload: {
+        client_id: client.client_id,
+        client_secret: client.client_secret,
+        code,
+        grant_type: 'authorization_code',
+        redirect_uri: redirectUri,
+      },
+      url: '/oauth/token',
+    });
+    expect(token.statusCode).toBe(200);
+    expect(token.json()).toMatchObject({ scope: 'torkout:read', token_type: 'Bearer' });
+  });
+
+  it('recusa a troca sem o segredo, que é o que substitui o PKCE aqui', async () => {
+    const client = await registerConfidentialClient();
+    const consent = await consentWithoutPkce(client.client_id);
+    const code = new URL(consent.headers.location as string).searchParams.get('code');
+
+    const token = await app.inject({
+      method: 'POST',
+      payload: { client_id: client.client_id, code, grant_type: 'authorization_code' },
+      url: '/oauth/token',
+    });
+    expect(token.statusCode).toBe(401);
+    expect(token.json()).toMatchObject({ error: 'invalid_client' });
+  });
+
+  it('continua exigindo PKCE de cliente público, que é onde ele protege', async () => {
+    // Registro sem `token_endpoint_auth_method` nasce público: sem segredo, o código interceptado
+    // seria trocável por qualquer um que o capturasse.
+    const client = await registerClient(redirectUri);
+    currentSession = sessionFor(ownerId);
+    const consent = await app.inject({
+      headers: { origin },
+      method: 'POST',
+      payload: {
+        client_id: client.client_id,
+        decision: 'allow',
+        redirect_uri: redirectUri,
+        scope: 'torkout:read',
+      },
+      url: '/oauth/authorize',
+    });
+    currentSession = null;
+
+    expect(consent.statusCode).toBe(302);
+    const location = new URL(consent.headers.location as string);
+    expect(location.searchParams.get('code')).toBeNull();
+    expect(location.searchParams.get('error')).toBe('invalid_request');
+  });
+
+  it('recusa um desafio mal formado mesmo vindo de cliente confidencial', async () => {
+    const client = await registerConfidentialClient();
+    currentSession = sessionFor(ownerId);
+    const consent = await app.inject({
+      headers: { origin },
+      method: 'POST',
+      payload: {
+        client_id: client.client_id,
+        code_challenge: 'algo',
+        code_challenge_method: 'plain',
+        decision: 'allow',
+        redirect_uri: redirectUri,
+        scope: 'torkout:read',
+      },
+      url: '/oauth/authorize',
+    });
+    currentSession = null;
+
+    expect(new URL(consent.headers.location as string).searchParams.get('error')).toBe(
+      'invalid_request',
+    );
+  });
+
+  it('não deixa um cliente confidencial pular a verificação de um desafio que ele mesmo enviou', async () => {
+    const client = await registerConfidentialClient();
+    const { challenge } = pkce();
+    currentSession = sessionFor(ownerId);
+    const consent = await app.inject({
+      headers: { origin },
+      method: 'POST',
+      payload: {
+        client_id: client.client_id,
+        code_challenge: challenge,
+        code_challenge_method: 'S256',
+        decision: 'allow',
+        redirect_uri: redirectUri,
+        scope: 'torkout:read',
+      },
+      url: '/oauth/authorize',
+    });
+    currentSession = null;
+    const code = new URL(consent.headers.location as string).searchParams.get('code');
+
+    // Segredo correto, mas sem o verificador do desafio registrado: a troca precisa falhar.
+    const token = await app.inject({
+      method: 'POST',
+      payload: {
+        client_id: client.client_id,
+        client_secret: client.client_secret,
+        code,
+        grant_type: 'authorization_code',
+        redirect_uri: redirectUri,
+      },
+      url: '/oauth/token',
+    });
+    expect(token.statusCode).toBe(400);
+    expect(token.json()).toMatchObject({ error: 'invalid_grant' });
+  });
+});

@@ -117,8 +117,18 @@ para reduzir a chance de o modelo interpretar o dado errado.
 
 ## 5. Autenticação
 
-`Authorization: Bearer <access_token>`, sobre o **mesmo servidor OAuth 2.1 com PKCE** do MCP. Não
-existe token estático em variável de ambiente, e não existe segundo emissor.
+`Authorization: Bearer <access_token>`, sobre o **mesmo servidor OAuth 2.1** do MCP. Não existe
+token estático em variável de ambiente, e não existe segundo emissor.
+
+O editor de GPT Actions **não implementa PKCE**: ele monta `/oauth/authorize` sem `code_challenge` e
+autentica-se no `/oauth/token` com o `client_secret`. Por isso o servidor exige PKCE apenas de
+cliente **público** — todo cliente do MCP, registrado dinamicamente — e o dispensa para cliente
+**confidencial**, cujo código interceptado é inútil sem o segredo. A decisão, seus riscos e a
+consulta que verifica a invariante estão no
+[ADR-0006](adr/0006-pkce-optional-for-confidential-clients.md).
+
+Um desafio enviado é sempre honrado: `plain` continua recusado, e um código emitido com desafio exige
+o verificador na troca, mesmo vindo de cliente confidencial.
 
 O `userId` vem exclusivamente do token verificado. Nenhum endpoint aceita `userId`, `email` ou
 `username` para escolher o titular: esses campos são descartados na validação, e a consulta continua
@@ -160,7 +170,7 @@ JavaScript já compilado — o mesmo padrão do serviço `migrate`:
 ```bash
 docker exec -it <contêiner-da-api> \
   node dist/ai/create-gpt-client.js \
-  --redirect-uri https://chatgpt.com/aip/g-XXXXXXXX/oauth/callback \
+  --redirect-uri https://chat.openai.com/aip/g-XXXXXXXX/oauth/callback \
   --name "Meu GPT do Torkout"
 ```
 
@@ -170,7 +180,7 @@ No Coolify, abra o terminal do serviço `api` e rode a partir de `node dist/...`
 
 ```bash
 DATABASE_URL=postgresql://... pnpm ai:create-gpt-client \
-  --redirect-uri https://chatgpt.com/aip/g-XXXXXXXX/oauth/callback \
+  --redirect-uri https://chat.openai.com/aip/g-XXXXXXXX/oauth/callback \
   --name "Meu GPT do Torkout"
 ```
 
@@ -180,7 +190,7 @@ Nos dois casos o comando devolve:
   client_id:     ...
   client_secret: ...
   scope:         torkout:read
-  redirect_uris: https://chatgpt.com/aip/g-XXXXXXXX/oauth/callback
+  redirect_uris: https://chat.openai.com/aip/g-XXXXXXXX/oauth/callback
 ```
 
 - O segredo aparece **uma única vez**, nessa saída, e nunca é registrado em log. No banco só existe o
@@ -202,7 +212,7 @@ update mcp_consents set revoked_at = now() where client_id = '<client_id>' and r
 ## 7. Callback URL
 
 **A URL de callback definitiva é fornecida pelo editor do GPT Actions**, depois que a ação é salva
-pela primeira vez. Ela tem o formato `https://chatgpt.com/aip/<id-da-ação>/oauth/callback`.
+pela primeira vez. Ela tem o formato `https://chat.openai.com/aip/<id-da-ação>/oauth/callback`.
 
 O fluxo prático é:
 
@@ -211,7 +221,7 @@ O fluxo prático é:
 
    ```sql
    update mcp_oauth_clients
-      set redirect_uris = array['https://chatgpt.com/aip/g-XXXXXXXX/oauth/callback']
+      set redirect_uris = array['https://chat.openai.com/aip/g-XXXXXXXX/oauth/callback']
     where client_id = '<client_id>';
    ```
 
@@ -335,6 +345,7 @@ evita o N+1.
 | `401` com `WWW-Authenticate`              | Token ausente, expirado ou revogado                    | Reautorize a ação no editor do GPT        |
 | `403 insufficient_scope`                  | Token emitido com outro escopo                         | Refaça a autorização com `torkout:read`   |
 | `invalid_request` sobre `redirect_uri`    | Callback do GPT não registrada no cliente              | Registre a URL exata, conforme a seção 7  |
+| `invalid_request` sobre PKCE              | Cliente registrado como público, sem `client_secret`   | Recrie com `pnpm ai:create-gpt-client`    |
 | `invalid_client` na troca do código       | `client_secret` errado ou cliente desativado           | Confira o segredo; crie outro cliente     |
 | Tela de consentimento pede login em laço  | Cookie de sessão não chega à API                       | Confira o proxy e `TRUSTED_ORIGINS`       |
 | `400 period_too_long` em `/workouts`      | Mais de 180 dias pedidos com detalhe                   | Use `getTrainingSummary`                  |

@@ -65,6 +65,11 @@ apenas nas faixas declaradas em `TRUST_PROXY`.
 O acesso é concedido por **OAuth 2.1 com PKCE obrigatório**, implementado pela própria aplicação.
 Não existe token estático em variável de ambiente.
 
+PKCE é obrigatório para todo cliente MCP, que é sempre público por nascer do registro dinâmico. A
+dispensa criada na Fase 32 vale só para cliente confidencial — aquele que guarda um `client_secret` —
+e existe porque o editor de GPT Actions não implementa PKCE. Ver
+[ADR-0006](adr/0006-pkce-optional-for-confidential-clients.md).
+
 ```text
 1. Cliente lê  GET /.well-known/oauth-protected-resource/mcp     (RFC 9728)
 2. Cliente lê  GET /.well-known/oauth-authorization-server       (RFC 8414)

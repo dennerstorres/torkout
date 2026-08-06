@@ -39,6 +39,35 @@ export interface McpRouteOptions {
 
 const MCP_PATH = '/mcp';
 
+/**
+ * Decide se o pedido de autorização traz PKCE utilizável.
+ *
+ * PKCE é obrigatório para cliente público — é ali que ele protege, porque um código interceptado
+ * seria trocável por qualquer um. Cliente confidencial pode omiti-lo: ele precisa apresentar o
+ * `client_secret` na troca, e o código sozinho não vale nada. A dispensa existe porque o editor do
+ * GPT Actions não implementa PKCE. Ver ADR-0006.
+ *
+ * Um desafio presente é sempre honrado, venha de quem vier: `plain` continua recusado, e o código
+ * emitido com desafio exige o verificador na troca.
+ */
+type PkceDecision =
+  | { challenge: string; method: 'S256'; ok: true }
+  | { challenge?: undefined; ok: true }
+  | { ok: false };
+
+function decidePkce(
+  query: { code_challenge?: string | undefined; code_challenge_method?: string | undefined },
+  isConfidential: boolean,
+): PkceDecision {
+  if (query.code_challenge) {
+    if (query.code_challenge_method !== 'S256') return { ok: false };
+    return { challenge: query.code_challenge, method: 'S256', ok: true };
+  }
+  // Sem desafio: só passa se o cliente tiver segredo, e nunca com método declarado sem desafio.
+  if (!isConfidential || query.code_challenge_method !== undefined) return { ok: false };
+  return { ok: true };
+}
+
 function escapeHtml(value: string): string {
   return value
     .replaceAll('&', '&amp;')
@@ -244,12 +273,13 @@ export function registerMcpRoutes(
         query.state,
       );
     }
-    if (!query.code_challenge || query.code_challenge_method !== 'S256') {
+    const pkce = decidePkce(query, client.clientSecretHash !== null);
+    if (!pkce.ok) {
       return redirectError(
         reply,
         redirectUri,
         'invalid_request',
-        'Este servidor exige PKCE com S256.',
+        'Este servidor exige PKCE com S256 para clientes sem segredo.',
         query.state,
       );
     }
@@ -301,8 +331,9 @@ export function registerMcpRoutes(
     ) {
       const code = await createAuthorizationCode(dependencies.database, {
         clientId: client.clientId,
-        codeChallenge: query.code_challenge,
-        codeChallengeMethod: 'S256',
+        ...(pkce.challenge === undefined
+          ? {}
+          : { codeChallenge: pkce.challenge, codeChallengeMethod: 'S256' as const }),
         redirectUri,
         resource: query.resource,
         scope,
@@ -317,8 +348,10 @@ export function registerMcpRoutes(
 
     const hidden = Object.entries({
       client_id: client.clientId,
-      code_challenge: query.code_challenge,
-      code_challenge_method: 'S256',
+      // Sem desafio, os dois campos vão vazios: o POST decide de novo, pelo próprio cliente, em vez
+      // de confiar no que voltou do formulário.
+      code_challenge: pkce.challenge ?? '',
+      code_challenge_method: pkce.challenge === undefined ? '' : 'S256',
       redirect_uri: redirectUri,
       resource: query.resource ?? '',
       scope,
@@ -406,12 +439,20 @@ export function registerMcpRoutes(
         state,
       );
     }
-    if (!body.code_challenge || body.code_challenge_method !== 'S256') {
+    const pkce = decidePkce(
+      {
+        code_challenge: body.code_challenge === '' ? undefined : body.code_challenge,
+        code_challenge_method:
+          body.code_challenge_method === '' ? undefined : body.code_challenge_method,
+      },
+      client.clientSecretHash !== null,
+    );
+    if (!pkce.ok) {
       return redirectError(
         reply,
         redirectUri,
         'invalid_request',
-        'Este servidor exige PKCE com S256.',
+        'Este servidor exige PKCE com S256 para clientes sem segredo.',
         state,
       );
     }
@@ -430,8 +471,9 @@ export function registerMcpRoutes(
     });
     const code = await createAuthorizationCode(dependencies.database, {
       clientId: client.clientId,
-      codeChallenge: body.code_challenge,
-      codeChallengeMethod: 'S256',
+      ...(pkce.challenge === undefined
+        ? {}
+        : { codeChallenge: pkce.challenge, codeChallengeMethod: 'S256' as const }),
       redirectUri,
       resource: body.resource === '' ? undefined : body.resource,
       scope,
