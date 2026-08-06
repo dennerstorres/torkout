@@ -2471,6 +2471,33 @@ executado de verdade em vez de apenas descrito. Corrigidas em
 A lição registrada: um comando operacional só está entregue depois de executado no ambiente em que
 foi prometido. Descrever o caminho não substitui percorrê-lo.
 
+Na primeira colagem do documento OpenAPI no editor do GPT Actions, ele recusou 13 das 15 funções.
+Corrigido em `fix(phase-32): satisfy the GPT Actions schema validator`:
+
+- **O editor não resolve `$ref` dentro de `parameters`.** Ele percorre a lista esperando a chave
+  `name` em cada item; encontrando `$ref`, descarta o parâmetro e em seguida a função inteira, com
+  `skipping function due to errors`. Só `getHealth`, `getProfile` e `comparePeriods` sobreviveram.
+  Os 39 parâmetros foram inlinados e a seção `components/parameters` deixou de existir. Referência
+  em `schemas` e `responses` continua sendo resolvida sem reclamação — o defeito é específico de
+  `parameters`.
+- **Descrição de operação tem teto de 300 caracteres.** Sete passavam do limite, `getRecovery` com 484. Foram encurtadas sem perder as distinções semânticas: as regras sobre ausência de registro,
+  café sem açúcar e cintura distinta de barriga já estavam repetidas nas descrições dos schemas de
+  resposta, que o modelo também lê.
+
+As duas restrições viraram teste em `openapi.test.ts`, escrito antes da correção e reproduzindo os
+números exatos do editor.
+
+O primeiro teste de tamanho, porém, **passou por acidente**: o extrator varria o arquivo inteiro e,
+depois da última operação, encontrava o `description: >-` do `securityScheme` na mesma indentação de
+seis espaços, sobrescrevendo silenciosamente a medição de `comparePeriods`. Ele media catorze das
+quinze operações e afirmava cobrir todas. O furo só apareceu porque o editor real acusou 315
+caracteres onde o teste dava verde. O extrator passou a varrer apenas a seção `paths`, e então
+reproduziu o mesmo 315.
+
+A segunda lição: um teste que passa por acidente é pior que teste nenhum, porque compra confiança
+que não sustenta. Um oráculo externo — aqui, o validador do próprio ChatGPT — é o que revela esse
+tipo de furo; concordar consigo mesmo não é evidência.
+
 ### Riscos e pendências
 
 - Nada foi exercitado contra o ChatGPT real: a URL de callback definitiva só existe depois que a

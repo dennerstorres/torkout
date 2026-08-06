@@ -94,15 +94,35 @@ paths:
       tags: [treino]
       summary: Resumo agregado dos treinos do período
       description: >-
-        Retorna um resumo agregado dos treinos de força dentro de um período, incluindo aderência,
-        sessões concluídas, parciais, perdidas, canceladas, sessões futuras não contabilizadas,
-        séries, repetições, RPE e recuperação. Sessões futuras nunca contam como falta: elas aparecem
-        em `future_not_counted` e ficam fora do denominador. Prefira este endpoint a `getWorkouts`
-        para períodos longos ou perguntas de visão geral.
+        Resumo agregado dos treinos de força no período: aderência, sessões concluídas, parciais,
+        perdidas, canceladas e futuras, séries, repetições, RPE e recuperação. Treino futuro nunca
+        conta como falta: fica em `future_not_counted`, fora do denominador. Em período longo,
+        prefira este a `getWorkouts`.
       parameters:
-        - $ref: '#/components/parameters/Days'
-        - $ref: '#/components/parameters/From'
-        - $ref: '#/components/parameters/To'
+        - name: days
+          in: query
+          required: false
+          description: >-
+            Número de dias contados para trás a partir de hoje, no fuso do titular. Não pode ser
+            combinado com `from` e `to`.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 730
+        - name: from
+          in: query
+          required: false
+          description: Início do período, YYYY-MM-DD, inclusivo. Informe junto com `to`.
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          description: Fim do período, YYYY-MM-DD, inclusivo. Informe junto com `from`.
+          schema:
+            type: string
+            format: date
       responses:
         '200':
           description: Resumo do período
@@ -132,12 +152,52 @@ paths:
         `getTrainingSummary`, que devolve o agregado sem carregar cada série. Use `limit` para
         controlar o tamanho da resposta.
       parameters:
-        - $ref: '#/components/parameters/Days'
-        - $ref: '#/components/parameters/From'
-        - $ref: '#/components/parameters/To'
-        - $ref: '#/components/parameters/Limit'
-        - $ref: '#/components/parameters/Exercise'
-        - $ref: '#/components/parameters/Status'
+        - name: days
+          in: query
+          required: false
+          description: >-
+            Número de dias contados para trás a partir de hoje, no fuso do titular. Não pode ser
+            combinado com `from` e `to`.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 730
+        - name: from
+          in: query
+          required: false
+          description: Início do período, YYYY-MM-DD, inclusivo. Informe junto com `to`.
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          description: Fim do período, YYYY-MM-DD, inclusivo. Informe junto com `from`.
+          schema:
+            type: string
+            format: date
+        - name: limit
+          in: query
+          required: false
+          description: Máximo de registros detalhados devolvidos. Padrão 20, teto 100.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - name: exercise
+          in: query
+          required: false
+          description: Nome ou parte do nome do exercício; ignora acentos e maiúsculas.
+          schema:
+            type: string
+            maxLength: 120
+        - name: status
+          in: query
+          required: false
+          description: Filtra por estado da sessão.
+          schema:
+            type: string
+            enum: [cancelled, completed, in_progress, missed, partial, planned]
       responses:
         '200':
           description: Treinos do período
@@ -166,7 +226,13 @@ paths:
         Devolve `workout: null` quando nada foi concluído nesse intervalo — o que significa ausência
         de registro, não ausência de treino.
       parameters:
-        - $ref: '#/components/parameters/Exercise'
+        - name: exercise
+          in: query
+          required: false
+          description: Nome ou parte do nome do exercício; ignora acentos e maiúsculas.
+          schema:
+            type: string
+            maxLength: 120
       responses:
         '200':
           description: Último treino concluído
@@ -196,15 +262,41 @@ paths:
       tags: [treino]
       summary: Progressão de um exercício
       description: >-
-        Retorna a série histórica de um exercício: datas, séries, valor por série, total por treino,
-        maior série, média por sessão, volume total e tendência simples. O parâmetro `exercise` é
-        obrigatório e casa por parte do nome, ignorando acentos e maiúsculas. A tendência descreve o
-        que foi registrado; não é avaliação de qualidade nem prescrição.
+        Série histórica de um exercício: datas, séries, valor por série, total por treino, maior
+        série, média, volume e tendência. O parâmetro `exercise` é obrigatório e casa por parte do
+        nome, sem acento nem caixa. Descreve o que foi registrado; não é avaliação nem prescrição.
       parameters:
-        - $ref: '#/components/parameters/ExerciseRequired'
-        - $ref: '#/components/parameters/Days'
-        - $ref: '#/components/parameters/From'
-        - $ref: '#/components/parameters/To'
+        - name: exercise
+          in: query
+          required: true
+          description: Nome ou parte do nome do exercício; ignora acentos e maiúsculas.
+          schema:
+            type: string
+            maxLength: 120
+        - name: days
+          in: query
+          required: false
+          description: >-
+            Número de dias contados para trás a partir de hoje, no fuso do titular. Não pode ser
+            combinado com `from` e `to`.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 730
+        - name: from
+          in: query
+          required: false
+          description: Início do período, YYYY-MM-DD, inclusivo. Informe junto com `to`.
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          description: Fim do período, YYYY-MM-DD, inclusivo. Informe junto com `from`.
+          schema:
+            type: string
+            format: date
       responses:
         '200':
           description: Progressão do exercício
@@ -234,10 +326,38 @@ paths:
         devem ser somadas nem trocadas uma pela outra. Um valor nulo significa medida não registrada,
         nunca zero.
       parameters:
-        - $ref: '#/components/parameters/Days'
-        - $ref: '#/components/parameters/From'
-        - $ref: '#/components/parameters/To'
-        - $ref: '#/components/parameters/Limit'
+        - name: days
+          in: query
+          required: false
+          description: >-
+            Número de dias contados para trás a partir de hoje, no fuso do titular. Não pode ser
+            combinado com `from` e `to`.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 730
+        - name: from
+          in: query
+          required: false
+          description: Início do período, YYYY-MM-DD, inclusivo. Informe junto com `to`.
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          description: Fim do período, YYYY-MM-DD, inclusivo. Informe junto com `from`.
+          schema:
+            type: string
+            format: date
+        - name: limit
+          in: query
+          required: false
+          description: Máximo de registros detalhados devolvidos. Padrão 20, teto 100.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
       responses:
         '200':
           description: Medidas do período
@@ -262,14 +382,34 @@ paths:
       tags: [corpo]
       summary: Resumo por medida corporal
       description: >-
-        Para cada medida — peso, cintura, barriga, quadril, coxa e bíceps — retorna primeiro e último
-        valor, diferença absoluta e percentual, mínimo, máximo e quantidade de registros. Uma medida
-        sem nenhum registro no período vem como `null`, e isso não significa zero. Não interprete
-        oscilação pequena como ganho ou perda real.
+        Para cada medida — peso, cintura, barriga, quadril, coxa e bíceps — primeiro e último valor,
+        diferença absoluta e percentual, mínimo, máximo e contagem. Medida sem registro no período
+        vem `null`, o que não é zero. Não leia oscilação pequena como ganho ou perda real.
       parameters:
-        - $ref: '#/components/parameters/Days'
-        - $ref: '#/components/parameters/From'
-        - $ref: '#/components/parameters/To'
+        - name: days
+          in: query
+          required: false
+          description: >-
+            Número de dias contados para trás a partir de hoje, no fuso do titular. Não pode ser
+            combinado com `from` e `to`.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 730
+        - name: from
+          in: query
+          required: false
+          description: Início do período, YYYY-MM-DD, inclusivo. Informe junto com `to`.
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          description: Fim do período, YYYY-MM-DD, inclusivo. Informe junto com `from`.
+          schema:
+            type: string
+            format: date
       responses:
         '200':
           description: Resumo das medidas
@@ -298,9 +438,30 @@ paths:
         mais o resumo de concluídas, parciais, canceladas, distância total, duração total e distância
         média. Caminhada é atividade separada do treino de força e tem aderência própria.
       parameters:
-        - $ref: '#/components/parameters/Days'
-        - $ref: '#/components/parameters/From'
-        - $ref: '#/components/parameters/To'
+        - name: days
+          in: query
+          required: false
+          description: >-
+            Número de dias contados para trás a partir de hoje, no fuso do titular. Não pode ser
+            combinado com `from` e `to`.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 730
+        - name: from
+          in: query
+          required: false
+          description: Início do período, YYYY-MM-DD, inclusivo. Informe junto com `to`.
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          description: Fim do período, YYYY-MM-DD, inclusivo. Informe junto com `from`.
+          schema:
+            type: string
+            format: date
       responses:
         '200':
           description: Caminhadas do período
@@ -325,15 +486,34 @@ paths:
       tags: [rotina]
       summary: Café, hábitos registrados e presença de whey
       description: >-
-        Retorna somente o que o aplicativo realmente registra: estado do café (não consumido, sem
-        açúcar, com açúcar), hábitos configurados pelo titular e presença de whey. Café sem açúcar é
-        consumo e nunca é somado a "não consumi"; um dia sem linha entra em `days_without_record`.
-        Nenhum macronutriente é estimado — `macronutrients` é sempre `null`, e você não deve calcular
-        calorias ou proteína a partir daqui.
+        Só o que o aplicativo registra: estado do café (não consumido, sem açúcar, com açúcar),
+        hábitos do titular e presença de whey. Café sem açúcar é consumo e nunca soma a "não
+        consumi"; dia sem linha entra em `days_without_record`. Nenhum macronutriente é estimado.
       parameters:
-        - $ref: '#/components/parameters/Days'
-        - $ref: '#/components/parameters/From'
-        - $ref: '#/components/parameters/To'
+        - name: days
+          in: query
+          required: false
+          description: >-
+            Número de dias contados para trás a partir de hoje, no fuso do titular. Não pode ser
+            combinado com `from` e `to`.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 730
+        - name: from
+          in: query
+          required: false
+          description: Início do período, YYYY-MM-DD, inclusivo. Informe junto com `to`.
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          description: Fim do período, YYYY-MM-DD, inclusivo. Informe junto com `from`.
+          schema:
+            type: string
+            format: date
       responses:
         '200':
           description: Alimentação e hábitos do período
@@ -362,10 +542,38 @@ paths:
         volume de líquido, marca, produto, proteína informada por dose, tolerância e observações. Um
         registro com `consumed: false` é uma recusa registrada, diferente de um dia sem registro.
       parameters:
-        - $ref: '#/components/parameters/Days'
-        - $ref: '#/components/parameters/From'
-        - $ref: '#/components/parameters/To'
-        - $ref: '#/components/parameters/Limit'
+        - name: days
+          in: query
+          required: false
+          description: >-
+            Número de dias contados para trás a partir de hoje, no fuso do titular. Não pode ser
+            combinado com `from` e `to`.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 730
+        - name: from
+          in: query
+          required: false
+          description: Início do período, YYYY-MM-DD, inclusivo. Informe junto com `to`.
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          description: Fim do período, YYYY-MM-DD, inclusivo. Informe junto com `from`.
+          schema:
+            type: string
+            format: date
+        - name: limit
+          in: query
+          required: false
+          description: Máximo de registros detalhados devolvidos. Padrão 20, teto 100.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
       responses:
         '200':
           description: Registros de whey
@@ -390,17 +598,43 @@ paths:
       tags: [recuperação]
       summary: Recuperação, esforço percebido e registros de dor
       description: >-
-        Retorna os registros de recuperação e dor. Distingue explicitamente entre ausência de
-        registro, resposta sem dor, dor muscular e dor articular. Em `answers`,
-        `explicitly_without_pain` conta apenas quem respondeu "sem dor"; `not_answered` conta as
-        sessões sem resposta, e essas nunca devem ser tratadas como sessões sem dor. Traz também o
-        RPE por sessão e os campos gravados em cada relato: tipo, intensidade, região, momento,
-        inchaço, dificuldade para apoiar e exercício interrompido.
+        Registros de recuperação e dor. Distingue ausência de registro, resposta sem dor, dor
+        muscular e dor articular. Em `answers`, só `explicitly_without_pain` é "sem dor";
+        `not_answered` nunca deve ser lido como sem dor. Traz também o RPE por sessão e os campos
+        gravados em cada relato.
       parameters:
-        - $ref: '#/components/parameters/Days'
-        - $ref: '#/components/parameters/From'
-        - $ref: '#/components/parameters/To'
-        - $ref: '#/components/parameters/Limit'
+        - name: days
+          in: query
+          required: false
+          description: >-
+            Número de dias contados para trás a partir de hoje, no fuso do titular. Não pode ser
+            combinado com `from` e `to`.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 730
+        - name: from
+          in: query
+          required: false
+          description: Início do período, YYYY-MM-DD, inclusivo. Informe junto com `to`.
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          description: Fim do período, YYYY-MM-DD, inclusivo. Informe junto com `from`.
+          schema:
+            type: string
+            format: date
+        - name: limit
+          in: query
+          required: false
+          description: Máximo de registros detalhados devolvidos. Padrão 20, teto 100.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
       responses:
         '200':
           description: Recuperação do período
@@ -425,14 +659,34 @@ paths:
       tags: [panorama]
       summary: Progresso consolidado do período
       description: >-
-        Retorna a visão consolidada do período: treinos concluídos, aderência, sequência atual e
-        melhor sequência, evolução de flexões e agachamentos, peso, cintura, barriga, caminhadas,
-        RPE, recuperação e nível atual. Sequências e nível são calculados dentro do período pedido;
-        uma sequência anterior ao recorte não é considerada.
+        Visão consolidada do período: treinos concluídos, aderência, sequência atual e melhor
+        sequência, evolução de flexões e agachamentos, peso, cintura, barriga, caminhadas, RPE,
+        recuperação e nível. Sequências e nível valem só dentro do período pedido.
       parameters:
-        - $ref: '#/components/parameters/Days'
-        - $ref: '#/components/parameters/From'
-        - $ref: '#/components/parameters/To'
+        - name: days
+          in: query
+          required: false
+          description: >-
+            Número de dias contados para trás a partir de hoje, no fuso do titular. Não pode ser
+            combinado com `from` e `to`.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 730
+        - name: from
+          in: query
+          required: false
+          description: Início do período, YYYY-MM-DD, inclusivo. Informe junto com `to`.
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: false
+          description: Fim do período, YYYY-MM-DD, inclusivo. Informe junto com `from`.
+          schema:
+            type: string
+            format: date
       responses:
         '200':
           description: Progresso consolidado
@@ -466,7 +720,16 @@ paths:
         janela padrão é de 14 dias. Apenas detecta mudanças; não diagnostica e não recomenda
         tratamento.
       parameters:
-        - $ref: '#/components/parameters/Days'
+        - name: days
+          in: query
+          required: false
+          description: >-
+            Número de dias contados para trás a partir de hoje, no fuso do titular. Não pode ser
+            combinado com `from` e `to`.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 730
       responses:
         '200':
           description: Mudanças recentes
@@ -500,11 +763,10 @@ paths:
       tags: [panorama]
       summary: Compara dois períodos explícitos
       description: >-
-        Compara dois períodos informados por extenso e devolve, para cada indicador, o valor atual, o
-        anterior, a diferença absoluta e a percentual quando matematicamente válida. Os quatro
-        limites são obrigatórios e cada período precisa caber em 360 dias. Uma diferença percentual
-        `null` significa que ela não é calculável — por exemplo, quando o valor anterior é zero ou
-        não foi registrado. Não produz recomendação médica nem prescrição de treino.
+        Compara dois períodos informados por extenso: para cada indicador, o valor atual, o
+        anterior, a diferença absoluta e a percentual quando válida. Os quatro limites são
+        obrigatórios e cada período cabe em 360 dias. `delta_percent` nulo significa variação não
+        calculável.
       parameters:
         - name: current_from
           in: query
@@ -566,68 +828,6 @@ components:
           refreshUrl: https://torkout.dennerstorres.dev/oauth/token
           scopes:
             torkout:read: Leitura dos dados de treino do titular autenticado
-
-  parameters:
-    Days:
-      name: days
-      in: query
-      required: false
-      description: >-
-        Número de dias contados para trás a partir de hoje, no fuso do titular. Não pode ser
-        combinado com `from` e `to`.
-      schema:
-        type: integer
-        minimum: 1
-        maximum: 730
-    From:
-      name: from
-      in: query
-      required: false
-      description: Início do período, YYYY-MM-DD, inclusivo. Informe junto com `to`.
-      schema:
-        type: string
-        format: date
-    To:
-      name: to
-      in: query
-      required: false
-      description: Fim do período, YYYY-MM-DD, inclusivo. Informe junto com `from`.
-      schema:
-        type: string
-        format: date
-    Limit:
-      name: limit
-      in: query
-      required: false
-      description: Máximo de registros detalhados devolvidos. Padrão 20, teto 100.
-      schema:
-        type: integer
-        minimum: 1
-        maximum: 100
-    Exercise:
-      name: exercise
-      in: query
-      required: false
-      description: Nome ou parte do nome do exercício; ignora acentos e maiúsculas.
-      schema:
-        type: string
-        maxLength: 120
-    ExerciseRequired:
-      name: exercise
-      in: query
-      required: true
-      description: Nome ou parte do nome do exercício; ignora acentos e maiúsculas.
-      schema:
-        type: string
-        maxLength: 120
-    Status:
-      name: status
-      in: query
-      required: false
-      description: Filtra por estado da sessão.
-      schema:
-        type: string
-        enum: [cancelled, completed, in_progress, missed, partial, planned]
 
   responses:
     BadRequest:
