@@ -2624,6 +2624,30 @@ Corrigido em `fix(phase-32): trust the issuer origin on the consent form`:
 - Origem estranha e origem opaca (`null`) continuam recusadas, cada uma com caso próprio.
 - RED: quatro casos, um reprovando por recusar a própria origem. GREEN nos quatro, 143 de integração.
 
+### O cabeçalho de segurança do produto derrubava o próprio formulário
+
+Com a origem recusada agora registrada, o log de produção respondeu na primeira tentativa:
+`{"origin":"null","msg":"mcp_authorization_origin_rejected"}`.
+
+A causa é o cabeçalho global `referrer-policy: no-referrer`. Pela especificação do Fetch, um POST de
+navegação fora de CORS com essa política tem o cabeçalho `Origin` **serializado como `null`**. A
+página de consentimento herdava a política global, o formulário saía com origem opaca, e a
+verificação de origem daquela mesma rota o recusava. O servidor derrubava o próprio formulário.
+
+Corrigido em `fix(phase-32): keep the consent form origin from being opaque`:
+
+- A página de consentimento passa a declarar `referrer-policy: same-origin`, que preserva a origem
+  em requisições da mesma origem e continua não vazando referenciador para fora do site.
+- O gancho `onSend` deixou de sobrescrever **qualquer** cabeçalho que a rota já tenha declarado, e
+  não só a política de conteúdo. A exceção especial para um cabeçalho só era o que permitia o
+  acoplamento silencioso: a rota declarava sua política e o gancho a substituía.
+- RED: três casos, um reprovando com `expected 'no-referrer' to be 'same-origin'`. GREEN nos três,
+  146 de integração.
+
+A sexta lição: uma política de segurança global que sobrescreve o que a rota declarou não é defesa,
+é acoplamento. E a diferença entre um `403` mudo e um `403` que registra o valor recusado foi a
+diferença entre três rodadas de palpite e um diagnóstico na primeira tentativa.
+
 ### Verificação em produção
 
 Concluída em 2026-08-06, contra a instância real e o editor do ChatGPT Plus:

@@ -51,7 +51,12 @@ export function buildApp(
     for (const [name, value] of Object.entries(securityHeaders(options.production ?? false))) {
       // A política global vale para tudo, exceto onde a própria rota já declarou uma. Hoje só a
       // página de consentimento do MCP faz isso, e a dela é mais restritiva que esta.
-      if (name === 'content-security-policy' && reply.hasHeader(name)) continue;
+      //
+      // A regra vale para qualquer cabeçalho, não só a política de conteúdo: sobrescrever o que a
+      // rota declarou é o tipo de acoplamento que quebra em silêncio. Foi o que aconteceu com o
+      // referenciador, cujo `no-referrer` global fazia o formulário de consentimento sair com
+      // `Origin: null` e ser recusado pela própria verificação de origem daquela rota.
+      if (reply.hasHeader(name)) continue;
       reply.header(name, value);
     }
   });

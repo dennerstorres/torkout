@@ -919,3 +919,46 @@ describe('origem do formulário de consentimento', () => {
     await instance.close();
   });
 });
+
+/**
+ * A página de consentimento precisa de política de referenciador própria.
+ *
+ * Pela especificação do Fetch, um POST de navegação fora de CORS com `Referrer-Policy: no-referrer`
+ * tem o cabeçalho `Origin` serializado como `null`. O cabeçalho global do produto é `no-referrer`,
+ * então o formulário de consentimento saía com origem opaca e era recusado pela própria verificação
+ * de origem — o servidor derrubava o próprio formulário.
+ *
+ * `same-origin` preserva a origem em requisições da mesma origem, que é o caso do formulário, e
+ * continua não vazando referenciador para fora.
+ */
+describe('política de referenciador do consentimento', () => {
+  async function consentPage() {
+    const client = await registerClient();
+    const { challenge } = pkce();
+    currentSession = sessionFor(ownerId);
+    const page = await app.inject({
+      method: 'GET',
+      url: `/oauth/authorize?client_id=${client.client_id}&response_type=code&code_challenge=${challenge}&code_challenge_method=S256&redirect_uri=${encodeURIComponent('https://chatgpt.com/callback')}&scope=torkout%3Aread`,
+    });
+    currentSession = null;
+    return page;
+  }
+
+  it('declara same-origin, para o formulário não sair com origem opaca', async () => {
+    const page = await consentPage();
+    expect(page.statusCode).toBe(200);
+    expect(page.body).toContain('Autorizar acesso de leitura');
+    expect(page.headers['referrer-policy']).toBe('same-origin');
+  });
+
+  it('mantém a política restritiva da própria página, sem herdar a global', async () => {
+    const page = await consentPage();
+    expect(page.headers['content-security-policy']).toContain("default-src 'none'");
+    expect(page.headers['content-security-policy']).toContain("form-action 'self'");
+  });
+
+  it('não afrouxa o referenciador nas demais respostas', async () => {
+    const health = await app.inject({ method: 'GET', url: '/mcp/health' });
+    expect(health.headers['referrer-policy']).toBe('no-referrer');
+  });
+});

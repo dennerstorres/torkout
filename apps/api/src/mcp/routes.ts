@@ -139,6 +139,12 @@ function page(options: { body: string; nonce: string; title: string }): string {
 /**
  * A página de consentimento declara a própria política, mais restritiva que a global: sem script,
  * sem imagem, sem conexão, e estilo apenas pelo nonce desta resposta.
+ *
+ * O referenciador precisa ser `same-origin` e não o `no-referrer` global. Pela especificação do
+ * Fetch, um POST de navegação fora de CORS com `no-referrer` tem o cabeçalho `Origin` serializado
+ * como `null`; o formulário sairia com origem opaca e seria recusado pela verificação de origem
+ * desta mesma rota. `same-origin` preserva a origem aqui e continua não vazando referenciador para
+ * fora do site.
  */
 function sendPage(reply: FastifyReply, nonce: string, html: string, status = 200): FastifyReply {
   return reply
@@ -147,6 +153,7 @@ function sendPage(reply: FastifyReply, nonce: string, html: string, status = 200
       'content-security-policy',
       `default-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; style-src 'nonce-${nonce}'`,
     )
+    .header('referrer-policy', 'same-origin')
     .header('cache-control', 'no-store')
     .type('text/html; charset=utf-8')
     .send(html);
