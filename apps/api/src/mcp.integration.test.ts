@@ -746,3 +746,107 @@ describe('cliente confidencial sem PKCE', () => {
     expect(token.json()).toMatchObject({ error: 'invalid_grant' });
   });
 });
+
+/**
+ * O formulário de consentimento é HTML puro e envia `application/x-www-form-urlencoded`, como todo
+ * formulário de navegador. O endpoint de token também recebe urlencoded: a RFC 6749 §4.1.3 exige.
+ * O Fastify só analisa JSON e texto por padrão, e sem um analisador para esse tipo o corpo nunca
+ * chega ao manipulador — a requisição morre com `FST_ERR_CTP_INVALID_MEDIA_TYPE`.
+ *
+ * As demais suítes usam `payload` como objeto, que o `inject` serializa em JSON, e por isso nunca
+ * exercitaram o caminho que o navegador realmente percorre.
+ */
+describe('corpo de formulário', () => {
+  const redirectUri = 'https://chat.openai.com/aip/g-form/oauth/callback';
+
+  function form(fields: Record<string, string>) {
+    return new URLSearchParams(fields).toString();
+  }
+
+  it('aceita o consentimento enviado como formulário de navegador', async () => {
+    const client = await registerClient(redirectUri);
+    const { challenge } = pkce();
+    currentSession = sessionFor(ownerId);
+    const consent = await app.inject({
+      headers: {
+        'content-type': 'application/x-www-form-urlencoded',
+        origin,
+      },
+      method: 'POST',
+      payload: form({
+        client_id: client.client_id,
+        code_challenge: challenge,
+        code_challenge_method: 'S256',
+        decision: 'allow',
+        redirect_uri: redirectUri,
+        scope: 'torkout:read',
+        state: 'form',
+      }),
+      url: '/oauth/authorize',
+    });
+    currentSession = null;
+
+    expect(consent.statusCode).toBe(302);
+    const location = new URL(consent.headers.location as string);
+    expect(location.searchParams.get('code')).toBeTruthy();
+    expect(location.searchParams.get('state')).toBe('form');
+  });
+
+  it('aceita a troca de token enviada como formulário, conforme a RFC 6749', async () => {
+    const client = await registerClient(redirectUri);
+    const { challenge, verifier } = pkce();
+    currentSession = sessionFor(ownerId);
+    const consent = await app.inject({
+      headers: { 'content-type': 'application/x-www-form-urlencoded', origin },
+      method: 'POST',
+      payload: form({
+        client_id: client.client_id,
+        code_challenge: challenge,
+        code_challenge_method: 'S256',
+        decision: 'allow',
+        redirect_uri: redirectUri,
+        scope: 'torkout:read',
+      }),
+      url: '/oauth/authorize',
+    });
+    currentSession = null;
+    const code = new URL(consent.headers.location as string).searchParams.get('code') ?? '';
+
+    const token = await app.inject({
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      method: 'POST',
+      payload: form({
+        client_id: client.client_id,
+        code,
+        code_verifier: verifier,
+        grant_type: 'authorization_code',
+        redirect_uri: redirectUri,
+      }),
+      url: '/oauth/token',
+    });
+
+    expect(token.statusCode).toBe(200);
+    expect(token.json()).toMatchObject({ scope: 'torkout:read', token_type: 'Bearer' });
+  });
+
+  it('aceita o registro dinâmico e a revogação em formulário', async () => {
+    const revoke = await app.inject({
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      method: 'POST',
+      payload: form({ client_id: 'desconhecido', token: 'qualquer' }),
+      url: '/oauth/revoke',
+    });
+    // RFC 7009: token desconhecido devolve 200 para não revelar sua existência.
+    expect(revoke.statusCode).toBe(200);
+  });
+
+  it('não deixa um corpo de formulário inválido derrubar a requisição', async () => {
+    const response = await app.inject({
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      method: 'POST',
+      payload: '%%%',
+      url: '/oauth/token',
+    });
+    expect(response.statusCode).toBeLessThan(500);
+  });
+});

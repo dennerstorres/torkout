@@ -2573,6 +2573,34 @@ A quarta lição: a mesma verificação feita em aba nova e em navegador já usa
 diferentes quando existe service worker. Testar sempre no estado limpo é testar o caso que o titular
 nunca vive.
 
+### O consentimento nunca funcionou em navegador
+
+Com o service worker corrigido, a tela de consentimento finalmente apareceu. Autorizando, a resposta
+foi `{"code":"INTERNAL_ERROR","status":500}` — o formato do tratador global, não do OAuth, ou seja,
+exceção inesperada. O log deu `errorType: "FastifyError"` em 7 ms, sem nada gravado no banco.
+
+O Fastify analisa apenas `application/json` e `text/plain` por padrão. A tela de consentimento é um
+`<form method="post">` HTML, que envia `application/x-www-form-urlencoded`, e o endpoint de token
+recebe o mesmo tipo — a RFC 6749 §4.1.3 exige. Sem analisador para esse tipo, o corpo nunca chegava
+ao manipulador e a requisição morria em `FST_ERR_CTP_INVALID_MEDIA_TYPE`.
+
+O defeito é da Fase 30 e nunca foi detectado porque **toda a suíte usa `app.inject({ payload: {} })`,
+que serializa o corpo em JSON**. Os endpoints foram exercitados dezenas de vezes; o caminho que o
+navegador realmente percorre, nenhuma. O teste concordava com a implementação porque os dois falavam
+JSON — e o navegador, que é quem importa, não fala.
+
+Corrigido em `fix(phase-32): parse form encoded bodies on the OAuth endpoints`:
+
+- Analisador de `application/x-www-form-urlencoded` registrado com `URLSearchParams`, que é da
+  plataforma: nenhuma dependência nova, conforme o `CLAUDE.md` §13.
+- Corpo malformado vira objeto vazio, para a rota responder o erro OAuth que o cliente entende em vez
+  de um 500 sem significado.
+- RED: quatro casos novos com `content-type` de formulário, todos devolvendo 500 — exatamente o erro
+  de produção. GREEN nos quatro, e 139 casos de integração no total.
+
+A quinta lição, e a que mais se repete nesta fase: o teste precisa falar a mesma língua do cliente
+real. Um `inject` com objeto JavaScript é conveniente e mente sobre o transporte.
+
 ### Verificação em produção
 
 Concluída em 2026-08-06, contra a instância real e o editor do ChatGPT Plus:

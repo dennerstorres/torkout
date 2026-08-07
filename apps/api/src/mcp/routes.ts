@@ -157,6 +157,24 @@ export function registerMcpRoutes(
   dependencies: ApiDependencies,
   options: McpRouteOptions,
 ): void {
+  // O Fastify analisa apenas JSON e texto por padrão. A tela de consentimento é um formulário HTML,
+  // e a RFC 6749 §4.1.3 exige que o endpoint de token aceite `application/x-www-form-urlencoded`.
+  // Sem este analisador, o corpo nunca chega ao manipulador e a requisição morre em
+  // `FST_ERR_CTP_INVALID_MEDIA_TYPE`. `URLSearchParams` é da plataforma; não há dependência nova.
+  app.addContentTypeParser(
+    'application/x-www-form-urlencoded',
+    { parseAs: 'string' },
+    (_request, body, done) => {
+      try {
+        done(null, Object.fromEntries(new URLSearchParams(body as string)));
+      } catch {
+        // Corpo malformado vira objeto vazio: a rota responde o erro OAuth que o cliente entende,
+        // em vez de um 500 sem significado.
+        done(null, {});
+      }
+    },
+  );
+
   const issuer = new URL(options.publicUrl).origin;
   const resourceUrl = `${issuer}${MCP_PATH}`;
   const limiters = options.rateLimiters ?? createMcpRateLimiters(options.rateLimits);
