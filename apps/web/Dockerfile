@@ -20,6 +20,9 @@ FROM nginxinc/nginx-unprivileged:1.29.4-alpine AS runtime
 USER root
 RUN apk upgrade --no-cache
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
+# Fora de `conf.d/`, que é incluído automaticamente dentro de `http`: ali estes cabeçalhos voltariam
+# a valer para tudo, inclusive para as respostas repassadas da API.
+COPY apps/web/security-headers.conf /etc/nginx/security-headers.conf
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
 USER nginx
 EXPOSE 8080

@@ -2648,6 +2648,51 @@ A sexta lição: uma política de segurança global que sobrescreve o que a rota
 é acoplamento. E a diferença entre um `403` mudo e um `403` que registra o valor recusado foi a
 diferença entre três rodadas de palpite e um diagnóstico na primeira tentativa.
 
+### O nginx sobrescrevia a política que a API declarava
+
+A correção acima não resolveu: o log de produção continuou com `origin: "null"`. Uma requisição
+direta à instância, lendo os cabeçalhos da própria tela de consentimento, mostrou o motivo:
+
+```text
+referrer-policy: same-origin      ← da API, já implantada
+referrer-policy: no-referrer      ← do nginx
+```
+
+O `apps/web/nginx.conf` declarava os seis cabeçalhos de segurança no bloco `server`, e as `location`
+de proxy os herdavam. Com `always`, eles eram acrescentados também às respostas que o nginx apenas
+repassa da API. O navegador aplica o último `Referrer-Policy`, e o `no-referrer` vencia.
+
+A duplicação atingia todos os seis. Na política de conteúdo o efeito era mudo e igualmente real: o
+navegador exige que o recurso passe pelas duas políticas, e o estilo embutido da tela de
+consentimento — liberado por nonce na política da rota — era proibido pelo `style-src 'self'` do
+nginx. A página vinha sem estilo desde a Fase 30.
+
+Corrigido em `fix(phase-32): stop nginx from overriding the API security headers`:
+
+- Os cabeçalhos saíram do bloco `server` para `apps/web/security-headers.conf`, incluído apenas nas
+  `location` que servem conteúdo do próprio nginx. As respostas repassadas carregam exatamente o que
+  a API define — que é mais completo, porque ela também envia `Cross-Origin-Opener-Policy` e
+  `Cross-Origin-Resource-Policy`.
+- O arquivo fica fora de `conf.d/`, que o nginx inclui automaticamente dentro de `http` e faria os
+  cabeçalhos valerem para tudo de novo.
+- `add_header_inherit merge` deixou de ser necessário e saiu.
+
+Evidência, desta vez com o binário real e não só com o teste de configuração: dois contêineres em
+rede, um nginx servindo `nginx.conf` e outro fazendo de API e devolvendo `Referrer-Policy:
+same-origin`.
+
+- Configuração anterior, rota repassada: `Referrer-Policy: same-origin` seguido de
+  `Referrer-Policy: no-referrer` — a reprodução exata do que a produção devolvia.
+- Configuração nova, rota repassada: apenas `same-origin`.
+- Configuração nova, rota estática: `no-referrer`, `X-Frame-Options: DENY` e a política completa,
+  intactos.
+
+A sétima lição, e a que explica por que esta sequência durou tanto: eu verifiquei a aplicação e
+tratei o proxy como se não existisse. Durante seis correções, o `nginx.conf` nunca foi aberto. Uma
+verificação que para na borda da própria aplicação não é verificação de sistema — e o primeiro
+`curl` contra a instância real, lendo os cabeçalhos de fato entregues, teria mostrado a duplicação
+em segundos.
+
 ### Verificação em produção
 
 Concluída em 2026-08-06, contra a instância real e o editor do ChatGPT Plus:
