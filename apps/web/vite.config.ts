@@ -4,6 +4,8 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+import { SERVER_OWNED_PATH_PATTERNS } from './src/pwa-routes.js';
+
 const webPackage = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as {
   version: string;
 };
@@ -56,11 +58,15 @@ export default defineConfig({
         clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallback: 'index.html',
-        navigateFallbackDenylist: [/^\/api\//, /^\/auth\//],
+        // Sem esta exclusão, a navegação para uma página do servidor — a tela de consentimento
+        // OAuth, por exemplo — é respondida com a casca do aplicativo, e o servidor nunca é
+        // consultado. Ver `src/pwa-routes.ts`.
+        navigateFallbackDenylist: [...SERVER_OWNED_PATH_PATTERNS],
         runtimeCaching: [
           {
             handler: 'NetworkOnly',
-            urlPattern: /\/(?:api|auth)\//,
+            urlPattern: ({ url }: { url: URL }) =>
+              SERVER_OWNED_PATH_PATTERNS.some((pattern) => pattern.test(url.pathname)),
           },
           {
             handler: 'NetworkFirst',

@@ -5,5 +5,7 @@
     "lib": ["ES2023"],
     "types": ["node"]
   },
-  "include": ["vite.config.ts"]
+  // `pwa-routes.ts` é a lista de caminhos do servidor, compartilhada entre o config do service
+  // worker e o aplicativo. Precisa estar visível aos dois projetos.
+  "include": ["vite.config.ts", "src/pwa-routes.ts"]
 }

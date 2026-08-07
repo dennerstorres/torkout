@@ -2542,6 +2542,37 @@ antes de qualquer linha de código REST ser escrita.
   mas reforçá-las nas instruções reduz a chance de o modelo tratar ausência de registro como
   ausência de sintoma.
 
+### O service worker engolia a tela de consentimento
+
+Com tudo funcionando, a primeira conversa real com o GPT ofereceu o botão de entrar. Clicando nele, o
+navegador abria o Torkout com a URL de autorização na barra de endereço e mais nada acontecia.
+
+A causa não era o OAuth. O service worker do PWA responde toda navegação com o `index.html` do
+aplicativo, e o `navigateFallbackDenylist` listava apenas `/api/` e `/auth/`. A navegação para
+`/oauth/authorize` era interceptada antes de sair do navegador: o servidor nunca era consultado, e o
+titular via a casca do aplicativo com a URL original intacta.
+
+O defeito é da Fase 30, não desta: a tela de consentimento do MCP sempre esteve sujeita a ele.
+Passou despercebido porque o service worker só assume a origem depois da primeira visita, e todos os
+testes anteriores — inclusive os desta fase, feitos em aba nova — chegaram ao servidor antes disso. É
+um bug que só aparece para quem já usou o aplicativo, ou seja, exatamente para o titular.
+
+Corrigido em `fix(phase-32): stop the service worker from swallowing server pages`:
+
+- `apps/web/src/pwa-routes.ts` passou a ser a lista única de caminhos que pertencem ao servidor:
+  `/api/`, `/auth/`, `/oauth/`, `/mcp` e `/.well-known/`.
+- O config do Vite consome essa lista tanto no `navigateFallbackDenylist` quanto na regra
+  `NetworkOnly`, em vez de repetir padrões escritos à mão.
+- RED: oito casos em `apps/web/src/pwa-routes.test.tsx`, três reprovando na configuração e cinco já
+  cobrindo os padrões. GREEN nos oito, e o `dist/sw.js` gerado confere:
+  `denylist:[/^\/api\//,/^\/auth\//,/^\/oauth\//,/^\/mcp(?:\/|$)/,/^\/\.well-known\//]`.
+- `/mcp` casa exato ou seguido de barra, para não sequestrar uma futura tela do aplicativo cujo
+  caminho apenas comece parecido.
+
+A quarta lição: a mesma verificação feita em aba nova e em navegador já usado dá resultados
+diferentes quando existe service worker. Testar sempre no estado limpo é testar o caso que o titular
+nunca vive.
+
 ### Verificação em produção
 
 Concluída em 2026-08-06, contra a instância real e o editor do ChatGPT Plus:
