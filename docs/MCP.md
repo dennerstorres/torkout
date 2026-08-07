@@ -317,7 +317,10 @@ Para `https://mcp.<seu-dominio>`:
 2. No Coolify, adicione o domínio ao serviço `web` (para reaproveitar o proxy e o certificado) ou
    crie um domínio próprio apontando para a porta 3000 do serviço `api`.
 3. Defina `MCP_PUBLIC_URL=https://mcp.<seu-dominio>`.
-4. Acrescente esse origin a `TRUSTED_ORIGINS`, para que o consentimento seja aceito.
+
+O consentimento não exige que o subdomínio esteja em `TRUSTED_ORIGINS`: o servidor aceita a própria
+origem, derivada de `MCP_PUBLIC_URL`, por construção. Acrescentá-lo à lista continua valendo apenas
+se o navegador precisar chamar a API do produto a partir dele.
 
 O emissor OAuth anunciado na descoberta é derivado de `MCP_PUBLIC_URL`; ele precisa bater exatamente
 com o endereço pelo qual o cliente chega, ou a validação do cliente falhará.

@@ -2601,6 +2601,29 @@ Corrigido em `fix(phase-32): parse form encoded bodies on the OAuth endpoints`:
 A quinta lição, e a que mais se repete nesta fase: o teste precisa falar a mesma língua do cliente
 real. Um `inject` com objeto JavaScript é conveniente e mente sobre o transporte.
 
+### A própria origem não era confiável para o próprio formulário
+
+Passado o analisador de formulário, o consentimento devolveu
+`{"error":"access_denied","error_description":"Origem não autorizada."}`.
+
+A verificação comparava o cabeçalho `Origin` apenas contra `TRUSTED_ORIGINS`, que é a lista de CORS
+do produto. Uma sonda direta contra a instância — três requisições com origens diferentes e um
+cliente inexistente — mostrou que a lista estava correta: com a origem esperada, o pedido passava do
+porteiro e parava em `invalid_client`. O problema é de projeto, não de valor.
+
+A tela de consentimento é servida por este mesmo servidor, sob `MCP_PUBLIC_URL`. Exigir que alguém
+acrescente essa origem a uma lista que existe para outra finalidade transforma um subdomínio
+dedicado ao MCP numa armadilha silenciosa — e o `MCP.md` documentava esse passo manual em vez de
+eliminá-lo.
+
+Corrigido em `fix(phase-32): trust the issuer origin on the consent form`:
+
+- O `issuer` passa a ser aceito por construção, além de `TRUSTED_ORIGINS`.
+- A origem recusada passa a ser registrada em `mcp_authorization_origin_rejected`. É um valor
+  público, e sem ele o `403` não diz o que corrigir — foi exatamente o que travou o diagnóstico.
+- Origem estranha e origem opaca (`null`) continuam recusadas, cada uma com caso próprio.
+- RED: quatro casos, um reprovando por recusar a própria origem. GREEN nos quatro, 143 de integração.
+
 ### Verificação em produção
 
 Concluída em 2026-08-06, contra a instância real e o editor do ChatGPT Plus:

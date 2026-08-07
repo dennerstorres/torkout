@@ -419,8 +419,18 @@ export function registerMcpRoutes(
   app.post('/oauth/authorize', async (request, reply) => {
     const body = (request.body ?? {}) as Record<string, string | undefined>;
     // O formulário é enviado da própria origem; uma origem estranha não decide consentimento.
+    //
+    // O `issuer` entra na lista por construção: a tela de consentimento é servida por este servidor,
+    // e exigir que alguém a acrescente a `TRUSTED_ORIGINS` — que existe para o CORS do produto —
+    // transforma um subdomínio dedicado ao MCP numa armadilha silenciosa de configuração.
     const origin = request.headers.origin;
-    if (origin !== undefined && !dependencies.trustedOrigins.includes(origin)) {
+    if (
+      origin !== undefined &&
+      origin !== issuer &&
+      !dependencies.trustedOrigins.includes(origin)
+    ) {
+      // A origem recusada é registrada: é um valor público, e sem ele o 403 não diz o que corrigir.
+      request.log.warn({ origin }, 'mcp_authorization_origin_rejected');
       return reply
         .status(403)
         .send({ error: 'access_denied', error_description: 'Origem não autorizada.' });

@@ -850,3 +850,72 @@ describe('corpo de formulário', () => {
     expect(response.statusCode).toBeLessThan(500);
   });
 });
+
+/**
+ * A tela de consentimento é servida por este mesmo servidor, sob `MCP_PUBLIC_URL`. A própria origem
+ * precisa ser aceita por construção, sem depender de alguém lembrar de acrescentá-la a
+ * `TRUSTED_ORIGINS`, que existe para o CORS do produto e pode legitimamente não incluir um
+ * subdomínio dedicado ao MCP.
+ */
+describe('origem do formulário de consentimento', () => {
+  const dedicated = 'https://mcp.torkout.example.test';
+
+  function appOn(publicUrl: string) {
+    return buildApp(dependencies, {
+      mcp: {
+        publicUrl,
+        rateLimits: {
+          callsPerMinute: 10_000,
+          registrationsPerHour: 10_000,
+          tokensPerMinute: 10_000,
+        },
+      },
+    });
+  }
+
+  async function postWithOrigin(instance: ReturnType<typeof buildApp>, header: string | undefined) {
+    return instance.inject({
+      headers: {
+        'content-type': 'application/x-www-form-urlencoded',
+        ...(header === undefined ? {} : { origin: header }),
+      },
+      method: 'POST',
+      payload: new URLSearchParams({ client_id: 'inexistente', decision: 'deny' }).toString(),
+      url: '/oauth/authorize',
+    });
+  }
+
+  it('aceita a própria origem, mesmo fora de TRUSTED_ORIGINS', async () => {
+    const instance = appOn(dedicated);
+    await instance.ready();
+    const response = await postWithOrigin(instance, dedicated);
+    // Passou do porteiro de origem: para no cliente desconhecido, que é o passo seguinte.
+    expect(response.json()).toMatchObject({ error: 'invalid_client' });
+    await instance.close();
+  });
+
+  it('continua aceitando as origens confiáveis do produto', async () => {
+    const instance = appOn(dedicated);
+    await instance.ready();
+    const response = await postWithOrigin(instance, origin);
+    expect(response.json()).toMatchObject({ error: 'invalid_client' });
+    await instance.close();
+  });
+
+  it('recusa uma origem estranha', async () => {
+    const instance = appOn(dedicated);
+    await instance.ready();
+    const response = await postWithOrigin(instance, 'https://atacante.example.test');
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toMatchObject({ error: 'access_denied' });
+    await instance.close();
+  });
+
+  it('recusa uma origem opaca, que não prova nada sobre quem enviou', async () => {
+    const instance = appOn(dedicated);
+    await instance.ready();
+    const response = await postWithOrigin(instance, 'null');
+    expect(response.statusCode).toBe(403);
+    await instance.close();
+  });
+});
