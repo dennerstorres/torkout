@@ -1,14 +1,26 @@
-# Freeze de schema e contratos — 2.5.0
+# Freeze de schema e contratos — 2.6.0
 
-- Versão: `2.5.0`
-- Cabeça de migração: `0014_phase_32_optional_pkce`
-- Schema SHA-256: `13c5c10f906f3090415a7e768f29db5fc118f78937793146b149ed23e05840e2`
-- Contracts SHA-256: `bebd02ba4f9aeef1a39caf952f3b117305e34fc3628e183926c828accae0c93f`
+- Versão: `2.6.0`
+- Cabeça de migração: `0015_phase_33_protein_formats`
+- Schema SHA-256: `a70d5aadcb7ba589a8b41199fcbd8a8655f1583b8b014c2d7ae7bef6aca0f6d5`
+- Contracts SHA-256: `e53f90a7cb0e4f17b9be5a10c3e8a84030cbeb63319701cf6f71d96d51e2882b`
 
 O digest de schema cobre SQLs e fontes TypeScript de `packages/database/src/schema`. O digest de
 contratos cobre fontes públicas não-teste de `packages/contracts/src`. Execute
 `pnpm verify:schema-freeze`; qualquer mudança após o freeze exige nova versão compatível,
 migração aditiva quando aplicável e atualização explícita deste documento.
+
+A versão 2.6.0 acrescenta formato, unidade de dose e ingredientes batidos ao registro de proteína,
+pela migração `0015_phase_33_protein_formats`. A alteração é aditiva: cria os tipos
+`protein_format` e `protein_serving_unit`, acrescenta as colunas `format` (com padrão `powder`),
+`serving_unit` e `blended_with`, e recria `whey_intakes_not_consumed_check` incluindo as colunas
+novas. Nenhuma linha guardada deixa de ser válida — todo registro anterior é whey em pó, que é o
+padrão da coluna. Em contratos, `wheyIntakeCreateSchema` e `wheyIntakeUpdateSchema` ganharam três
+campos opcionais; nenhum campo público foi removido ou renomeado, e um cliente da versão anterior
+continua sendo aceito. As duas constraints novas restringem apenas combinações que a versão anterior
+não sabia produzir. A reversão está em
+`packages/database/migrations/rollback/0015_phase_33_protein_formats.down.sql` e exige descartar
+registros de formato diferente de pó, que passariam a ser lidos como whey em pó.
 
 A versão 2.5.0 torna `mcp_authorization_codes.code_challenge` e `code_challenge_method` opcionais,
 pela migração `0014_phase_32_optional_pkce`. A alteração é aditiva no sentido que importa: afrouxa

@@ -2770,6 +2770,11 @@ conversa real, e a verificação em iPhone físico, que não se aplica a esta ca
 - Migração `0015_phase_33_protein_formats` (tipos `protein_format` e `protein_serving_unit`, colunas
   `format`, `serving_unit` e `blended_with`) mais
   `rollback/0015_phase_33_protein_formats.down.sql`.
+- Freeze de schema e contratos promovido a **2.6.0**, com os dois digests reemitidos e a
+  compatibilidade descrita em `docs/release/schema-contract-freeze-v1.md`. O gate reprovou no CI do
+  commit de encerramento, porque `pnpm check` não foi executado por inteiro antes do push: os gates
+  de teste e qualidade rodaram, mas as verificações estruturais de fase, não. Corrigido em
+  `chore(phase-33): reissue the schema and contract freeze as 2.6.0`.
 - Nenhum endpoint novo. `POST` e `PUT /api/v1/whey-intakes` passam a aceitar os três campos e
   `GET /api/v1/whey-intakes` a devolvê-los; `get_whey_history` ganhou os mesmos campos no MCP e no
   REST.
