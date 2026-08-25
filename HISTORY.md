@@ -2813,6 +2813,13 @@ conversa real, e a verificação em iPhone físico, que não se aplica a esta ca
 
 ### Riscos e pendências
 
-- A migração ainda não rodou em produção: o deploy é o próximo passo e precisa aplicar
-  `0015_phase_33_protein_formats` antes de a versão nova da tela subir.
+- **Deploy concluído em 25/08/2026.** O push para `main` disparou a implantação no Coolify: o bundle
+  público passou a servir "Proteína de hoje" e a API voltou a responder. Como o serviço `api`
+  depende de `migrate` terminar com código 0, a subida da API é a evidência de que
+  `0015_phase_33_protein_formats` foi aplicada. Confirmação direta pelo log do serviço `migrate`
+  continua sendo do painel, fora do repositório.
+- O CI reprovou no primeiro push por causa do freeze desatualizado; verde no commit seguinte.
+- O workflow `Security` continua vermelho por três CVEs HIGH em dependências transitivas
+  (`fast-uri` CVE-2026-18446, `nanoid` CVE-2026-67213, `undici` CVE-2026-13697), já vermelhas na
+  execução agendada de 24/08/2026. Não têm relação com esta fase e continuam abertas.
 - Validação física no iPhone continua pendente, como manda a regra 12 do `CLAUDE.md`.

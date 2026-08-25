@@ -6,7 +6,7 @@
 
 **Unidade de entrega:** fase completa com commit de encerramento
 
-**Status geral:** Fases 0–25 concluídas e validação física aprovada; a instância de produção está no ar em <https://torkout.dennerstorres.dev>. Fases 28 (cadastro público fechado) e 29 (modo demonstração local) concluídas no código, aguardando deploy. Fase 27 (CI de segurança) concluída. Resta a Fase 26 (backup externo comprovado). Fase 33 (registro de proteína por formato, medida e vitamina) concluída no código, aguardando deploy da migração e validação no iPhone.
+**Status geral:** Fases 0–25 concluídas e validação física aprovada; a instância de produção está no ar em <https://torkout.dennerstorres.dev>. Fases 28 (cadastro público fechado) e 29 (modo demonstração local) concluídas no código, aguardando deploy. Fase 27 (CI de segurança) concluída. Resta a Fase 26 (backup externo comprovado). Fase 33 (registro de proteína por formato, medida e vitamina) concluída e implantada em 25/08/2026; resta a validação no iPhone.
 
 ## 1. Regras de execução
 
@@ -1825,7 +1825,7 @@ também consome. O MCP continua funcionando exatamente como antes, e nada nesta 
 
 ### Fase 33 — Registro de proteína por formato, medida e vitamina
 
-**Status:** concluída no código; migração pendente de deploy e validação física no iPhone
+**Status:** concluída e implantada em 25/08/2026; validação física no iPhone pendente
 
 **Commit esperado:** `feat(phase-33): record protein by format, serving unit and blended ingredients`
 
