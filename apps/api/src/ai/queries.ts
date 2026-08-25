@@ -701,9 +701,12 @@ export function getWheyHistory(context: QueryContext, options: { limit?: number 
 
   return {
     entries: page.map((row) => ({
+      blended_with: text(row.blendedWith),
       brand: text(row.brand),
       consumed: flag(row.consumed),
       date: localDate(row.localDate),
+      // Registro anterior ao campo é pó: era o único formato que existia.
+      format: text(row.format) ?? 'powder',
       id: text(row.id),
       liquid_ml: num(row.liquidMl),
       mixed_with: row.mixedWith === 'other' ? text(row.customMixedWith) : text(row.mixedWith),
@@ -712,6 +715,7 @@ export function getWheyHistory(context: QueryContext, options: { limit?: number 
       powder_grams: num(row.powderGrams),
       product: text(row.product),
       protein_per_serving_grams: num(row.proteinPerServingGrams),
+      serving_unit: text(row.servingUnit),
       servings: num(row.servings),
       time: clock(row.localTime),
       tolerance: Array.isArray(row.tolerance) ? (row.tolerance as string[]) : [],

@@ -181,9 +181,9 @@ export function createMcpToolRegistrar(dependencies: McpToolDependencies) {
     server.registerTool(
       'get_whey_history',
       {
-        annotations: { ...READ_ONLY, title: 'Histórico de whey' },
+        annotations: { ...READ_ONLY, title: 'Histórico de proteína' },
         description:
-          'Registros de whey no período: consumo, quantidade, horário, mistura, volume de líquido, marca, produto, proteína informada, tolerância e observações.',
+          'Registros de proteína no período: consumo, formato (pó, pronto para beber, iogurte), quantidade e medida da dose, horário, mistura, volume de líquido, ingredientes batidos junto, marca, produto, proteína informada, tolerância e observações.',
         inputSchema: { ...mcpRangeShape, limit: mcpLimitSchema },
       },
       async (input) => run(() => operations.getWheyHistory(input)),

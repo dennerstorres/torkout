@@ -146,8 +146,8 @@ recorte, o padrão é catorze dias.
 | `get_measurements`        | `days`, `from`, `to`, `limit`                                | Peso, cintura, barriga, quadril, coxa, bíceps, jejum, observações                         |
 | `get_measurement_summary` | `days`, `from`, `to`                                         | Primeiro, último, diferença absoluta e percentual, mínimo, máximo, contagem               |
 | `get_walks`               | `days`, `from`, `to`                                         | Caminhadas e resumo de distância e duração                                                |
-| `get_nutrition`           | `days`, `from`, `to`                                         | Estado do café, hábitos registrados, presença de whey                                     |
-| `get_whey_history`        | `days`, `from`, `to`, `limit`                                | Consumo, quantidade, mistura, produto, tolerância                                         |
+| `get_nutrition`           | `days`, `from`, `to`                                         | Estado do café, hábitos registrados, presença de proteína                                 |
+| `get_whey_history`        | `days`, `from`, `to`, `limit`                                | Consumo, formato, quantidade, medida, mistura, ingredientes, produto, tolerância          |
 | `get_recovery`            | `days`, `from`, `to`, `limit`                                | RPE e registros de dor com todos os campos gravados                                       |
 | `get_progress`            | `days`, `from`, `to`                                         | Visão consolidada, sequências e nível                                                     |
 | `compare_periods`         | `current_from`, `current_to`, `previous_from`, `previous_to` | Comparação com diferenças absolutas e percentuais                                         |

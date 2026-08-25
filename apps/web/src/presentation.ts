@@ -56,6 +56,31 @@ export function wheyMixLabel(value: string): string {
   );
 }
 
+export function proteinFormatLabel(value: string): string {
+  return (
+    {
+      powder: 'Whey em pó',
+      ready_to_drink: 'Pronto para beber',
+      yogurt: 'Iogurte proteico',
+    }[value] ?? 'Whey em pó'
+  );
+}
+
+/**
+ * Dose já escrita por extenso. A medida é uma só por registro — scoop, colher de sopa ou unidade —,
+ * então a quantidade nunca aparece somada a uma segunda medida.
+ */
+export function proteinServingLabel(amount: number, unit: string): string {
+  const plural = amount === 1 ? 0 : 1;
+  const words = {
+    scoop: ['scoop', 'scoops'],
+    tablespoon: ['colher (sopa)', 'colheres (sopa)'],
+    unit: ['unidade', 'unidades'],
+  }[unit];
+  if (!words) return formatNumber(amount);
+  return `${formatNumber(amount)} ${words[plural]}`;
+}
+
 export function wheyMomentLabel(value: string): string {
   return (
     {
@@ -150,7 +175,7 @@ export function syncEntityLabel(value: string): string {
       habit_definition: 'Hábito',
       habit_entry: 'Registro de hábito',
       pain_report: 'Registro de desconforto',
-      whey_intake: 'Registro de whey',
+      whey_intake: 'Registro de proteína',
       workout_session: 'Sessão de treino',
     }[value] ?? 'Registro'
   );

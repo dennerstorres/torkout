@@ -169,6 +169,81 @@ describe('initial PostgreSQL schema', () => {
     ).rejects.toMatchObject({ constraint: 'habit_entries_exactly_one_value_check' });
   });
 
+  it('registers protein by format, serving unit and blended ingredients', async () => {
+    const userId = await createUser('protein-format@example.invalid');
+
+    const legacy = await pool.query<{ format: string }>(
+      `insert into whey_intakes (user_id, local_date, consumed, powder_grams)
+       values ($1, '2026-08-24', true, 30) returning format`,
+      [userId],
+    );
+    expect(legacy.rows[0]?.format).toBe('powder');
+
+    const bottle = await pool.query<{ format: string; serving_unit: string }>(
+      `insert into whey_intakes
+         (user_id, local_date, consumed, format, servings, serving_unit, brand,
+          protein_per_serving_grams)
+       values ($1, '2026-08-25', true, 'ready_to_drink', 1, 'unit', 'YoPro', 25)
+       returning format, serving_unit`,
+      [userId],
+    );
+    expect(bottle.rows[0]).toMatchObject({ format: 'ready_to_drink', serving_unit: 'unit' });
+
+    const shake = await pool.query<{ blended_with: string; serving_unit: string }>(
+      `insert into whey_intakes
+         (user_id, local_date, consumed, powder_grams, servings, serving_unit, mixed_with,
+          liquid_ml, blended_with)
+       values ($1, '2026-08-25', true, 30, 2, 'tablespoon', 'skimmed_milk', 300,
+         'Banana e abacate')
+       returning blended_with, serving_unit`,
+      [userId],
+    );
+    expect(shake.rows[0]).toMatchObject({
+      blended_with: 'Banana e abacate',
+      serving_unit: 'tablespoon',
+    });
+
+    await expect(
+      pool.query(
+        `insert into whey_intakes (user_id, local_date, consumed, format, powder_grams)
+         values ($1, '2026-08-25', true, 'ready_to_drink', 30)`,
+        [userId],
+      ),
+    ).rejects.toMatchObject({ constraint: 'whey_intakes_format_fields_check' });
+
+    await expect(
+      pool.query(
+        `insert into whey_intakes (user_id, local_date, consumed, format, blended_with)
+         values ($1, '2026-08-25', true, 'yogurt', 'Banana')`,
+        [userId],
+      ),
+    ).rejects.toMatchObject({ constraint: 'whey_intakes_format_fields_check' });
+
+    await expect(
+      pool.query(
+        `insert into whey_intakes (user_id, local_date, consumed, servings, serving_unit)
+         values ($1, '2026-08-25', true, 1, 'unit')`,
+        [userId],
+      ),
+    ).rejects.toMatchObject({ constraint: 'whey_intakes_serving_unit_check' });
+
+    await expect(
+      pool.query(
+        `insert into whey_intakes (user_id, local_date, consumed, serving_unit)
+         values ($1, '2026-08-25', true, 'scoop')`,
+        [userId],
+      ),
+    ).rejects.toMatchObject({ constraint: 'whey_intakes_serving_unit_check' });
+
+    await expect(
+      pool.query(
+        `insert into whey_intakes (user_id, local_date, consumed, blended_with)
+         values ($1, '2026-08-25', false, 'Banana e abacate')`,
+        [userId],
+      ),
+    ).rejects.toMatchObject({ constraint: 'whey_intakes_not_consumed_check' });
+  });
+
   it('stores explicit joint-pain confirmation and an idempotent authenticated history import', async () => {
     const columns = await pool.query<{ column_name: string }>(
       `select column_name from information_schema.columns

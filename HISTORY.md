@@ -2706,3 +2706,108 @@ Concluída em 2026-08-06, contra a instância real e o editor do ChatGPT Plus:
 
 Restam de fora do que foi exercitado: o comportamento do modelo diante das distinções semânticas em
 conversa real, e a verificação em iPhone físico, que não se aplica a esta camada.
+
+## Fase 33 — Registro de proteína por formato, medida e vitamina
+
+**Commit de encerramento:** `feat(phase-33): record protein by format, serving unit and blended ingredients`
+
+### Escopo entregue
+
+- `format` (`powder`, `ready_to_drink`, `yogurt`) no contrato, no schema, na API e na tela, com
+  `powder` como padrão e como leitura de todo registro anterior ao campo.
+- `servingUnit` (`scoop`, `tablespoon`, `unit`) ao lado de `servings`: uma medida por registro,
+  presa ao formato e válida só junto da quantidade que ela mede.
+- `blendedWith`: texto livre dos ingredientes batidos junto com o pó, somado ao líquido base — a
+  vitamina de banana e abacate deixa de caber apenas em observação.
+- Migração `0015_phase_33_protein_formats.sql` com duas constraints novas
+  (`whey_intakes_format_fields_check`, `whey_intakes_serving_unit_check`), a
+  `whey_intakes_not_consumed_check` recriada com as colunas novas e rollback documentado.
+- Seção `Hoje` renomeada de "Whey de hoje" para "Proteína de hoje": o campo **Tipo** governa quais
+  campos aparecem, os de preparo do pó somem nos demais formatos, e a lista do dia mostra formato,
+  dose por extenso e o que foi batido junto.
+- Leituras coerentes: `get_whey_history` (MCP e `/api/ai/whey-history`) devolve `format`,
+  `serving_unit` e `blended_with`; o relatório de evolução ganhou as colunas _formato_ e
+  _batido com_, com a dose escrita por extenso.
+- `SPEC.md` (WHEY-001, WHEY-005, WHEY-006 revisados; WHEY-007, WHEY-008 e WHEY-009 novos),
+  `docs/GUIA_DO_USUARIO.md`, `docs/MCP.md` e `docs/torkout-gpt-actions.openapi.yaml` atualizados.
+
+### Evidência Red
+
+- `packages/contracts/src/nutrition.test.ts`: 5 reprovações comportamentais em 21 casos — formato
+  ausente do contrato, garrafa pronta recusada, `scoop`/`tablespoon` desconhecidos e `blendedWith`
+  rejeitado como chave estranha pelo `strictObject`.
+- `packages/database/src/schema.integration.test.ts` contra PostgreSQL real:
+  `error: column "format" does not exist`.
+- `apps/api/src/daily.integration.test.ts`: `POST /api/v1/whey-intakes` com
+  `format: 'ready_to_drink'` devolveu **400** em vez de 201.
+- `apps/web/src/components/DailyNutrition.test.tsx`: 11 reprovações em 14 casos.
+- `apps/api/src/ai/queries.test.ts`: 2 reprovações — `format` e `serving_unit` ausentes das entradas.
+- `apps/api/src/evolution-report.test.ts`: 2 reprovações — seção `## Proteína` e colunas novas
+  inexistentes.
+
+### Evidência Green
+
+- Contratos 21/21; schema em PostgreSQL real 8/8, incluindo as quatro recusas por constraint e a
+  linha antiga sem formato lida como `powder`.
+- Suíte completa: `pnpm test` 65 arquivos e **482 casos**; `pnpm test:integration` contra PostgreSQL
+  real 17 arquivos e **148 casos**; `pnpm test:e2e` 34 aprovados e 2 ignorados (os baselines
+  rejeitados da Fase 14, que continuam desligados).
+- O arquivo de rollback foi executado de verdade contra o banco de teste, em transação única, e
+  desfez as três colunas, as duas constraints e os dois tipos sem erro.
+
+### Evidência Refactor
+
+- `validateWhey` passou a receber `{ partial }`: a criação valida o par completo, a alteração parcial
+  não lê campo ausente como vazio, e o par que só a linha gravada conhece fica com a constraint.
+- A lista do dia saiu de expressão embutida no JSX para `describeIntake`, que é onde formato, dose e
+  ingredientes se juntam.
+- Gates completos verdes: `pnpm verify:governance`, `pnpm security:scan` (382 arquivos),
+  `pnpm format:check`, `pnpm lint --max-warnings 0`, `pnpm typecheck`, `pnpm test`,
+  `pnpm test:integration`, `pnpm test:e2e` e `pnpm build`.
+
+### Migrações e endpoints
+
+- Migração `0015_phase_33_protein_formats` (tipos `protein_format` e `protein_serving_unit`, colunas
+  `format`, `serving_unit` e `blended_with`) mais
+  `rollback/0015_phase_33_protein_formats.down.sql`.
+- Nenhum endpoint novo. `POST` e `PUT /api/v1/whey-intakes` passam a aceitar os três campos e
+  `GET /api/v1/whey-intakes` a devolvê-los; `get_whey_history` ganhou os mesmos campos no MCP e no
+  REST.
+
+### Decisões
+
+- **Um histórico só.** YoPro entrou como formato do registro existente, não como segunda entidade:
+  tolerância, momento e horário já eram os mesmos, e dois formulários dobrariam a manutenção sem
+  responder nenhuma pergunta nova.
+- **Campos de preparo pertencem ao pó.** Gramas, líquido, mistura e ingredientes batidos só existem
+  em `powder`. A regra vale no contrato e na constraint, então nem a API nem a sincronização podem
+  gravar uma garrafa com 30 g de pó.
+- **A medida acompanha o formato e a quantidade.** `scoop` e `tablespoon` só no pó, `unit` só fora
+  dele, e nunca uma medida sozinha: "colher" sem quantidade não é registro, é ruído.
+- **A vitamina é texto livre.** Lista de ingredientes com quantidade tornaria o lançamento diário
+  lento para um dado que ninguém vai somar — e o produto não deriva caloria nem macronutriente.
+- **Rollback apaga em vez de reinterpretar.** Voltar o schema faria garrafa e iogurte virarem whey em
+  pó em silêncio; o arquivo apaga essas linhas e diz para exportar antes.
+
+### Impactos de segurança e privacidade
+
+- Nenhum dado novo é registrado em log. `blendedWith` é conteúdo do titular e segue a regra dos
+  demais campos de alimentação: não aparece em log, mensagem de erro nem telemetria.
+- Nenhuma estimativa nutricional é derivada dos ingredientes, do formato ou da dose.
+- A exportação continua incluindo as colunas novas por ser dump de esquema, sem sessão, hash ou
+  token.
+
+### Desvios
+
+- A seção do relatório de evolução deixou de se chamar "Whey" e passou a "Proteína", junto com o
+  rótulo de entidade de sincronização ("Registro de proteína"). O critério de saída da Fase 32
+  pedia relatório idêntico, mas ele valia para aquela fase; manter "Whey" sobre linhas de YoPro
+  seria incoerente com o SPEC revisado.
+- A tabela do relatório passou de 13 para 15 colunas. Quem já usa o arquivo verá as colunas novas
+  entre "consumiu" e "pó" (formato) e entre "misturado com" e "marca" (batido com).
+
+### Riscos e pendências
+
+- A migração ainda não rodou em produção: o deploy é o próximo passo e precisa aplicar
+  `0015_phase_33_protein_formats` antes de a versão nova da tela subir.
+- Validação física no iPhone continua pendente, como manda a regra 12 do `CLAUDE.md`.

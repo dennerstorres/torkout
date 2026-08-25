@@ -73,6 +73,18 @@ const PAIN_INTENSITY_LABELS: Record<string, string> = {
   strong: 'Forte',
 };
 
+const PROTEIN_FORMAT_LABELS: Record<string, string> = {
+  powder: 'Whey em pó',
+  ready_to_drink: 'Pronto para beber',
+  yogurt: 'Iogurte proteico',
+};
+
+const PROTEIN_SERVING_UNIT_WORDS: Record<string, [string, string]> = {
+  scoop: ['scoop', 'scoops'],
+  tablespoon: ['colher (sopa)', 'colheres (sopa)'],
+  unit: ['unidade', 'unidades'],
+};
+
 const WHEY_MIX_LABELS: Record<string, string> = {
   other: 'Outro',
   semi_skimmed_milk: 'Leite semidesnatado',
@@ -159,6 +171,15 @@ function clock(input: unknown): string {
   if (typeof input !== 'string') return NOT_RECORDED;
   const match = /^([01]\d|2[0-3]):([0-5]\d)/.exec(input);
   return match ? `${match[1]}:${match[2]}` : NOT_RECORDED;
+}
+
+/** Dose por extenso: scoop, colher e unidade nunca podem ser lidos como a mesma medida. */
+function serving(amount: unknown, unit: unknown): string {
+  const parsed = number(amount);
+  if (parsed === null) return NOT_RECORDED;
+  const words = typeof unit === 'string' ? PROTEIN_SERVING_UNIT_WORDS[unit] : undefined;
+  if (!words) return decimal(parsed);
+  return `${decimal(parsed)} ${words[parsed === 1 ? 0 : 1]}`;
 }
 
 function boolText(input: unknown): string {
@@ -568,11 +589,13 @@ export function buildEvolutionReport(data: DataExport): string {
       date(row.localDate) ?? NOT_RECORDED,
       clock(row.localTime),
       boolText(row.consumed),
+      label(PROTEIN_FORMAT_LABELS, row.format ?? 'powder'),
       value(row.powderGrams, 'g'),
-      value(row.servings),
+      serving(row.servings, row.servingUnit),
       value(row.proteinPerServingGrams, 'g'),
       value(row.liquidMl, 'ml'),
       row.mixedWith === 'other' ? text(row.customMixedWith) : label(WHEY_MIX_LABELS, row.mixedWith),
+      text(row.blendedWith),
       text(row.brand),
       text(row.product),
       label(WHEY_MOMENT_LABELS, row.moment),
@@ -853,7 +876,7 @@ export function buildEvolutionReport(data: DataExport): string {
     '',
     ...table(['data', 'estado', 'observações'], coffeeRows),
     '',
-    '## Whey',
+    '## Proteína',
     '',
     '> Registro descritivo de consumo e tolerância. Nenhuma recomendação é derivada destes dados.',
     '',
@@ -862,11 +885,13 @@ export function buildEvolutionReport(data: DataExport): string {
         'data',
         'horário',
         'consumiu',
+        'formato',
         'pó',
         'porções',
         'proteína por porção',
         'líquido',
         'misturado com',
+        'batido com',
         'marca',
         'produto',
         'momento',

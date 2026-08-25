@@ -90,6 +90,75 @@ describe('daily tracking API', () => {
     await pool.end();
   });
 
+  it('records protein by format, serving unit and blended ingredients', async () => {
+    const bottle = await request(users.first, 'POST', '/api/v1/whey-intakes', {
+      brand: 'YoPro',
+      consumed: true,
+      format: 'ready_to_drink',
+      localDate: '2026-08-25',
+      localTime: '07:30',
+      product: 'Morango',
+      proteinPerServingGrams: 25,
+      servingUnit: 'unit',
+      servings: 1,
+      tolerance: ['none'],
+    });
+    expect(bottle.statusCode).toBe(201);
+    expect(bottle.json()).toMatchObject({
+      blendedWith: null,
+      format: 'ready_to_drink',
+      powderGrams: null,
+      servingUnit: 'unit',
+      servings: 1,
+    });
+
+    const shake = await request(users.first, 'POST', '/api/v1/whey-intakes', {
+      blendedWith: 'Banana e abacate',
+      consumed: true,
+      liquidMl: 300,
+      localDate: '2026-08-25',
+      localTime: '19:00',
+      mixedWith: 'skimmed_milk',
+      powderGrams: 30,
+      servingUnit: 'tablespoon',
+      servings: 2,
+      tolerance: [],
+    });
+    expect(shake.statusCode).toBe(201);
+    expect(shake.json()).toMatchObject({
+      blendedWith: 'Banana e abacate',
+      format: 'powder',
+      servingUnit: 'tablespoon',
+    });
+
+    const listed = await request(users.first, 'GET', '/api/v1/whey-intakes?localDate=2026-08-25');
+    expect(listed.statusCode).toBe(200);
+    expect(listed.json().items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ format: 'ready_to_drink', servingUnit: 'unit' }),
+        expect.objectContaining({ blendedWith: 'Banana e abacate', servingUnit: 'tablespoon' }),
+      ]),
+    );
+
+    const powderWithBottleUnit = await request(users.first, 'POST', '/api/v1/whey-intakes', {
+      consumed: true,
+      localDate: '2026-08-25',
+      servingUnit: 'unit',
+      servings: 1,
+      tolerance: [],
+    });
+    expect(powderWithBottleUnit.statusCode).toBe(400);
+
+    const bottleWithPowder = await request(users.first, 'POST', '/api/v1/whey-intakes', {
+      consumed: true,
+      format: 'ready_to_drink',
+      localDate: '2026-08-25',
+      powderGrams: 30,
+      tolerance: [],
+    });
+    expect(bottleWithPowder.statusCode).toBe(400);
+  });
+
   it('updates actual sets incrementally without changing planned targets and calculates partiality', async () => {
     const created = await request(users.first, 'POST', '/api/v1/sessions', {
       exercises: [

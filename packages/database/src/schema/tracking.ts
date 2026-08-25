@@ -33,6 +33,13 @@ export const wheyMixBaseEnum = pgEnum('whey_mix_base', [
   'skimmed_milk',
   'other',
 ]);
+/** Pó, pronto para beber (YoPro) e iogurte proteico dividem a mesma tabela: só o preparo muda. */
+export const proteinFormatEnum = pgEnum('protein_format', ['powder', 'ready_to_drink', 'yogurt']);
+export const proteinServingUnitEnum = pgEnum('protein_serving_unit', [
+  'scoop',
+  'tablespoon',
+  'unit',
+]);
 export const wheyMomentEnum = pgEnum('whey_moment', [
   'morning',
   'pre_workout',
@@ -148,12 +155,15 @@ export const wheyIntakes = pgTable(
     localDate: date('local_date', { mode: 'string' }).notNull(),
     localTime: time('local_time'),
     consumed: boolean('consumed').notNull(),
+    format: proteinFormatEnum('format').default('powder').notNull(),
     powderGrams: numeric('powder_grams', { precision: 7, scale: 2 }),
     servings: numeric('servings', { precision: 5, scale: 2 }),
+    servingUnit: proteinServingUnitEnum('serving_unit'),
     proteinPerServingGrams: numeric('protein_per_serving_grams', { precision: 6, scale: 2 }),
     mixedWith: wheyMixBaseEnum('mixed_with'),
     customMixedWith: text('custom_mixed_with'),
     liquidMl: numeric('liquid_ml', { precision: 8, scale: 2 }),
+    blendedWith: text('blended_with'),
     brand: text('brand'),
     product: text('product'),
     moment: wheyMomentEnum('moment'),
@@ -168,7 +178,15 @@ export const wheyIntakes = pgTable(
     ),
     check(
       'whey_intakes_not_consumed_check',
-      sql`${table.consumed} or num_nonnulls(${table.powderGrams}, ${table.servings}, ${table.proteinPerServingGrams}, ${table.mixedWith}, ${table.liquidMl}, ${table.moment}) = 0`,
+      sql`${table.consumed} or num_nonnulls(${table.powderGrams}, ${table.servings}, ${table.servingUnit}, ${table.proteinPerServingGrams}, ${table.mixedWith}, ${table.liquidMl}, ${table.blendedWith}, ${table.moment}) = 0`,
+    ),
+    check(
+      'whey_intakes_format_fields_check',
+      sql`${table.format} = 'powder' or num_nonnulls(${table.powderGrams}, ${table.mixedWith}, ${table.customMixedWith}, ${table.liquidMl}, ${table.blendedWith}) = 0`,
+    ),
+    check(
+      'whey_intakes_serving_unit_check',
+      sql`${table.servingUnit} is null or (${table.servings} is not null and case when ${table.format} = 'powder' then ${table.servingUnit} in ('scoop', 'tablespoon') else ${table.servingUnit} = 'unit' end)`,
     ),
     check(
       'whey_intakes_tolerance_check',

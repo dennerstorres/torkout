@@ -344,7 +344,7 @@ Conversões úteis:
 - 45 minutos = 2700 segundos;
 - 1 hora = 3600 segundos.
 
-## 9. Café, whey e hábitos do dia
+## 9. Café, proteína e hábitos do dia
 
 ### Café
 
@@ -354,16 +354,25 @@ Em **Hoje → Café de hoje**, escolha um dos três estados: **Não consumi**, *
 Enquanto você não escolher, o dia fica como não registrado. A aplicação nunca trata a falta de
 registro como "não consumi", e "sem açúcar" nunca é lido como ausência de café.
 
-### Whey
+### Proteína
 
-Em **Hoje → Whey de hoje**, toque em **Registrar whey**. Informe se consumiu, o horário e, quando
-houver consumo, quantidade de pó em gramas, porções, proteína informada por porção, com o que foi
-misturado, quantidade do líquido, marca, produto e momento. Só a resposta de consumo é obrigatória.
+Em **Hoje → Proteína de hoje**, toque em **Registrar proteína**. Informe se consumiu, o horário e,
+quando houver consumo, o **Tipo**: whey em pó, pronto para beber (YoPro) ou iogurte proteico. Só a
+resposta de consumo é obrigatória; o tipo já vem como whey em pó.
+
+No tipo **pó** aparecem quantidade em gramas, com o que foi misturado, quantidade do líquido e
+**Batido com** — o campo da vitamina, onde você escreve as frutas e o que mais entrou na batida, como
+banana e abacate. Pronto para beber e iogurte não têm esses campos: são contados por unidade.
+
+A dose vai em **Quantidade de porções** mais **Medida**: ou scoop, ou colher (sopa) — uma medida por
+registro, a que você usou na hora. Proteína informada por porção, marca, produto e momento
+continuam disponíveis nos três tipos.
 
 Em **Tolerância**, marque quantas ocorrências quiser entre sem desconforto, gases, estufamento,
 cólica, diarreia, náusea e outro. Marcar **Sem desconforto** limpa as demais.
 
-A aplicação apenas registra e resume esses dados. Ela não indica dose, marca nem horário.
+A aplicação apenas registra e resume esses dados. Ela não indica dose, marca nem horário, e não
+calcula calorias nem macronutrientes a partir do que foi batido junto.
 
 ### Hábitos do dia
 

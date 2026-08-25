@@ -95,8 +95,10 @@ export function coffeeView(row: typeof coffeeIntakes.$inferSelect) {
 
 export function wheyView(row: typeof wheyIntakes.$inferSelect) {
   return {
+    blendedWith: row.blendedWith,
     brand: row.brand,
     consumed: row.consumed,
+    format: row.format,
     customMixedWith: row.customMixedWith,
     id: row.id,
     liquidMl: row.liquidMl === null ? null : Number(row.liquidMl),
@@ -109,6 +111,7 @@ export function wheyView(row: typeof wheyIntakes.$inferSelect) {
     product: row.product,
     proteinPerServingGrams:
       row.proteinPerServingGrams === null ? null : Number(row.proteinPerServingGrams),
+    servingUnit: row.servingUnit,
     servings: row.servings === null ? null : Number(row.servings),
     tolerance: row.tolerance,
     version: row.version,
@@ -122,9 +125,11 @@ type WheyInput = {
 
 export function wheyValues(input: WheyInput) {
   const values: Record<string, unknown> = {};
+  if ('blendedWith' in input) values.blendedWith = input.blendedWith ?? null;
   if ('brand' in input) values.brand = input.brand ?? null;
   if ('consumed' in input) values.consumed = input.consumed;
   if ('customMixedWith' in input) values.customMixedWith = input.customMixedWith ?? null;
+  if ('format' in input) values.format = input.format;
   if ('liquidMl' in input) values.liquidMl = input.liquidMl?.toString() ?? null;
   if ('localDate' in input) values.localDate = input.localDate;
   if ('localTime' in input) values.localTime = input.localTime ?? null;
@@ -135,6 +140,7 @@ export function wheyValues(input: WheyInput) {
   if ('product' in input) values.product = input.product ?? null;
   if ('proteinPerServingGrams' in input)
     values.proteinPerServingGrams = input.proteinPerServingGrams?.toString() ?? null;
+  if ('servingUnit' in input) values.servingUnit = input.servingUnit ?? null;
   if ('servings' in input) values.servings = input.servings?.toString() ?? null;
   if ('tolerance' in input) values.tolerance = input.tolerance ?? [];
   return values;

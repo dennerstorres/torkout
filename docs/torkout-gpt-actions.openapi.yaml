@@ -536,11 +536,12 @@ paths:
     get:
       operationId: getWheyHistory
       tags: [rotina]
-      summary: Histórico de consumo de whey
+      summary: Histórico de consumo de proteína
       description: >-
-        Retorna os registros de whey do período: consumo ou recusa, quantidade, horário, mistura,
-        volume de líquido, marca, produto, proteína informada por dose, tolerância e observações. Um
-        registro com `consumed: false` é uma recusa registrada, diferente de um dia sem registro.
+        Registros de proteína do período: consumo ou recusa, formato (pó, pronto para beber,
+        iogurte), quantidade e medida da dose, horário, mistura, líquido, ingredientes batidos,
+        marca, produto, proteína por dose, tolerância e observações. `consumed: false` é recusa
+        registrada, não dia sem registro.
       parameters:
         - name: days
           in: query

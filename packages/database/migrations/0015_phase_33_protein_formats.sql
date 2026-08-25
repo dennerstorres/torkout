@@ -1,0 +1,9 @@
+CREATE TYPE "public"."protein_format" AS ENUM('powder', 'ready_to_drink', 'yogurt');--> statement-breakpoint
+CREATE TYPE "public"."protein_serving_unit" AS ENUM('scoop', 'tablespoon', 'unit');--> statement-breakpoint
+ALTER TABLE "whey_intakes" DROP CONSTRAINT "whey_intakes_not_consumed_check";--> statement-breakpoint
+ALTER TABLE "whey_intakes" ADD COLUMN "format" "protein_format" DEFAULT 'powder' NOT NULL;--> statement-breakpoint
+ALTER TABLE "whey_intakes" ADD COLUMN "serving_unit" "protein_serving_unit";--> statement-breakpoint
+ALTER TABLE "whey_intakes" ADD COLUMN "blended_with" text;--> statement-breakpoint
+ALTER TABLE "whey_intakes" ADD CONSTRAINT "whey_intakes_format_fields_check" CHECK ("whey_intakes"."format" = 'powder' or num_nonnulls("whey_intakes"."powder_grams", "whey_intakes"."mixed_with", "whey_intakes"."custom_mixed_with", "whey_intakes"."liquid_ml", "whey_intakes"."blended_with") = 0);--> statement-breakpoint
+ALTER TABLE "whey_intakes" ADD CONSTRAINT "whey_intakes_serving_unit_check" CHECK ("whey_intakes"."serving_unit" is null or ("whey_intakes"."servings" is not null and case when "whey_intakes"."format" = 'powder' then "whey_intakes"."serving_unit" in ('scoop', 'tablespoon') else "whey_intakes"."serving_unit" = 'unit' end));--> statement-breakpoint
+ALTER TABLE "whey_intakes" ADD CONSTRAINT "whey_intakes_not_consumed_check" CHECK ("whey_intakes"."consumed" or num_nonnulls("whey_intakes"."powder_grams", "whey_intakes"."servings", "whey_intakes"."serving_unit", "whey_intakes"."protein_per_serving_grams", "whey_intakes"."mixed_with", "whey_intakes"."liquid_ml", "whey_intakes"."blended_with", "whey_intakes"."moment") = 0);

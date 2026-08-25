@@ -6,7 +6,7 @@
 
 **Unidade de entrega:** fase completa com commit de encerramento
 
-**Status geral:** Fases 0–25 concluídas e validação física aprovada; a instância de produção está no ar em <https://torkout.dennerstorres.dev>. Fases 28 (cadastro público fechado) e 29 (modo demonstração local) concluídas no código, aguardando deploy. Fase 27 (CI de segurança) concluída. Resta a Fase 26 (backup externo comprovado).
+**Status geral:** Fases 0–25 concluídas e validação física aprovada; a instância de produção está no ar em <https://torkout.dennerstorres.dev>. Fases 28 (cadastro público fechado) e 29 (modo demonstração local) concluídas no código, aguardando deploy. Fase 27 (CI de segurança) concluída. Resta a Fase 26 (backup externo comprovado). Fase 33 (registro de proteína por formato, medida e vitamina) concluída no código, aguardando deploy da migração e validação no iPhone.
 
 ## 1. Regras de execução
 
@@ -1823,11 +1823,64 @@ também consome. O MCP continua funcionando exatamente como antes, e nada nesta 
 - Lint, formatação, typecheck, testes unitários, integração e build verdes.
 - `HISTORY.md` atualizado e fase encerrada em commit próprio.
 
+### Fase 33 — Registro de proteína por formato, medida e vitamina
+
+**Status:** concluída no código; migração pendente de deploy e validação física no iPhone
+
+**Commit esperado:** `feat(phase-33): record protein by format, serving unit and blended ingredients`
+
+**Objetivo:** permitir registrar no mesmo histórico o whey em pó e a proteína pronta para beber
+(YoPro), medir a dose por scoop ou por colher de sopa e descrever a vitamina em que o whey foi
+batido.
+
+**Motivação:** o titular passou a consumir proteína pronta para beber nos dias de treino e costuma
+bater o whey com banana e abacate. O formulário atual só aceita pó dissolvido em líquido, mede a dose
+apenas em porções sem unidade declarada e não tem onde registrar o que foi batido junto. O consumo
+real fica fora do registro, e o histórico de tolerância perde a comparação entre formatos.
+
+**Restrição central:** um único histórico de proteína. Nada de segunda entidade, segunda tabela ou
+segundo formulário: o registro existente ganha formato, unidade de porção e ingredientes, e os
+registros já gravados continuam válidos como pó sem reescrita de dado.
+
+#### Escopo
+
+- [x] `format` (`powder`, `ready_to_drink`, `yogurt`) no contrato, no schema e na tela, com `powder`
+      como padrão e como leitura dos registros anteriores.
+- [x] `servingUnit` (`scoop`, `tablespoon`, `unit`) ao lado de `servings`, exclusivo por registro.
+- [x] `blendedWith`: texto livre dos ingredientes batidos junto, somado — nunca substituto — ao
+      líquido base já existente.
+- [x] Migração versionada com rollback, sem reescrever linha existente.
+- [x] Tela `Hoje` renomeada para "Proteína de hoje", com os campos de pó visíveis somente no formato
+      pó e a lista do dia exibindo formato e medida.
+- [x] Relatório de evolução, consultas de IA/MCP, exportação e guia do usuário coerentes com os campos
+      novos.
+
+#### Testes primeiro
+
+- [x] RED de contrato: formato pronto para beber aceito sem gramas de pó; gramas de pó, líquido,
+      quantidade de líquido e ingredientes recusados fora do formato pó.
+- [x] RED de contrato: `scoop` e `tablespoon` recusados fora do pó, `unit` recusada no pó, unidade
+      sem quantidade de porções recusada.
+- [x] RED de contrato: ingredientes batidos recusados quando não houve consumo.
+- [x] RED de schema: as mesmas recusas comprovadas por constraint em PostgreSQL real, e linha antiga
+      sem formato lida como pó.
+- [x] RED de API: `POST /api/v1/whey-intakes` grava e devolve formato, unidade e ingredientes.
+- [x] RED de tela: registrar YoPro sem campo de pó, medir em colher de sopa e salvar a vitamina com
+      banana e abacate.
+- [x] RED de leitura: relatório de evolução e histórico de IA expõem formato, unidade e ingredientes.
+
+#### Critérios de saída
+
+- Registro anterior à fase continua legível, exportável e sem formato inventado além de pó.
+- Nenhuma estimativa de caloria ou macronutriente é derivada dos ingredientes.
+- Lint, formatação, typecheck, testes unitários, integração e build verdes.
+- `HISTORY.md` atualizado e fase encerrada em commit próprio.
+
 ## 5. Dependências entre fases
 
 ```text
 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21
-  → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29 → 30 → 31 → 32
+  → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29 → 30 → 31 → 32 → 33
 ```
 
 As Fases 26 e 27 são independentes entre si e podem ser executadas em qualquer ordem; ambas dependem
@@ -1846,6 +1899,9 @@ foi descoberta ali.
 
 A Fase 32 depende da 30. Ela não acrescenta consulta nem regra: extrai a camada de leitura que o MCP
 já usa e a expõe também por REST, para um cliente que fala OpenAPI em vez de MCP.
+
+A Fase 33 depende da 22, que criou o registro de whey, e toca as leituras entregues pelas Fases 30 e
+32 apenas para mantê-las coerentes com os campos novos. Não depende da 26 nem da 27.
 
 Trabalhos internos de uma mesma fase podem ser paralelos somente quando não compartilham arquivos ou contratos instáveis. O encerramento continua único.
 

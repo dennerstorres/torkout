@@ -123,7 +123,9 @@ function exportData(): DataExport {
       ],
       wheyIntakes: [
         {
+          blendedWith: 'Banana e abacate',
           consumed: true,
+          format: 'powder',
           id: 'whey-1',
           liquidMl: '300.00',
           localDate: '2026-07-10',
@@ -131,7 +133,21 @@ function exportData(): DataExport {
           mixedWith: 'skimmed_milk',
           moment: 'post_workout',
           powderGrams: '30.00',
+          servingUnit: 'tablespoon',
+          servings: '2.00',
           tolerance: ['none'],
+        },
+        {
+          brand: 'YoPro',
+          consumed: true,
+          format: 'ready_to_drink',
+          id: 'whey-2',
+          localDate: '2026-07-11',
+          localTime: '07:30:00',
+          proteinPerServingGrams: '25.00',
+          servingUnit: 'unit',
+          servings: '1.00',
+          tolerance: [],
         },
       ],
       workoutSessions: [
@@ -216,11 +232,23 @@ describe('evolution Markdown report', () => {
     expect(report).toMatch(/## Café[\s\S]*Dias sem registro de café no período: /);
   });
 
-  it('reports whey consumption and tolerance from the structured record', () => {
+  it('reports protein consumption and tolerance from the structured record', () => {
     const report = buildEvolutionReport(exportData());
-    expect(report).toMatch(/## Whey[\s\S]*\| 2026-07-10 \| 19:30 \| sim \| 30 g \|/);
-    expect(report).toMatch(/## Whey[\s\S]*Leite desnatado/);
-    expect(report).toMatch(/## Whey[\s\S]*Sem desconforto/);
+    expect(report).toMatch(
+      /## Proteína[\s\S]*\| 2026-07-10 \| 19:30 \| sim \| Whey em pó \| 30 g \|/,
+    );
+    expect(report).toMatch(/## Proteína[\s\S]*Leite desnatado/);
+    expect(report).toMatch(/## Proteína[\s\S]*Sem desconforto/);
+  });
+
+  it('keeps the ready to drink bottle apart from the powder shake', () => {
+    const report = buildEvolutionReport(exportData());
+    expect(report).toMatch(/## Proteína[\s\S]*2 colheres \(sopa\)/);
+    expect(report).toMatch(/## Proteína[\s\S]*Banana e abacate/);
+    expect(report).toMatch(
+      /## Proteína[\s\S]*\| 2026-07-11 \| 07:30 \| sim \| Pronto para beber \|/,
+    );
+    expect(report).toMatch(/## Proteína[\s\S]*1 unidade/);
   });
 
   it('separates explicit "no pain" answers from missing records', () => {

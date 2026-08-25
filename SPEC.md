@@ -383,9 +383,10 @@ indicador ou relatório.
 **COFFEE-004:** um dia sem registro é ausência de informação e nunca é convertido em
 `not_consumed`. Registros antigos de hábito só são reclassificados quando o valor é inequívoco.
 
-**WHEY-001:** o consumo de whey registra se houve consumo, data, horário, gramas de pó, porções,
-proteína informada por porção, líquido usado, quantidade do líquido, marca, produto, momento e
-observações. Somente o consumo, a data e a tolerância são obrigatórios.
+**WHEY-001:** o consumo de proteína registra se houve consumo, data, horário, formato, gramas de pó,
+porções e a unidade da porção, proteína informada por porção, líquido usado, quantidade do líquido,
+ingredientes batidos junto, marca, produto, momento e observações. Somente o consumo, a data, o
+formato e a tolerância são obrigatórios.
 
 **WHEY-002:** o líquido aceita água, leite integral, leite semidesnatado, leite desnatado ou outro,
 com descrição livre exigida apenas em "outro".
@@ -396,10 +397,23 @@ com descrição livre exigida apenas em "outro".
 estufamento, cólica, diarreia, náusea e outro. "Sem desconforto" não pode ser combinado com as
 demais.
 
-**WHEY-005:** quando não houve consumo, quantidades e líquido não podem ser registrados.
+**WHEY-005:** quando não houve consumo, quantidades, líquido e ingredientes não podem ser
+registrados.
 
-**WHEY-006:** o sistema registra e resume os dados de whey e tolerância, sem qualquer recomendação
-médica ou nutricional automática.
+**WHEY-006:** o sistema registra e resume os dados de proteína e tolerância, sem qualquer
+recomendação médica ou nutricional automática.
+
+**WHEY-007:** o formato aceita pó, pronto para beber e iogurte proteico. Um registro sem formato
+declarado é pó, inclusive os anteriores à existência do campo. Gramas de pó, líquido usado,
+quantidade do líquido e ingredientes batidos junto pertencem apenas ao formato pó; os demais formatos
+são contados por unidade consumida.
+
+**WHEY-008:** a porção é medida em scoop, colher de sopa ou unidade — uma medida por registro, nunca
+duas somadas. Scoop e colher de sopa valem apenas no formato pó, unidade apenas nos demais formatos,
+e a unidade só é registrada junto com a quantidade de porções.
+
+**WHEY-009:** os ingredientes batidos junto com a proteína são texto livre descritivo. Nenhuma
+caloria, macronutriente ou equivalência nutricional é derivada deles.
 
 ### 7.9 Medidas corporais
 
@@ -710,8 +724,9 @@ Todas as tabelas de domínio incluem `id uuid`, `user_id uuid` quando aplicável
   estruturadas e observação.
 - `coffee_intakes`: data local, estado explícito do café, instante do registro e observação; no
   máximo um registro vigente por data.
-- `whey_intakes`: data local, horário, consumo, gramas de pó, porções, proteína por porção, líquido
-  usado, quantidade do líquido, marca, produto, momento, tolerância múltipla e observação.
+- `whey_intakes`: data local, horário, consumo, formato, gramas de pó, porções, unidade da porção,
+  proteína por porção, líquido usado, quantidade do líquido, ingredientes batidos junto, marca,
+  produto, momento, tolerância múltipla e observação.
 - `progress_photos`: data local, instante da captura, pose, chave de armazenamento, tipo, tamanho,
   dimensões, medição associada e observação. O binário nunca é gravado no PostgreSQL.
 

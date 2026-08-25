@@ -8,6 +8,7 @@ import {
   getMeasurementSummary,
   getMeasurements,
   getNutrition,
+  getWheyHistory,
   getProfile,
   getProgress,
   getRecovery,
@@ -464,6 +465,78 @@ describe('getNutrition', () => {
     expect(result.coffee.not_consumed).toBe(1);
     expect(result.coffee.with_sugar).toBe(1);
     expect(result.coffee.days_without_record).toBe(11);
+  });
+});
+
+describe('getWheyHistory', () => {
+  it('distinguishes the ready to drink bottle from the powder shake', () => {
+    const result = getWheyHistory(
+      context({
+        wheyIntakes: [
+          {
+            blendedWith: null,
+            brand: 'YoPro',
+            consumed: true,
+            deletedAt: null,
+            format: 'ready_to_drink',
+            id: 'w1',
+            localDate: '2026-08-01',
+            servingUnit: 'unit',
+            servings: '1.00',
+            tolerance: [],
+          },
+          {
+            blendedWith: 'Banana e abacate',
+            consumed: true,
+            deletedAt: null,
+            format: 'powder',
+            id: 'w2',
+            localDate: '2026-08-02',
+            mixedWith: 'skimmed_milk',
+            powderGrams: '30.00',
+            servingUnit: 'tablespoon',
+            servings: '2.00',
+            tolerance: [],
+          },
+        ] as never,
+      }),
+      {},
+    );
+
+    expect(result.entries).toEqual([
+      expect.objectContaining({
+        blended_with: 'Banana e abacate',
+        format: 'powder',
+        serving_unit: 'tablespoon',
+        servings: 2,
+      }),
+      expect.objectContaining({
+        blended_with: null,
+        format: 'ready_to_drink',
+        powder_grams: null,
+        serving_unit: 'unit',
+      }),
+    ]);
+  });
+
+  it('reads a record without a declared format as powder', () => {
+    const result = getWheyHistory(
+      context({
+        wheyIntakes: [
+          {
+            consumed: true,
+            deletedAt: null,
+            id: 'w3',
+            localDate: '2026-08-01',
+            powderGrams: '30.00',
+            tolerance: [],
+          },
+        ] as never,
+      }),
+      {},
+    );
+
+    expect(result.entries[0]).toMatchObject({ format: 'powder', serving_unit: null });
   });
 });
 

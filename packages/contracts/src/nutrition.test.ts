@@ -4,6 +4,7 @@ import {
   coffeeIntakeCreateSchema,
   coffeeIntakeUpdateSchema,
   wheyIntakeCreateSchema,
+  wheyIntakeUpdateSchema,
 } from './nutrition.js';
 
 describe('coffee intake contract', () => {
@@ -95,5 +96,107 @@ describe('whey intake contract', () => {
 
   it('keeps every detail optional so the form stays quick', () => {
     expect(wheyIntakeCreateSchema.safeParse(base).success).toBe(true);
+  });
+});
+
+describe('protein format', () => {
+  const base = { consumed: true, localDate: '2026-08-25' };
+
+  it('reads a record without a declared format as powder', () => {
+    expect(wheyIntakeCreateSchema.parse(base).format).toBe('powder');
+  });
+
+  it('accepts a ready to drink bottle with no powder at all', () => {
+    const parsed = wheyIntakeCreateSchema.safeParse({
+      ...base,
+      brand: 'YoPro',
+      format: 'ready_to_drink',
+      product: 'Morango',
+      proteinPerServingGrams: 25,
+      servingUnit: 'unit',
+      servings: 1,
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it('rejects powder preparation fields outside the powder format', () => {
+    for (const field of [
+      { powderGrams: 30 },
+      { mixedWith: 'skimmed_milk' as const },
+      { liquidMl: 300 },
+      { blendedWith: 'Banana e abacate' },
+    ]) {
+      expect(
+        wheyIntakeCreateSchema.safeParse({ ...base, format: 'ready_to_drink', ...field }).success,
+      ).toBe(false);
+    }
+  });
+
+  it('rejects a format the application does not register', () => {
+    expect(wheyIntakeCreateSchema.safeParse({ ...base, format: 'bar' }).success).toBe(false);
+  });
+});
+
+describe('protein serving unit', () => {
+  const base = { consumed: true, localDate: '2026-08-25' };
+
+  it('measures the powder dose by scoop or by tablespoon', () => {
+    for (const servingUnit of ['scoop', 'tablespoon'] as const) {
+      expect(wheyIntakeCreateSchema.safeParse({ ...base, servingUnit, servings: 2 }).success).toBe(
+        true,
+      );
+    }
+  });
+
+  it('keeps the unit tied to the format', () => {
+    expect(
+      wheyIntakeCreateSchema.safeParse({ ...base, servingUnit: 'unit', servings: 1 }).success,
+    ).toBe(false);
+    expect(
+      wheyIntakeCreateSchema.safeParse({
+        ...base,
+        format: 'ready_to_drink',
+        servingUnit: 'scoop',
+        servings: 1,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('does not accept a unit without the amount it measures', () => {
+    expect(wheyIntakeCreateSchema.safeParse({ ...base, servingUnit: 'scoop' }).success).toBe(false);
+  });
+
+  it('accepts an update that only changes the unit', () => {
+    expect(wheyIntakeUpdateSchema.safeParse({ servingUnit: 'tablespoon' }).success).toBe(true);
+  });
+});
+
+describe('blended ingredients', () => {
+  const base = { consumed: true, localDate: '2026-08-25' };
+
+  it('records the fruit shake next to the liquid base', () => {
+    const parsed = wheyIntakeCreateSchema.safeParse({
+      ...base,
+      blendedWith: 'Banana e abacate',
+      liquidMl: 300,
+      mixedWith: 'skimmed_milk',
+      powderGrams: 30,
+    });
+    expect(parsed.success).toBe(true);
+    expect(parsed.success && parsed.data.blendedWith).toBe('Banana e abacate');
+  });
+
+  it('does not accept ingredients when the protein was not consumed', () => {
+    expect(
+      wheyIntakeCreateSchema.safeParse({
+        blendedWith: 'Banana e abacate',
+        consumed: false,
+        localDate: '2026-08-25',
+      }).success,
+    ).toBe(false);
+  });
+
+  it('rejects an empty description instead of storing blank text', () => {
+    expect(wheyIntakeCreateSchema.safeParse({ ...base, blendedWith: '   ' }).success).toBe(false);
   });
 });

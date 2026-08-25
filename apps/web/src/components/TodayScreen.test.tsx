@@ -103,7 +103,7 @@ describe('Today mobile tracking', () => {
     expect(complementaryRegion).toHaveTextContent('Dor e desconforto');
     expect(complementaryRegion).toHaveTextContent('Peso e medidas');
     expect(complementaryRegion).toHaveTextContent('Café de hoje');
-    expect(complementaryRegion).toHaveTextContent('Whey de hoje');
+    expect(complementaryRegion).toHaveTextContent('Proteína de hoje');
     expect(sessionsRegion.compareDocumentPosition(summaryRegion)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
@@ -484,7 +484,7 @@ describe('Today mobile tracking', () => {
     database.close();
   });
 
-  it('shows the daily coffee and whey records', async () => {
+  it('shows the daily coffee and protein records', async () => {
     const database = await seed();
     render(
       <TodayScreen
@@ -498,7 +498,7 @@ describe('Today mobile tracking', () => {
 
     expect(await screen.findByRole('radiogroup', { name: /café de hoje/i })).toBeVisible();
     expect(screen.getByRole('radio', { name: 'Sem açúcar' })).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Registrar whey' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Registrar proteína' })).toBeVisible();
     database.close();
   });
 
