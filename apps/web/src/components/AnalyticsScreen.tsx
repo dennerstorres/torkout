@@ -403,7 +403,13 @@ function AccessibleLineChart({
               <XAxis dataKey="date" tickFormatter={dateLabel} />
               <YAxis />
               <Tooltip labelFormatter={(label) => dateLabel(String(label))} />
-              <Line dataKey="value" dot type="monotone" stroke="#245b3c" strokeWidth={3} />
+              <Line
+                dataKey="value"
+                dot
+                type="monotone"
+                stroke="var(--color-primary)"
+                strokeWidth={3}
+              />
             </LineChart>
           </div>
           <table aria-label={tableName}>

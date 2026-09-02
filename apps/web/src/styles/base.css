@@ -16,7 +16,9 @@ body {
   min-height: 100dvh;
   margin: 0;
   overflow-x: clip;
-  background: var(--color-canvas);
+  background:
+    radial-gradient(circle at 18% -8%, rgb(239 203 118 / 7%), transparent 24rem),
+    var(--color-canvas);
   color: var(--color-text);
 }
 
@@ -37,24 +39,26 @@ p {
 h1,
 h2,
 h3 {
-  font-family: 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Display', 'Segoe UI', system-ui,
+    sans-serif;
   text-wrap: balance;
 }
 
 h1 {
   margin: var(--space-1) 0 var(--space-3);
-  font-size: clamp(2rem, 4vw, 3rem);
-  font-weight: 760;
-  letter-spacing: -0.045em;
-  line-height: 1.02;
+  font-size: 2.35rem;
+  font-weight: 780;
+  letter-spacing: -0.035em;
+  line-height: 1;
 }
 
 h2 {
   margin: 0;
-  font-size: clamp(1.15rem, 2vw, 1.45rem);
-  font-weight: 720;
-  letter-spacing: -0.025em;
-  line-height: 1.15;
+  font-size: 1.35rem;
+  font-weight: 730;
+  letter-spacing: -0.02em;
+  line-height: 1.12;
 }
 
 h3 {
@@ -100,7 +104,7 @@ textarea {
   font-size: 1rem;
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-sm);
-  background: var(--color-canvas-soft);
+  background: var(--color-surface);
   color: var(--color-text);
   padding: 0.72rem 0.8rem;
   transition:
@@ -112,7 +116,7 @@ textarea {
 input:hover,
 select:hover,
 textarea:hover {
-  border-color: rgb(202 222 211 / 46%);
+  border-color: rgb(239 203 118 / 48%);
 }
 
 textarea {
@@ -145,7 +149,7 @@ button {
 }
 
 button:hover:not(:disabled) {
-  border-color: rgb(202 222 211 / 50%);
+  border-color: rgb(239 203 118 / 52%);
   background: var(--color-surface-highlighted);
 }
 
@@ -173,7 +177,7 @@ button.primary:hover:not(:disabled),
 
 button.danger,
 .button--danger {
-  border-color: rgb(255 123 115 / 42%);
+  border-color: rgb(255 140 131 / 42%);
   background: var(--color-danger-soft);
   color: var(--color-danger);
 }
@@ -199,6 +203,7 @@ fieldset {
   margin: 0;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
+  background: rgb(239 203 118 / 2.5%);
   padding: var(--space-4);
 }
 
@@ -219,6 +224,12 @@ code {
   background: var(--color-canvas-soft);
   padding: 0.15rem 0.35rem;
   font-size: 0.88em;
+}
+
+@media (min-width: 64rem) {
+  h1 {
+    font-size: 2.65rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

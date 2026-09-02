@@ -10,12 +10,17 @@ import { BrandMark } from './BrandMark';
 export type AuthenticatedView =
   'account' | 'analytics' | 'history' | 'photos' | 'planning' | 'progression' | 'today';
 
-const destinations: Array<{ icon: IconName; label: string; view: AuthenticatedView }> = [
-  { icon: 'home', label: 'Hoje', view: 'today' },
-  { icon: 'calendar', label: 'Planejamento', view: 'planning' },
-  { icon: 'history', label: 'Histórico', view: 'history' },
-  { icon: 'analytics', label: 'Progresso', view: 'analytics' },
-  { icon: 'account', label: 'Conta', view: 'account' },
+const destinations: Array<{
+  compactLabel: string;
+  icon: IconName;
+  label: string;
+  view: AuthenticatedView;
+}> = [
+  { compactLabel: 'Hoje', icon: 'home', label: 'Hoje', view: 'today' },
+  { compactLabel: 'Plano', icon: 'calendar', label: 'Planejamento', view: 'planning' },
+  { compactLabel: 'Histórico', icon: 'history', label: 'Histórico', view: 'history' },
+  { compactLabel: 'Progresso', icon: 'analytics', label: 'Progresso', view: 'analytics' },
+  { compactLabel: 'Conta', icon: 'account', label: 'Conta', view: 'account' },
 ];
 
 interface Props {
@@ -129,13 +134,19 @@ function PrimaryNavigation({ onNavigate, view }: Pick<Props, 'onNavigate' | 'vie
     <nav aria-label="Navegação principal" className="primary-navigation">
       {destinations.map((item) => (
         <button
+          aria-label={item.label}
           aria-current={view === item.view ? 'page' : undefined}
           key={item.view}
           type="button"
           onClick={() => onNavigate(item.view)}
         >
           <Icon name={item.icon} />
-          <span>{item.label}</span>
+          <span aria-hidden="true" className="navigation-label navigation-label--compact">
+            {item.compactLabel}
+          </span>
+          <span aria-hidden="true" className="navigation-label navigation-label--full">
+            {item.label}
+          </span>
         </button>
       ))}
     </nav>

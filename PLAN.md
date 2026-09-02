@@ -1876,11 +1876,67 @@ registros já gravados continuam válidos como pó sem reescrita de dado.
 - Lint, formatação, typecheck, testes unitários, integração e build verdes.
 - `HISTORY.md` atualizado e fase encerrada em commit próprio.
 
+### Fase 34 — Direção visual preto e dourado
+
+**Status:** implementação concluída; aceite visual e iPhone físico pendentes
+
+**Commit esperado:** `feat(phase-34): refactor the interface around the focused daily experience`
+
+**Referência visual:** post público de `@lasuliss` no X (`2094977060397576447`), com três capturas
+de uma PWA mobile em preto e dourado. A referência orienta composição e linguagem visual; nenhum
+asset, marca ou código de terceiros entra no bundle.
+
+**Objetivo:** refatorar a UI/UX completa do Torkout para uma experiência focada, tátil e noturna,
+priorizando o treino do dia, a leitura rápida e a navegação com uma mão, sem alterar regras de
+negócio, persistência local, sincronização, privacidade ou acessibilidade.
+
+#### Direção visual e de interação
+
+- Preto profundo e superfícies quentes quase pretas, com um único acento dourado de alto contraste.
+- Navegação mobile flutuante e persistente, com destino ativo inequívoco e safe area preservada.
+- Tela Hoje abre com orientação semanal e um resumo destacado do treino principal; formulários e
+  registros secundários permanecem abaixo e usam progressive disclosure já existente.
+- Bordas, brilhos e transparência aparecem somente quando comunicam seleção, sobreposição ou foco.
+- Desktop preserva densidade e largura útil, traduzindo a mesma linguagem para trilho lateral e
+  painéis sem transformar a aplicação em uma grade genérica de cards.
+- Sentence case, números tabulares, alvos de 44 px, WCAG 2.2 AA, reduced motion e forced colors.
+
+#### Escopo
+
+- [x] Registrar `PRODUCT.md`, atualizar `DESIGN.md` e configurar o modo visual local.
+- [x] Atualizar tokens, marca, favicon e ícones PWA para a paleta preto/dourado.
+- [x] Redesenhar shell, cabeçalho, navegação mobile/desktop e estados de sincronização.
+- [x] Reorganizar Hoje com faixa semanal semântica e resumo prioritário do treino.
+- [x] Aplicar a nova hierarquia a Planejamento, Histórico, Progresso, Conta e fluxos públicos.
+- [x] Reduzir padrões genéricos: eyebrows em caixa alta, side stripes, over-rounding, nested cards e
+      combinações decorativas de borda com sombra larga.
+- [x] Atualizar o laboratório do sistema visual e a documentação afetada.
+
+#### Testes primeiro
+
+- [x] RED de componente: Hoje ainda não expõe uma faixa semanal semântica nem o resumo prioritário
+      com quantidade de exercícios e séries.
+- [x] GREEN de componente: o dia atual usa `aria-current="date"` e o resumo deriva apenas do snapshot
+      local da sessão.
+- [x] Regressões de shell, autenticação, Hoje, Planejamento, Histórico, Progresso e Conta verdes.
+- [x] Formatação, lint, typecheck, testes web e build verdes.
+- [x] Invariantes responsivos existentes verdes; snapshots continuam suspensos até novo aceite
+      humano.
+
+#### Critérios de saída
+
+- Hierarquia e navegação coerentes com a referência em 320, 390, 768, 1024 e 1440 px.
+- A próxima ação do dia é identificável em até cinco segundos e continua operável offline.
+- Nenhum conteúdo essencial fica sob navegação fixa, teclado virtual ou safe area.
+- Contraste, foco, zoom, forced colors e redução de movimento permanecem suportados.
+- Nenhum dado, fórmula, contrato, endpoint ou comportamento de sincronização é alterado.
+- `HISTORY.md` registra Red, Green, Refactor, limites de validação visual e aceite pendente.
+
 ## 5. Dependências entre fases
 
 ```text
 0 → 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21
-  → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29 → 30 → 31 → 32 → 33
+  → 22 → 23 → 24 → 25 → 26 → 27 → 28 → 29 → 30 → 31 → 32 → 33 → 34
 ```
 
 As Fases 26 e 27 são independentes entre si e podem ser executadas em qualquer ordem; ambas dependem

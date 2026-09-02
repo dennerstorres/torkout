@@ -2823,3 +2823,84 @@ conversa real, e a verificação em iPhone físico, que não se aplica a esta ca
   (`fast-uri` CVE-2026-18446, `nanoid` CVE-2026-67213, `undici` CVE-2026-13697), já vermelhas na
   execução agendada de 24/08/2026. Não têm relação com esta fase e continuam abertas.
 - Validação física no iPhone continua pendente, como manda a regra 12 do `CLAUDE.md`.
+
+## 2026-09-02 — Fase 34: direção visual preto e dourado
+
+**Status:** implementação concluída; aceite visual e iPhone físico pendentes
+
+**Commit esperado:** `feat(phase-34): refactor the interface around the focused daily experience`
+
+### Referência e auditoria inicial
+
+- O post público `@lasuliss/2094977060397576447` contém três capturas mobile em preto e dourado.
+  Foram recuperadas em resolução original apenas para inspeção local; nenhum asset, marca ou código
+  da referência será incorporado ao Torkout.
+- A linguagem aplicável é: fundo quase preto, acento dourado quente, tipografia grande e direta,
+  orientação semanal, resumo prioritário da atividade e navegação inferior flutuante. Blur e brilho
+  ficam restritos a sobreposição, seleção e foco.
+- `impeccable` 3.9.1 e `redesign-existing-projects` foram lidas integralmente. A primeira definiu o
+  registro `product`, os limites de contraste e os anti-padrões; a segunda serviu como checklist de
+  hierarquia, densidade, estados e preservação da stack.
+- `PRODUCT.md` foi criado em `apps/web` a partir do `SPEC.md`, do README, do contrato visual e da
+  referência. O modo visual local foi configurado para o shell Vite; não há CSP a ajustar.
+
+### Evidência Red
+
+- O teste de componente `frames the day with a semantic week strip and a prioritized workout
+summary` falhou porque Hoje não tinha uma lista chamada "Semana atual", não marcava o dia com
+  `aria-current="date"` e ainda apresentava o cabeçalho genérico "Sessões de hoje" sem a contagem
+  de exercícios e séries do treino principal.
+- Comando: `pnpm vitest run --project unit-web apps/web/src/components/TodayScreen.test.tsx
+--reporter=verbose`.
+- Resultado esperado observado: 1 falha comportamental nova por ausência da faixa semanal. A segunda
+  falha do arquivo ocorreu em cascata porque o teste Red interrompeu antes de fechar a conexão Dexie;
+  ela não representa regressão anterior e deve desaparecer quando o cenário novo chegar ao fim.
+
+### Green
+
+- Hoje passou a expor a semana civil como lista, a marcar o dia com `aria-current="date"` e a resumir
+  o treino principal pelo snapshot local: nome, exercícios e séries. Descanso recebe texto próprio e
+  os estados terminais preservam a mensagem operacional já existente.
+- O shell ganhou navegação inferior flutuante com safe area, destino selecionado por contorno e fundo
+  completos e rótulo compacto "Plano" somente no mobile. O nome acessível continua
+  "Planejamento"; no desktop o rótulo completo reaparece.
+- A paleta preto/dourado agora nasce dos tokens e chega aos fluxos públicos, formulários, calendários,
+  tabelas, gráficos, estados de foco e sincronização. O resumo do treino é o único grande plano
+  dourado; o restante usa superfícies quentes quase pretas para preservar prioridade.
+- Marca vetorial, favicon, Apple Touch Icon, PNGs PWA, manifest e `theme-color` foram regenerados a
+  partir da mesma fonte dourada. Nenhum arquivo da referência foi mantido no repositório.
+
+### Refactor
+
+- `DESIGN.md` 1.2 registra a cena de uso, a estratégia de cor, tipografia, raio, sombra, navegação e
+  limites de decoração. `PRODUCT.md` registra público, propósito, personalidade e anti-referências.
+- Side stripes deixaram de representar seleção ou segurança; esses estados agora usam contorno
+  completo e texto explícito. Eyebrows voltaram a sentence case, raios e sombras foram contidos e o
+  gráfico deixou de carregar a cor primária hard-coded.
+- O conteúdo ganha largura máxima de 1344 px e permanece centralizado em telas maiores. O invariante
+  E2E foi atualizado para exigir largura total até esse limite e centralização acima dele.
+- `redesign-existing-projects` influenciou a preservação da stack e da arquitetura de componentes, a
+  redução de padrões genéricos e a checagem de todos os estados, sem dependência ou biblioteca nova.
+
+### Verificação
+
+- `pnpm verify:phase-15`: estrutura visual verde, 16 arquivos obrigatórios presentes.
+- Teste focado de Hoje: 17/17; shell + Hoje: 21/21; suíte web: 152/152.
+- `pnpm test`: 65 arquivos e 483 testes unitários verdes nos projetos `unit-node` e `unit-web`.
+- `pnpm format:check`, `pnpm lint`, `pnpm typecheck` e `pnpm build`: verdes. O build ainda emite o
+  aviso não bloqueante de chunk principal acima de 500 kB.
+- Playwright em Chromium mobile: 24 testes executáveis verdes em `accessibility.spec.ts`,
+  `pwa.spec.ts` e `visual.spec.ts`; 2 snapshots legados continuaram intencionalmente em `skip` até
+  aceite humano. Foram cobertos 320, 360, 390, 430, 768, 1024, 1366, 1440 e 1920 px, WCAG AA, zoom de
+  200%, teclado, reduced motion e forced colors.
+- A primeira rodada E2E revelou somente as três expectativas RGB antigas do ícone maskable. Elas
+  foram atualizadas para preto `#050505`, tinta `#171004` e dourado `#efcb76`; a repetição ficou 2/2.
+
+### Limites preservados
+
+- A fase é de apresentação e arquitetura de informação. Nenhum contrato, endpoint, schema, fórmula,
+  dado de saúde, IndexedDB, outbox ou regra de sincronização foi alterado.
+- Aceite visual humano e validação em iPhone físico continuam gates explícitos; testes automatizados
+  não serão apresentados como substitutos.
+- O navegador embutido não estava disponível nesta sessão. A inspeção automatizada real foi feita
+  com o Chromium do projeto, mas os snapshots novos não foram aprovados nem gravados.

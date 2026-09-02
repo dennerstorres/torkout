@@ -1,7 +1,7 @@
 # Sistema de design do Torkout
 
 **Status:** contrato visual obrigatório
-**Versão:** 1.1 — Fase 15, adendo de ritmo interno
+**Versão:** 1.2 — Fase 34, direção visual preto e dourado
 **Fonte executável:** `apps/web/src/styles/tokens.css` e arquivos importados por `apps/web/src/styles.css`
 
 Este documento define como o Torkout deve parecer e se comportar. Toda alteração de interface deve
@@ -12,8 +12,9 @@ alinhar ambos e validar o laboratório `/design-system`.
 
 1. **Clareza antes de decoração.** A ação principal e o estado atual aparecem antes de métricas,
    explicações e ações secundárias.
-2. **Calmo, direto e pessoal.** O produto usa uma base escura verde-neutra e apenas um acento lima.
-   Não usa gradiente azul/roxo, sombras pretas genéricas nem cartões para todo bloco de conteúdo.
+2. **Focado, tátil e pessoal.** O produto usa preto profundo, superfícies quentes quase pretas e um
+   único acento dourado. Não usa gradiente azul/roxo, neon fitness, sombras pretas genéricas nem
+   cartões para todo bloco de conteúdo.
 3. **Mobile first, desktop composto.** A ordem semântica é definida para 320 px; telas maiores
    reorganizam a mesma informação sem deixar cartões órfãos ou criar grandes vazios.
 4. **Ritmo explícito.** Label e seu controle usam 8 px; campos irmãos e título/conteúdo usam
@@ -24,6 +25,11 @@ alinhar ambos e validar o laboratório `/design-system`.
 6. **Acessibilidade é estrutural.** Teclado, leitor de tela, zoom de 200%, contraste forçado e redução
    de movimento pertencem ao componente, não a uma etapa posterior.
 
+Cena de uso: uma pessoa consulta o celular entre séries, sob luz variável de academia ou em casa,
+e precisa distinguir a próxima ação em poucos segundos. A estratégia de cor é restrita: preto e
+superfícies quentes ocupam a maior parte da interface; dourado fica abaixo de 10% e sinaliza ação,
+seleção, foco ou o resumo principal do dia.
+
 ## 2. Tokens obrigatórios
 
 Valores arbitrários são proibidos em componentes. Um valor novo deve primeiro virar token ou ter
@@ -31,24 +37,24 @@ uma justificativa óptica documentada no CSS.
 
 ### 2.1 Cores
 
-| Token                         |                    Valor | Uso                                  |
-| ----------------------------- | -----------------------: | ------------------------------------ |
-| `--color-canvas`              |                `#0b0f0e` | fundo principal                      |
-| `--color-canvas-soft`         |                `#0f1513` | campos, navegação e áreas rebaixadas |
-| `--color-surface`             |                `#151b19` | cartões e blocos elevados            |
-| `--color-surface-raised`      |                `#1a2320` | botões, modal e métricas             |
-| `--color-surface-highlighted` |                `#202d27` | hover, seleção e destaque            |
-| `--color-border`              | `rgb(202 222 211 / 16%)` | divisores e contornos comuns         |
-| `--color-border-strong`       | `rgb(202 222 211 / 30%)` | controles e limites importantes      |
-| `--color-text`                |                `#f2f6f3` | texto principal                      |
-| `--color-text-muted`          |                `#a7b3ad` | texto de apoio                       |
-| `--color-text-subtle`         |                `#7e8d85` | metadados não essenciais             |
-| `--color-primary`             |                `#b7df4b` | única cor de ação e foco             |
-| `--color-primary-strong`      |                `#cef46a` | hover e destaque de texto            |
-| `--color-primary-ink`         |                `#101600` | texto sobre o acento                 |
-| `--color-danger`              |                `#ff7b73` | erro e ação destrutiva               |
-| `--color-warning`             |                `#efbd68` | alerta e segurança                   |
-| `--color-success`             |                `#92d6aa` | sincronização e confirmação          |
+| Token                         |                    Valor | Uso                             |
+| ----------------------------- | -----------------------: | ------------------------------- |
+| `--color-canvas`              |                `#050505` | fundo principal                 |
+| `--color-canvas-soft`         |                `#0a0908` | navegação e áreas rebaixadas    |
+| `--color-surface`             |                `#100e0c` | cartões e controles             |
+| `--color-surface-raised`      |                `#17130f` | botões, modal e métricas        |
+| `--color-surface-highlighted` |                `#211b14` | hover, seleção e destaque       |
+| `--color-border`              | `rgb(239 203 118 / 16%)` | divisores e contornos comuns    |
+| `--color-border-strong`       | `rgb(239 203 118 / 32%)` | controles e limites importantes |
+| `--color-text`                |                `#f7f3ed` | texto principal                 |
+| `--color-text-muted`          |                `#bbb3aa` | texto de apoio                  |
+| `--color-text-subtle`         |                `#978e84` | metadados não essenciais        |
+| `--color-primary`             |                `#efcb76` | única cor de ação e foco        |
+| `--color-primary-strong`      |                `#ffdc8b` | hover e destaque de texto       |
+| `--color-primary-ink`         |                `#171004` | texto sobre o acento            |
+| `--color-danger`              |                `#ff8c83` | erro e ação destrutiva          |
+| `--color-warning`             |                `#f0b766` | alerta e segurança              |
+| `--color-success`             |                `#91d6aa` | sincronização e confirmação     |
 
 Fundos semânticos usam as variantes `--color-danger-soft`, `--color-warning-soft` e
 `--color-success-soft`. Branco translúcido pode ser usado somente como microtextura de superfície,
@@ -96,9 +102,9 @@ breakpoint justificado pode empilhá-los.
 | ------------------ | -----------------------------: | -------------------------- |
 | `--radius-xs`      |                         7,2 px | marca e código             |
 | `--radius-sm`      |                        11,2 px | controles e itens internos |
-| `--radius-md`      |                          16 px | métricas e agrupadores     |
-| `--radius-lg`      |                        21,6 px | cartões, painéis e modal   |
-| `--shadow-popover` | `0 20px 56px rgb(0 0 0 / 45%)` | somente modal/popover      |
+| `--radius-md`      |                        14,4 px | métricas e agrupadores     |
+| `--radius-lg`      |                          16 px | cartões, painéis e modal   |
+| `--shadow-popover` | `0 8px 8px rgb(25 17 5 / 34%)` | somente modal/popover      |
 
 Camadas: base `0`, sticky `20`, navegação `30`, popover `40`, dialog `50`. Não criar `z-index`
 arbitrário. A iluminação parte do topo: elevação usa borda clara sutil e sombra para baixo.
@@ -108,10 +114,11 @@ arbitrário. A iluminação parte do topo: elevação usa borda clara sutil e so
 - Corpo: `Segoe UI Variable Text`, `Segoe UI`, `system-ui`, `-apple-system`, `sans-serif`.
 - Títulos: `Segoe UI Variable Display`, com o mesmo fallback.
 - Corpo padrão: tamanho do navegador (16 px), line-height 1,6; largura máxima 65 caracteres.
-- `h1`: `clamp(32px, 4vw, 48px)`, peso 760, line-height 1,02, tracking `-0.045em`.
-- `h2`: `clamp(18,4px, 2vw, 23,2px)`, peso 720, line-height 1,15.
+- `h1`: 37,6 px no mobile e 42,4 px no desktop, peso 780, line-height 1, tracking `-0.035em`.
+- `h2`: 21,6 px, peso 730, line-height 1,12.
 - `h3`: 16,8 px, line-height 1,25.
-- Eyebrow: 11 px, peso 760, tracking `0.14em`, caixa alta; apenas uma por cabeçalho.
+- Rótulo de contexto: 13,6 px, peso 680, sentence case e sem tracking artificial; apenas um por
+  cabeçalho quando acrescenta informação real.
 - Label: 14 px, peso 650. Ajuda: 12,8 px, peso 450.
 - Métricas e números usam `font-variant-numeric: tabular-nums` quando comparáveis.
 - Títulos usam `text-wrap: balance`; parágrafos usam `text-wrap: pretty`.
@@ -121,7 +128,7 @@ offline.
 
 ### 3.1 Marca e ícones de instalação
 
-- a fonte oficial é `/icons/torkout-source.svg`: T escuro sobre quadrado lima inclinado;
+- a fonte oficial é `/icons/torkout-source.svg`: T escuro sobre quadrado dourado inclinado;
 - login, shell autenticado e favicon usam diretamente essa mesma fonte vetorial;
 - Apple Touch Icon e PNGs PWA de 192/512 px são renderizações da fonte oficial;
 - o ícone maskable mantém o mesmo símbolo, centralizado na área segura sobre `--color-canvas`;
@@ -133,8 +140,9 @@ offline.
 - conteúdo estreito: `44rem` (704 px);
 - conteúdo padrão: `68rem` (1088 px);
 - conteúdo amplo: `--content-wide`, com `84rem` (1344 px);
-- navegação lateral desktop: `13.5rem` (216 px);
-- header: `3.75rem` (60 px); navegação mobile: `4.25rem` (68 px);
+- navegação lateral desktop: `14.5rem` (232 px);
+- header: `3.75rem` (60 px); navegação mobile flutuante: `5.5rem` (88 px), incluindo respiro e
+  safe area;
 - padding de página: 16–20 px no mobile e `clamp(16px, 2vw, 32px)` no desktop, respeitando
   `safe-area-inset-*`.
 
@@ -163,7 +171,7 @@ a coluna final de uma linha.
 - foco: contorno de 3 px em `--color-primary`, offset de 3 px;
 - no máximo uma ação primária por grupo de decisão.
 - ações terciárias dentro de modais mantêm alvo mínimo de 44 px e padding de 8 × 12 px; o texto
-  fica alinhado por margem óptica negativa e o hover usa acento a 8%, borda sutil e texto lima.
+  fica alinhado por margem óptica negativa e o hover usa acento a 8%, borda sutil e texto dourado.
 
 ### 5.2 Campos e formulários
 
@@ -188,7 +196,8 @@ a coluna final de uma linha.
 ### 5.4 Navegação e cabeçalho
 
 - mobile: cinco destinos fixos no rodapé, com `safe-area` e destino atual explícito;
-- desktop: trilho lateral de 216 px; conteúdo ativo recebe acento lateral de 2 px;
+- desktop: trilho lateral de 232 px; conteúdo ativo recebe fundo e contorno completos, nunca uma
+  listra lateral decorativa;
 - cabeçalhos alinham eyebrow, `h1`, apoio e ações; a ação Voltar fica em barra própria quando uma
   eyebrow a sucede, com 24 px entre ambas;
 - todas as páginas sem saída direta oferecem Voltar ou um destino equivalente.

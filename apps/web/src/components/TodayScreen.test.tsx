@@ -79,6 +79,26 @@ describe('Today mobile tracking', () => {
     await deleteUserSyncDatabase(userId);
   });
 
+  it('frames the day with a semantic week strip and a prioritized workout summary', async () => {
+    const database = await seed();
+    render(
+      <TodayScreen
+        database={database}
+        now={new Date('2026-07-15T01:00:00.000Z')}
+        onBack={vi.fn()}
+        syncState="offline"
+        timeZone="America/Cuiaba"
+      />,
+    );
+
+    const week = await screen.findByRole('list', { name: 'Semana atual' });
+    expect(week.querySelector('[aria-current="date"]')).toHaveTextContent('14');
+    expect(screen.getByText('Treino de hoje')).toBeVisible();
+    expect(await screen.findByRole('heading', { level: 2, name: 'Treino A' })).toBeVisible();
+    expect(await screen.findByText('1 exercício · 1 série')).toBeVisible();
+    database.close();
+  });
+
   it('saves every set, pain confirmation, habit and measurement locally', async () => {
     const database = await seed();
     render(

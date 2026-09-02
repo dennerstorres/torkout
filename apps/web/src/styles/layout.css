@@ -15,7 +15,7 @@
   justify-content: space-between;
   min-height: var(--shell-header-height);
   border-bottom: 1px solid var(--color-border);
-  background: rgb(11 15 14 / 94%);
+  background: rgb(5 5 5 / 94%);
   padding: max(var(--space-2), env(safe-area-inset-top))
     max(var(--space-4), env(safe-area-inset-right)) var(--space-2)
     max(var(--space-4), env(safe-area-inset-left));
@@ -28,13 +28,14 @@
 .page-outlet {
   min-width: 0;
   padding-bottom: calc(
-    var(--shell-mobile-nav-height) + env(safe-area-inset-bottom) + var(--space-5)
+    var(--shell-mobile-nav-height) + env(safe-area-inset-bottom) + var(--space-6)
   );
 }
 
 .page-outlet > main {
   width: 100%;
-  margin: 0;
+  max-width: var(--content-wide);
+  margin-inline: auto;
   padding: clamp(var(--space-4), 2vw, var(--space-8))
     max(clamp(var(--space-4), 2vw, var(--space-8)), env(safe-area-inset-right)) var(--space-8)
     max(clamp(var(--space-4), 2vw, var(--space-8)), env(safe-area-inset-left));
@@ -58,16 +59,18 @@
 .primary-navigation {
   position: fixed;
   z-index: var(--layer-navigation);
-  right: 0;
-  bottom: 0;
-  left: 0;
+  right: max(var(--space-3), env(safe-area-inset-right));
+  bottom: max(var(--space-2), env(safe-area-inset-bottom));
+  left: max(var(--space-3), env(safe-area-inset-left));
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  min-height: var(--shell-mobile-nav-height);
-  border-top: 1px solid var(--color-border);
-  background: rgb(15 21 19 / 97%);
-  padding: var(--space-1) max(var(--space-1), env(safe-area-inset-right))
-    max(var(--space-1), env(safe-area-inset-bottom)) max(var(--space-1), env(safe-area-inset-left));
+  min-height: calc(var(--shell-mobile-nav-height) - var(--space-3));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: rgb(16 14 12 / 92%);
+  box-shadow: 0 0.35rem 0.5rem rgb(25 17 5 / 32%);
+  padding: var(--space-1);
+  backdrop-filter: blur(1rem);
 }
 
 .primary-navigation button {
@@ -75,9 +78,10 @@
   place-items: center;
   align-content: center;
   min-width: 0;
-  min-height: 3.5rem;
-  gap: 0.15rem;
+  min-height: 3.85rem;
+  gap: var(--space-1);
   border: 0;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--color-text-subtle);
   font-size: 0.66rem;
@@ -85,8 +89,20 @@
 }
 
 .primary-navigation button[aria-current='page'] {
-  background: rgb(183 223 75 / 9%);
+  background: rgb(239 203 118 / 10%);
+  box-shadow: inset 0 0 0 1px var(--color-border-strong);
   color: var(--color-primary-strong);
+}
+
+.navigation-label--full {
+  display: none;
+}
+
+.navigation-label {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  line-height: 1.1;
+  text-align: center;
 }
 
 .centered-layout,
@@ -108,8 +124,8 @@
   align-items: stretch;
   gap: var(--space-8);
   background:
-    radial-gradient(circle at 78% 20%, rgb(183 223 75 / 8%), transparent 28rem),
-    radial-gradient(circle at 8% 4%, rgb(183 223 75 / 5%), transparent 22rem);
+    radial-gradient(circle at 78% 20%, rgb(239 203 118 / 9%), transparent 28rem),
+    radial-gradient(circle at 8% 4%, rgb(239 203 118 / 5%), transparent 22rem);
 }
 
 .centered-layout > .card {
@@ -169,7 +185,9 @@
     flex-direction: column;
     height: 100dvh;
     border-right: 1px solid var(--color-border);
-    background: var(--color-canvas-soft);
+    background:
+      radial-gradient(circle at 20% 0%, rgb(239 203 118 / 8%), transparent 15rem),
+      var(--color-canvas-soft);
     padding: var(--space-5) var(--space-3);
   }
 
@@ -183,6 +201,7 @@
     grid-template-columns: 1fr;
     min-height: 0;
     border: 0;
+    box-shadow: none;
     background: transparent;
     padding: 0;
   }
@@ -198,7 +217,17 @@
   }
 
   .primary-navigation button[aria-current='page'] {
-    box-shadow: inset 2px 0 var(--color-primary);
+    box-shadow: inset 0 0 0 1px var(--color-border-strong);
+  }
+
+  .navigation-label--compact {
+    display: none;
+  }
+
+  .navigation-label--full {
+    display: inline;
+    overflow-wrap: normal;
+    text-align: left;
   }
 
   .mobile-brand {

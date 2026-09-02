@@ -272,14 +272,24 @@ for (const viewport of [
           document: document.documentElement.scrollWidth,
           mainLeft: main?.left ?? 0,
           mainRight: main?.right ?? 0,
+          mainWidth: main?.width ?? 0,
           outletLeft: outlet?.left ?? 0,
           outletRight: outlet?.right ?? 0,
+          outletWidth: outlet?.width ?? 0,
           viewport: innerWidth,
         };
       });
       expect(width.document).toBeLessThanOrEqual(width.viewport);
-      expect(Math.abs(width.mainLeft - width.outletLeft)).toBeLessThanOrEqual(1);
-      expect(Math.abs(width.mainRight - width.outletRight)).toBeLessThanOrEqual(1);
+      expect(width.mainWidth).toBeLessThanOrEqual(Math.min(width.outletWidth, 1344) + 1);
+      expect(
+        Math.abs(
+          (width.mainLeft + width.mainRight) / 2 - (width.outletLeft + width.outletRight) / 2,
+        ),
+      ).toBeLessThanOrEqual(1);
+      if (width.outletWidth <= 1344) {
+        expect(Math.abs(width.mainLeft - width.outletLeft)).toBeLessThanOrEqual(1);
+        expect(Math.abs(width.mainRight - width.outletRight)).toBeLessThanOrEqual(1);
+      }
       if (destination === 'Hoje' && viewport.width >= 1024) {
         const complementary = await page.evaluate(() =>
           [...document.querySelectorAll('.today-complementary-grid > *')].map((element) => {

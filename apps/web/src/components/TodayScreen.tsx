@@ -231,6 +231,28 @@ export function TodayScreen({
       record.data.plannedLocalDate >= weekStart.toISOString().slice(0, 10) &&
       record.data.plannedLocalDate <= weekThrough.toISOString().slice(0, 10),
   );
+  const weekDays = Array.from({ length: 7 }, (_, index) => {
+    const day = new Date(weekStart);
+    day.setUTCDate(day.getUTCDate() + index);
+    const isoDate = day.toISOString().slice(0, 10);
+    return {
+      current: isoDate === date,
+      day: new Intl.DateTimeFormat('pt-BR', { day: 'numeric', timeZone: 'UTC' }).format(day),
+      label: new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC', weekday: 'narrow' }).format(day),
+    };
+  });
+  const primarySession = sessions[0] ?? null;
+  const primaryExercises = primarySession
+    ? dataArray<ExerciseView>(primarySession.data, 'exercises')
+    : [];
+  const primarySetCount = primaryExercises.reduce(
+    (total, exercise) => total + exercise.sets.length,
+    0,
+  );
+  const primarySummary =
+    primarySession?.data.type === 'rest'
+      ? 'Recuperação planejada'
+      : `${primaryExercises.length} ${primaryExercises.length === 1 ? 'exercício' : 'exercícios'} · ${primarySetCount} ${primarySetCount === 1 ? 'série' : 'séries'}`;
 
   async function saveExecution(
     session: LocalRecord,
@@ -464,29 +486,58 @@ export function TodayScreen({
 
   return (
     <main className="today-layout">
-      <header className="planning-header">
+      <header className="planning-header today-header">
         <div>
           <p className="eyebrow">Seu ritmo, hoje</p>
           <h1>Hoje</h1>
-          {name && <p className="today-greeting">Olá, {name}.</p>}
-          <p>{new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full', timeZone }).format(now)}</p>
+          <p className="today-greeting">
+            {name && <span>Olá, {name}. </span>}
+            {new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full', timeZone }).format(now)}
+          </p>
         </div>
         <button type="button" onClick={onBack}>
           Voltar
         </button>
+        <ol aria-label="Semana atual" className="week-strip">
+          {weekDays.map((day) => (
+            <li aria-current={day.current ? 'date' : undefined} key={`${day.label}-${day.day}`}>
+              <span>{day.label}</span>
+              <strong>{day.day}</strong>
+            </li>
+          ))}
+        </ol>
       </header>
 
       <p className="sync-note" role="status">
         {message}
       </p>
 
-      <section className="card today-section sessions-section" aria-labelledby="sessions-heading">
+      <section
+        aria-label="Sessões de hoje"
+        className={`card today-section sessions-section ${runnerSessionId === null && primarySession ? 'sessions-section--summary' : ''}`.trim()}
+      >
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Treino principal</p>
+            <p className="eyebrow">{runnerSessionId ? 'Em andamento' : 'Treino de hoje'}</p>
             <h2 id="sessions-heading">
-              {runnerSessionId ? 'Treino em execução' : 'Sessões de hoje'}
+              {runnerSessionId
+                ? 'Treino em execução'
+                : primarySession
+                  ? stringValue(primarySession.data, 'templateNameSnapshot', 'Sessão')
+                  : 'Sessões de hoje'}
             </h2>
+            {runnerSessionId === null && primarySession && (
+              <>
+                <p className="session-plan-summary">{primarySummary}</p>
+                <p className="session-plan-note">
+                  {sessionOutcome(primarySession)
+                    ? 'Registro encerrado; consulte o histórico para ajustes.'
+                    : isRunning(primarySession)
+                      ? 'Continue de onde parou.'
+                      : 'Seu plano está pronto para começar.'}
+                </p>
+              </>
+            )}
           </div>
           {runnerSessionId && (
             <button

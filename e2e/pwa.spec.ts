@@ -10,13 +10,13 @@ test('publishes a complete installable manifest and versioned service worker', a
   expect(manifestResponse.ok()).toBe(true);
   const manifest = (await manifestResponse.json()) as Record<string, unknown>;
   expect(manifest).toMatchObject({
-    background_color: '#0b0f0e',
+    background_color: '#050505',
     display: 'standalone',
     id: '/',
     lang: 'pt-BR',
     short_name: 'Torkout',
     start_url: '/',
-    theme_color: '#0b0f0e',
+    theme_color: '#050505',
   });
   expect(manifest.icons).toEqual(
     expect.arrayContaining([
@@ -36,7 +36,7 @@ test('publishes a complete installable manifest and versioned service worker', a
   );
   const sourceResponse = await request.get('/icons/torkout-source.svg');
   expect(sourceResponse.ok()).toBe(true);
-  expect(await sourceResponse.text()).toContain('fill="#b7df4b"');
+  expect(await sourceResponse.text()).toContain('fill="#efcb76"');
 
   await page.goto('/icons/torkout-maskable-512.png');
   const pixels = await page.evaluate(() => {
@@ -54,9 +54,9 @@ test('publishes a complete installable manifest and versioned service worker', a
       mark: [...context.getImageData(170, 170, 1, 1).data],
     };
   });
-  expect(pixels.corner).toEqual([11, 15, 14, 255]);
-  expect(pixels.center).toEqual([16, 22, 0, 255]);
-  expect(pixels.mark).toEqual([183, 223, 75, 255]);
+  expect(pixels.corner).toEqual([5, 5, 5, 255]);
+  expect(pixels.center).toEqual([23, 16, 4, 255]);
+  expect(pixels.mark).toEqual([239, 203, 118, 255]);
 });
 
 test('reloads the public app shell while offline after the first successful visit', async ({
