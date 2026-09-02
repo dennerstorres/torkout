@@ -2826,7 +2826,7 @@ conversa real, e a verificação em iPhone físico, que não se aplica a esta ca
 
 ## 2026-09-02 — Fase 34: direção visual preto e dourado
 
-**Status:** implementação concluída; aceite visual e iPhone físico pendentes
+**Status:** correção em andamento após feedback visual
 
 **Commit esperado:** `feat(phase-34): refactor the interface around the focused daily experience`
 
@@ -2904,3 +2904,36 @@ summary` falhou porque Hoje não tinha uma lista chamada "Semana atual", não ma
   não serão apresentados como substitutos.
 - O navegador embutido não estava disponível nesta sessão. A inspeção automatizada real foi feita
   com o Chromium do projeto, mas os snapshots novos não foram aprovados nem gravados.
+
+### Correção solicitada após a primeira entrega
+
+- O usuário esclareceu que a referência deveria orientar somente design, layout, UI e UX. A paleta
+  verde original do Torkout não deveria ter sido substituída por dourado.
+- A primeira entrega concentrou mudança estrutural em Hoje e aplicou a nova cor globalmente; por
+  isso, não satisfez o pedido de levar a composição das três imagens ao produto inteiro.
+- O dispositivo principal é um iPhone 14 Pro Max usando a instalação PWA. A correção passa a tratar
+  430 × 932 px, `viewport-fit=cover`, safe areas e navegação com uma mão como gates explícitos.
+- Mapeamento aprovado para implementação: imagem 1 → Hoje e lista de exercícios; imagem 2 → topo de
+  Progresso; imagem 3 → menu sobreposto com os destinos secundários.
+
+### Correção Green/Refactor
+
+- A primeira entrega foi corrigida para preservar a identidade verde original do Torkout. Tokens,
+  estados semânticos, gráficos, marca vetorial, manifest, `theme-color` e ícones PWA voltaram aos
+  valores verdes anteriores; a referência externa permanece somente como direção de composição.
+- A arquitetura agora acompanha as três capturas sem trocar a identidade: Hoje concentra semana,
+  destaque e exercícios; Progresso abre com um instrumento semicircular; quatro destinos ficam
+  diretos e os demais entram no menu sobreposto; Planejamento, Histórico e Conta usam seções próprias.
+- O shell foi ajustado para instalação PWA em iPhone 14 Pro Max: `viewport-fit=cover`, safe areas,
+  navegação inferior flutuante, alvo mínimo de toque e geometria validada em 430 × 932 px.
+
+### Verificação da correção
+
+- `pnpm check` verde: governança, fases 1–15, segurança, formatação, lint, typecheck, 65 arquivos e
+  485 testes unitários, pacotes e build PWA.
+- Playwright verde em Chromium mobile: 26 testes executáveis em acessibilidade, PWA, portabilidade e
+  layout visual; inclui 320, 360, 390, 430, 768, 1024, 1366, 1440 e 1920 px, além de zoom 200%,
+  reduced motion, forced colors e o cenário dedicado ao iPhone 14 Pro Max. Dois snapshots legados
+  seguem suspensos até aceite humano.
+- O navegador embutido não estava disponível nesta sessão; a validação final no iPhone físico ainda
+  é necessária antes de considerar a fase visualmente aceita.

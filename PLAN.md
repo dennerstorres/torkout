@@ -1876,41 +1876,45 @@ registros já gravados continuam válidos como pó sem reescrita de dado.
 - Lint, formatação, typecheck, testes unitários, integração e build verdes.
 - `HISTORY.md` atualizado e fase encerrada em commit próprio.
 
-### Fase 34 — Direção visual preto e dourado
+### Fase 34 — Layout da referência com identidade verde
 
-**Status:** implementação concluída; aceite visual e iPhone físico pendentes
+**Status:** implementação concluída; aceite visual no iPhone físico pendente
 
 **Commit esperado:** `feat(phase-34): refactor the interface around the focused daily experience`
 
 **Referência visual:** post público de `@lasuliss` no X (`2094977060397576447`), com três capturas
-de uma PWA mobile em preto e dourado. A referência orienta composição e linguagem visual; nenhum
-asset, marca ou código de terceiros entra no bundle.
+de uma PWA mobile. A referência orienta composição, layout e interação; a identidade verde original
+do Torkout é obrigatória e nenhum asset, marca ou código de terceiros entra no bundle.
 
-**Objetivo:** refatorar a UI/UX completa do Torkout para uma experiência focada, tátil e noturna,
-priorizando o treino do dia, a leitura rápida e a navegação com uma mão, sem alterar regras de
-negócio, persistência local, sincronização, privacidade ou acessibilidade.
+**Objetivo:** transportar para o Torkout a organização das três referências — treino diário,
+progresso visual e menu de atalhos — priorizando leitura rápida e navegação com uma mão, sem trocar
+a paleta verde da marca nem alterar regras de negócio, persistência, sincronização ou privacidade.
 
 #### Direção visual e de interação
 
-- Preto profundo e superfícies quentes quase pretas, com um único acento dourado de alto contraste.
+- Base escura verde-neutra e o verde lima original como único acento de alto contraste.
 - Navegação mobile flutuante e persistente, com destino ativo inequívoco e safe area preservada.
-- Tela Hoje abre com orientação semanal e um resumo destacado do treino principal; formulários e
-  registros secundários permanecem abaixo e usam progressive disclosure já existente.
+- Tela Hoje abre com orientação semanal, resumo destacado e prévia ordenada dos exercícios.
+- Progresso abre com um instrumento semicircular de aderência e métricas essenciais antes dos
+  relatórios detalhados.
+- O quinto destino abre um menu sobreposto com Conta, Fotos de evolução, Progressão e sincronização,
+  seguindo a terceira referência sem esconder as quatro jornadas diárias.
 - Bordas, brilhos e transparência aparecem somente quando comunicam seleção, sobreposição ou foco.
 - Desktop preserva densidade e largura útil, traduzindo a mesma linguagem para trilho lateral e
   painéis sem transformar a aplicação em uma grade genérica de cards.
 - Sentence case, números tabulares, alvos de 44 px, WCAG 2.2 AA, reduced motion e forced colors.
 
-#### Escopo
+#### Correção após feedback visual
 
-- [x] Registrar `PRODUCT.md`, atualizar `DESIGN.md` e configurar o modo visual local.
-- [x] Atualizar tokens, marca, favicon e ícones PWA para a paleta preto/dourado.
-- [x] Redesenhar shell, cabeçalho, navegação mobile/desktop e estados de sincronização.
-- [x] Reorganizar Hoje com faixa semanal semântica e resumo prioritário do treino.
-- [x] Aplicar a nova hierarquia a Planejamento, Histórico, Progresso, Conta e fluxos públicos.
-- [x] Reduzir padrões genéricos: eyebrows em caixa alta, side stripes, over-rounding, nested cards e
-      combinações decorativas de borda com sombra larga.
-- [x] Atualizar o laboratório do sistema visual e a documentação afetada.
+- [x] Restaurar exatamente a paleta verde, a marca e os ícones PWA anteriores à primeira entrega.
+- [x] Transformar a navegação em quatro destinos diretos mais um menu sobreposto de atalhos.
+- [x] Mostrar a lista planejada de exercícios logo abaixo do destaque de Hoje.
+- [x] Criar o instrumento visual de aderência e reorganizar o topo de Progresso.
+- [x] Dar a Planejamento, Histórico e Conta uma arquitetura de seções própria, sem um grande cartão
+      genérico envolvendo cada tela.
+- [x] Garantir `viewport-fit=cover`, safe areas e geometria específica de 430 × 932 px para o iPhone
+      14 Pro Max em modo PWA.
+- [x] Revisar `PRODUCT.md`, `DESIGN.md`, laboratório visual e documentação afetada.
 
 #### Testes primeiro
 
@@ -1922,6 +1926,8 @@ negócio, persistência local, sincronização, privacidade ou acessibilidade.
 - [x] Formatação, lint, typecheck, testes web e build verdes.
 - [x] Invariantes responsivos existentes verdes; snapshots continuam suspensos até novo aceite
       humano.
+- [x] RED/GREEN do menu sobreposto, da prévia de exercícios e do instrumento de progresso.
+- [x] Invariante Playwright específico do iPhone 14 Pro Max e nova regressão completa verdes.
 
 #### Critérios de saída
 

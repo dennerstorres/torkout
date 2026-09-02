@@ -83,13 +83,17 @@ export function AccountScreen({
   }
 
   return (
-    <main className="centered-layout">
-      <section className="card wide-card account-card">
+    <main className="account-layout">
+      <header className="account-header page-header">
+        <div>
+          <p className="eyebrow">Preferências e privacidade</p>
+          <h1>Conta</h1>
+        </div>
         <button className="back-button" type="button" onClick={onBack}>
-          ← Voltar
+          Voltar
         </button>
-        <p className="eyebrow">Preferências e privacidade</p>
-        <h1>Conta</h1>
+      </header>
+      <div className="account-sections">
         <section className="account-section" aria-labelledby="account-profile-title">
           <h2 id="account-profile-title">Perfil</h2>
           <p>Suas informações pessoais e preferências de treino ficam vinculadas à sua conta.</p>
@@ -198,7 +202,7 @@ export function AccountScreen({
           </form>
         </section>
         {message && <p role="status">{message}</p>}
-      </section>
+      </div>
     </main>
   );
 }

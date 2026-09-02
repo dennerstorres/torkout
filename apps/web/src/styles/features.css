@@ -63,25 +63,63 @@
 }
 
 .planning-tabs {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: flex;
+  overflow-x: auto;
   gap: var(--space-2);
   padding: var(--space-1);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-canvas-soft);
+  scrollbar-width: none;
+}
+
+.planning-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .planning-tabs button {
-  min-width: 0;
+  flex: 0 0 auto;
+  min-width: max-content;
   border-color: transparent;
   background: transparent;
   color: var(--color-text-muted);
 }
 
 .planning-tabs button[aria-pressed='true'] {
-  background: var(--color-surface-highlighted);
+  background: var(--color-primary);
+  color: var(--color-primary-ink);
+}
+
+.planning-overview {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  border-block: 1px solid var(--color-border);
+}
+
+.planning-overview > div {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-2);
+}
+
+.planning-overview > div + div {
+  border-left: 1px solid var(--color-border);
+}
+
+.planning-overview dt {
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+  line-height: 1.25;
+}
+
+.planning-overview dd {
+  margin: 0;
   color: var(--color-primary-strong);
+  font-size: 1.35rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
 }
 
 .today-greeting {
@@ -134,11 +172,11 @@
   bottom: -8rem;
   width: 19rem;
   height: 19rem;
-  border: 1px solid rgb(23 16 4 / 20%);
+  border: 1px solid rgb(16 22 0 / 20%);
   border-radius: 50%;
   box-shadow:
-    0 0 0 3.5rem rgb(23 16 4 / 7%),
-    0 0 0 7rem rgb(23 16 4 / 5%);
+    0 0 0 3.5rem rgb(16 22 0 / 7%),
+    0 0 0 7rem rgb(16 22 0 / 5%);
   content: '';
   pointer-events: none;
 }
@@ -151,7 +189,7 @@
 .sessions-section--summary .eyebrow,
 .sessions-section--summary .session-plan-summary,
 .sessions-section--summary .session-plan-note {
-  color: rgb(23 16 4 / 78%);
+  color: rgb(16 22 0 / 78%);
 }
 
 .sessions-section--summary .section-heading h2 {
@@ -253,6 +291,49 @@
   margin-top: var(--space-4);
 }
 
+.session-exercise-preview {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border-block: 1px solid var(--color-border);
+  list-style: none;
+}
+
+.session-exercise-preview > li {
+  display: flex;
+  align-items: center;
+  min-height: 4.5rem;
+  gap: var(--space-4);
+  padding-block: var(--space-3);
+}
+
+.session-exercise-preview > li + li {
+  border-top: 1px solid var(--color-border);
+}
+
+.session-exercise-preview__index {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  color: var(--color-primary-ink);
+  font-variant-numeric: tabular-nums;
+  font-weight: 780;
+}
+
+.session-exercise-preview > li > span:last-child {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-1);
+}
+
+.session-exercise-preview small {
+  color: var(--color-text-muted);
+}
+
 .rest-session {
   display: grid;
   align-items: end;
@@ -305,8 +386,16 @@
   font-weight: 680;
 }
 
+.planning-section.card {
+  border: 0;
+  background: transparent;
+  padding: var(--space-2) 0 0;
+}
+
 .planning-section form {
   margin-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-5);
 }
 
 .planning-section > h2,
@@ -353,12 +442,6 @@
 
 .habit-options-editor {
   margin: 0;
-}
-
-@media (max-width: 34rem) {
-  .planning-tabs {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 .weekly-plan-basics,
@@ -441,12 +524,22 @@
   min-width: 0;
 }
 
+.history-calendar.card {
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
 .calendar-actions {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
   margin-bottom: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  padding: var(--space-3);
 }
 
 .calendar-actions h2 {
@@ -522,7 +615,14 @@
 }
 
 .calendar-day[aria-current='date'] {
-  box-shadow: inset 0 0 0 2px var(--color-primary);
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  box-shadow: none;
+  color: var(--color-primary-ink);
+}
+
+.calendar-day[aria-current='date'] .badge {
+  color: var(--color-primary-ink);
 }
 
 .calendar-day.outside-month {
@@ -855,13 +955,24 @@
   margin: 0;
 }
 
-.account-section {
-  padding: var(--space-6) 0;
-  border-top: 1px solid var(--color-border);
+.account-layout {
+  display: grid;
+  width: 100%;
+  gap: var(--space-5);
+  align-content: start;
 }
 
-.account-section:first-of-type {
-  margin-top: var(--space-4);
+.account-sections {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.account-section {
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  padding: var(--space-5);
 }
 
 .account-section h2 {
@@ -877,12 +988,6 @@
   display: grid;
   gap: var(--space-4);
   margin-top: var(--space-4);
-}
-
-.account-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-content: start;
 }
 
 .auth-header,
@@ -985,7 +1090,7 @@
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-lg);
   background:
-    radial-gradient(circle at 90% 8%, rgb(239 203 118 / 12%), transparent 15rem),
+    radial-gradient(circle at 90% 8%, rgb(183 223 75 / 12%), transparent 15rem),
     var(--color-surface);
   padding: clamp(var(--space-5), 4vw, var(--space-8));
 }
@@ -997,7 +1102,7 @@
   width: 10rem;
   height: 10rem;
   border-radius: 50%;
-  background: rgb(239 203 118 / 10%);
+  background: rgb(183 223 75 / 10%);
   content: '';
   filter: blur(0.25rem);
 }
@@ -1081,7 +1186,7 @@
   display: grid;
   place-items: center;
   overflow: auto;
-  background: rgb(5 5 5 / 78%);
+  background: rgb(11 15 14 / 78%);
   padding: var(--space-4);
   backdrop-filter: blur(0.6rem);
 }
@@ -1147,18 +1252,18 @@ body:has(.auth-dialog-backdrop) {
 
 .auth-dialog-links button:hover:not(:disabled) {
   border-color: var(--color-border);
-  background: rgb(239 203 118 / 8%);
+  background: rgb(183 223 75 / 8%);
   color: var(--color-primary-strong);
 }
 
 .danger-zone {
-  border-color: rgb(255 140 131 / 35%);
+  border-color: rgb(255 123 115 / 35%);
 }
 
 .local-removal-confirmation {
   display: grid;
   gap: var(--space-3);
-  border: 1px solid rgb(255 140 131 / 34%);
+  border: 1px solid rgb(255 123 115 / 34%);
   border-radius: var(--radius-sm);
   background: var(--color-danger-soft);
   padding: var(--space-3);
@@ -1322,26 +1427,26 @@ body:has(.auth-dialog-backdrop) {
 }
 
 @media (min-width: 64rem) {
-  .account-card {
+  .account-sections {
     grid-template-columns: repeat(12, minmax(0, 1fr));
     column-gap: var(--space-6);
   }
 
-  .account-card > :is(.back-button, .eyebrow, h1, [role='status']) {
+  .account-sections > [role='status'] {
     grid-column: 1 / -1;
   }
 
-  .account-card > .account-section:nth-of-type(1),
-  .account-card > .account-section:nth-of-type(4) {
+  .account-sections > .account-section:nth-of-type(1),
+  .account-sections > .account-section:nth-of-type(4) {
     grid-column: span 4;
   }
 
-  .account-card > .account-section:nth-of-type(2),
-  .account-card > .account-section:nth-of-type(3) {
+  .account-sections > .account-section:nth-of-type(2),
+  .account-sections > .account-section:nth-of-type(3) {
     grid-column: span 8;
   }
 
-  .account-card > .danger-zone {
+  .account-sections > .danger-zone {
     grid-column: 1 / -1;
   }
 }
@@ -1355,6 +1460,8 @@ body:has(.auth-dialog-backdrop) {
 @media (forced-colors: active) {
   .brand-mark,
   .sync-dot,
+  .progress-dial__value,
+  .session-exercise-preview__index,
   .progress-bar span {
     forced-color-adjust: none;
   }
@@ -1444,6 +1551,116 @@ body:has(.auth-dialog-backdrop) {
 .progress-panel {
   display: grid;
   gap: var(--space-4);
+}
+
+.progress-overview {
+  display: grid;
+  gap: var(--space-5);
+  overflow: hidden;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(circle at 50% 18%, rgb(183 223 75 / 9%), transparent 15rem),
+    var(--color-surface);
+  padding: clamp(var(--space-5), 5vw, var(--space-8));
+}
+
+.progress-overview__heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.progress-overview__heading > div {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.progress-overview__heading :is(h2, p),
+.progress-overview__heading > span {
+  margin: 0;
+}
+
+.progress-overview__heading > span {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.progress-overview__body {
+  display: grid;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.progress-dial {
+  position: relative;
+  width: min(100%, 21rem);
+  margin-inline: auto;
+  color: var(--color-primary);
+}
+
+.progress-dial svg {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+
+.progress-dial path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 12;
+}
+
+.progress-dial__track {
+  stroke: var(--color-surface-highlighted);
+}
+
+.progress-dial__value {
+  stroke: currentcolor;
+}
+
+.progress-dial__copy {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
+  color: var(--color-text);
+}
+
+.progress-dial__copy strong {
+  font-size: 2.6rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+.progress-dial__copy small {
+  color: var(--color-text-muted);
+}
+
+.progress-overview__metrics .today-summary {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.progress-overview__metrics .metric-card {
+  min-height: 4.5rem;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+  border-radius: 0;
+  background: transparent;
+  padding: var(--space-3) 0;
+}
+
+@media (min-width: 48rem) {
+  .progress-overview__body {
+    grid-template-columns: minmax(17rem, 0.8fr) minmax(22rem, 1.2fr);
+  }
 }
 
 .progress-panel > .card {
@@ -1611,7 +1828,7 @@ body:has(.auth-dialog-backdrop) {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: var(--space-4);
-  background: rgb(239 203 118 / 8%);
+  background: rgb(183 223 75 / 8%);
 }
 
 .best-set__label {

@@ -14,6 +14,8 @@ export type IconName =
   | 'chevron-down'
   | 'history'
   | 'home'
+  | 'image'
+  | 'menu'
   | 'refresh'
   | 'sparkles'
   | 'warning';
@@ -48,6 +50,21 @@ const paths: Record<IconName, ReactNode> = {
     <>
       <path d="m3 11 9-8 9 8" />
       <path d="M5 10v11h14V10M9 21v-7h6v7" />
+    </>
+  ),
+  image: (
+    <>
+      <rect x="3" y="4" width="18" height="16" rx="3" />
+      <circle cx="9" cy="10" r="2" />
+      <path d="m5 18 4.5-4.5 3 3 2.5-2.5 4 4" />
+    </>
+  ),
+  menu: (
+    <>
+      <rect x="4" y="4" width="6" height="6" rx="1.5" />
+      <rect x="14" y="4" width="6" height="6" rx="1.5" />
+      <rect x="4" y="14" width="6" height="6" rx="1.5" />
+      <rect x="14" y="14" width="6" height="6" rx="1.5" />
     </>
   ),
   refresh: (

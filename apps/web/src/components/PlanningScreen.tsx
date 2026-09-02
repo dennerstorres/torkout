@@ -641,6 +641,27 @@ export function PlanningScreen({ database, onBack, syncState }: PlanningScreenPr
         {message || syncStateMessage(syncState)}
       </p>
 
+      <dl aria-label="Resumo do planejamento" className="planning-overview">
+        <div>
+          <dt>Planos ativos</dt>
+          <dd>
+            {plans.filter((plan) => stringField(plan.data, 'status', 'active') === 'active').length}
+          </dd>
+        </div>
+        <div>
+          <dt>Exercícios</dt>
+          <dd>{exerciseRecords.filter((record) => record.data.active !== false).length}</dd>
+        </div>
+        <div>
+          <dt>Avulsos</dt>
+          <dd>{adHocSessions.length}</dd>
+        </div>
+        <div>
+          <dt>Hábitos</dt>
+          <dd>{habits.filter((habit) => habit.data.active !== false).length}</dd>
+        </div>
+      </dl>
+
       <nav aria-label="Áreas do planejamento" className="planning-tabs">
         <button
           aria-pressed={activeArea === 'catalog'}

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 
 import { syncStateMessage } from '../presentation';
 import type { SyncState } from '../sync/sync-coordinator';
@@ -20,8 +20,9 @@ const destinations: Array<{
   { compactLabel: 'Plano', icon: 'calendar', label: 'Planejamento', view: 'planning' },
   { compactLabel: 'Histórico', icon: 'history', label: 'Histórico', view: 'history' },
   { compactLabel: 'Progresso', icon: 'analytics', label: 'Progresso', view: 'analytics' },
-  { compactLabel: 'Conta', icon: 'account', label: 'Conta', view: 'account' },
 ];
+
+const menuViews: AuthenticatedView[] = ['account', 'photos', 'progression'];
 
 interface Props {
   children: ReactNode;
@@ -42,8 +43,26 @@ interface Props {
 }
 
 export function AuthenticatedShell(props: Props) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const closeMenuButton = useRef<HTMLButtonElement>(null);
+  const menuTrigger = useRef<HTMLButtonElement>(null);
   const unhealthy = props.state !== 'synced';
   const version = props.version ?? import.meta.env.VITE_APP_VERSION ?? 'desenvolvimento';
+
+  useEffect(() => {
+    if (menuOpen) closeMenuButton.current?.focus();
+  }, [menuOpen]);
+
+  function closeMenu(): void {
+    setMenuOpen(false);
+    window.setTimeout(() => menuTrigger.current?.focus(), 0);
+  }
+
+  function navigateFromMenu(destination: AuthenticatedView): void {
+    setMenuOpen(false);
+    props.onNavigate(destination);
+  }
+
   return (
     <div className="app-shell">
       <aside className="app-sidebar">
@@ -124,12 +143,111 @@ export function AuthenticatedShell(props: Props) {
         )}
         <div className="page-outlet">{props.children}</div>
       </div>
-      <PrimaryNavigation {...props} />
+      <PrimaryNavigation
+        menuOpen={menuOpen}
+        menuTrigger={menuTrigger}
+        onMenu={() => setMenuOpen(true)}
+        onNavigate={props.onNavigate}
+        view={props.view}
+      />
+      {menuOpen && (
+        <div
+          className="app-menu-layer"
+          onMouseDown={(event) => {
+            if (event.currentTarget === event.target) closeMenu();
+          }}
+        >
+          <section
+            aria-label="Menu"
+            aria-modal="true"
+            className="app-menu-sheet"
+            role="dialog"
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') closeMenu();
+            }}
+          >
+            <header className="app-menu-heading">
+              <div className="app-menu-profile">
+                <span className="avatar" aria-hidden="true">
+                  {props.name.slice(0, 1).toUpperCase()}
+                </span>
+                <span>
+                  <small>Seu espaço</small>
+                  <strong>{props.name}</strong>
+                </span>
+              </div>
+              <button ref={closeMenuButton} type="button" onClick={closeMenu}>
+                Fechar menu
+              </button>
+            </header>
+            <div className="app-menu-shortcuts">
+              <button aria-label="Conta" type="button" onClick={() => navigateFromMenu('account')}>
+                <Icon name="account" size={24} />
+                <span>
+                  <strong>Conta</strong>
+                  <small>Privacidade, sessões e exportação</small>
+                </span>
+              </button>
+              <button
+                aria-label="Fotos de evolução"
+                type="button"
+                onClick={() => navigateFromMenu('photos')}
+              >
+                <Icon name="image" size={24} />
+                <span>
+                  <strong>Fotos de evolução</strong>
+                  <small>Compare registros nas mesmas condições</small>
+                </span>
+              </button>
+              <button
+                aria-label="Sugestões de progressão"
+                type="button"
+                onClick={() => navigateFromMenu('progression')}
+              >
+                <Icon name="sparkles" size={24} />
+                <span>
+                  <strong>Sugestões de progressão</strong>
+                  <small>Revise sugestões antes de aplicar</small>
+                </span>
+              </button>
+              <button
+                aria-label="Sincronizar agora pelo menu"
+                type="button"
+                onClick={() => {
+                  props.onSync();
+                  closeMenu();
+                }}
+              >
+                <Icon name="refresh" size={24} />
+                <span>
+                  <strong>Sincronizar agora</strong>
+                  <small>
+                    {props.pendingCount > 0
+                      ? `${props.pendingCount} pendente${props.pendingCount === 1 ? '' : 's'}`
+                      : syncShortLabel(props.state)}
+                  </small>
+                </span>
+              </button>
+            </div>
+            <p className="app-menu-version">Torkout {version}</p>
+          </section>
+        </div>
+      )}
     </div>
   );
 }
 
-function PrimaryNavigation({ onNavigate, view }: Pick<Props, 'onNavigate' | 'view'>) {
+function PrimaryNavigation({
+  menuOpen,
+  menuTrigger,
+  onMenu,
+  onNavigate,
+  view,
+}: Pick<Props, 'onNavigate' | 'view'> & {
+  menuOpen: boolean;
+  menuTrigger: RefObject<HTMLButtonElement | null>;
+  onMenu(): void;
+}) {
   return (
     <nav aria-label="Navegação principal" className="primary-navigation">
       {destinations.map((item) => (
@@ -149,6 +267,19 @@ function PrimaryNavigation({ onNavigate, view }: Pick<Props, 'onNavigate' | 'vie
           </span>
         </button>
       ))}
+      <button
+        aria-current={menuOpen || menuViews.includes(view) ? 'page' : undefined}
+        aria-expanded={menuOpen}
+        aria-label="Menu"
+        ref={menuTrigger}
+        type="button"
+        onClick={onMenu}
+      >
+        <Icon name="menu" />
+        <span aria-hidden="true" className="navigation-label">
+          Menu
+        </span>
+      </button>
     </nav>
   );
 }

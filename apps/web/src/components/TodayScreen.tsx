@@ -150,6 +150,24 @@ function sessionOutcome(session: LocalRecord): string | null {
   return sessionOutcomes[stringValue(session.data, 'status', 'planned')] ?? null;
 }
 
+function plannedExerciseLabel(exercise: ExerciseView): string {
+  const setLabel = `${exercise.sets.length} ${exercise.sets.length === 1 ? 'série' : 'séries'}`;
+  const metric = exercise.trackingMetric ?? 'repetitions';
+  const targets = exercise.sets
+    .map((set) =>
+      metric === 'distance'
+        ? set.plannedDistanceMeters
+        : metric === 'duration'
+          ? set.plannedDurationSeconds
+          : set.plannedRepetitions,
+    )
+    .filter((value): value is number => typeof value === 'number');
+  const uniqueTargets = [...new Set(targets)];
+  if (uniqueTargets.length !== 1) return setLabel;
+  const unit = metric === 'distance' ? 'metros' : metric === 'duration' ? 'segundos' : 'repetições';
+  return `${setLabel} · meta ${uniqueTargets[0]} ${unit}`;
+}
+
 function isRunning(session: LocalRecord): boolean {
   if (sessionOutcome(session) || session.data.type === 'rest') return false;
   return (
@@ -600,6 +618,30 @@ export function TodayScreen({
                     {session.syncStatus === 'synced' ? 'Sincronizado' : 'Salvo localmente'}
                   </StatusBadge>
                 </div>
+                {runnerSessionId === null &&
+                  session.data.type !== 'rest' &&
+                  dataArray<ExerciseView>(session.data, 'exercises').length > 0 && (
+                    <ol
+                      aria-label={`Exercícios de ${stringValue(
+                        session.data,
+                        'templateNameSnapshot',
+                        'sessão',
+                      )}`}
+                      className="session-exercise-preview"
+                    >
+                      {dataArray<ExerciseView>(session.data, 'exercises').map((exercise, index) => (
+                        <li key={exercise.id}>
+                          <span aria-hidden="true" className="session-exercise-preview__index">
+                            {String(index + 1).padStart(2, '0')}
+                          </span>
+                          <span>
+                            <strong>{exercise.name ?? 'Exercício'}</strong>
+                            <small>{plannedExerciseLabel(exercise)}</small>
+                          </span>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
                 {runnerSessionId === null ? (
                   sessionOutcome(session) ? (
                     <div className="session-outcome">

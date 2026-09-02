@@ -152,6 +152,7 @@ describe('authenticated account journey', () => {
     });
     render(<App api={api} />);
 
+    fireEvent.click(await screen.findByRole('button', { name: 'Menu' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Conta' }));
     expect(await screen.findByRole('heading', { name: 'Conta' })).toHaveFocus();
     expect(scrollTo).toHaveBeenLastCalledWith({ behavior: 'auto', left: 0, top: 0 });
@@ -262,6 +263,7 @@ describe('authenticated account journey', () => {
     });
     render(<App api={api} />);
 
+    fireEvent.click(await screen.findByRole('button', { name: 'Menu' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Conta' }));
     expect(await screen.findByRole('heading', { name: 'Conta' })).toBeVisible();
     fireEvent.click(await screen.findByRole('button', { name: 'Revogar sessão' }));

@@ -16,6 +16,9 @@ O Torkout é uma PWA local-first para planejar, registrar e acompanhar treino e 
 
 Focado, acolhedor e confiante. A experiência deve parecer uma ferramenta pessoal de treino usada em momentos reais do dia: escura, tátil e energética sem agressividade, com informação direta e uma presença visual memorável.
 
+O verde lima é a assinatura visual fixa do Torkout. Referências externas podem orientar composição,
+hierarquia e interação, mas nunca substituem essa identidade.
+
 ## Anti-references
 
 Não deve parecer um painel SaaS genérico, um prontuário clínico, um aplicativo fitness “gym bro” com neon e excesso de estímulos, nem uma coleção de cartões idênticos. Efeitos luminosos, transparência e métricas não podem competir com leitura, ação ou acessibilidade.

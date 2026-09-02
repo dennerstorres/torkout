@@ -140,7 +140,7 @@
 }
 
 .surface--highlighted {
-  border: 1px solid rgb(239 203 118 / 24%);
+  border: 1px solid rgb(183 223 75 / 24%);
   background: var(--color-surface-highlighted);
 }
 
@@ -221,7 +221,7 @@
   width: 100%;
   max-width: none;
   margin: 0;
-  border: 1px solid rgb(145 214 170 / 24%);
+  border: 1px solid rgb(146 214 170 / 24%);
   border-radius: var(--radius-sm);
   background: var(--color-success-soft);
   color: var(--color-text-muted);
@@ -231,7 +231,7 @@
 
 .safety-note,
 .safety-notice {
-  border: 1px solid rgb(240 183 102 / 30%);
+  border: 1px solid rgb(239 189 104 / 30%);
   border-radius: var(--radius-sm);
   background: var(--color-warning-soft);
   color: #f4d69e;
@@ -290,7 +290,7 @@
   height: 2.5rem;
   place-items: center;
   border-radius: var(--radius-sm);
-  background: rgb(239 203 118 / 10%);
+  background: rgb(183 223 75 / 10%);
   color: var(--color-primary-strong);
 }
 
@@ -573,7 +573,7 @@
   height: 0.45rem;
   border-radius: 50%;
   background: var(--color-warning);
-  box-shadow: 0 0 0 2px rgb(23 16 4 / 28%);
+  box-shadow: 0 0 0 2px rgb(16 22 0 / 18%);
 }
 
 .pwa-update {

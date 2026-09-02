@@ -1,7 +1,7 @@
 # Sistema de design do Torkout
 
 **Status:** contrato visual obrigatório
-**Versão:** 1.2 — Fase 34, direção visual preto e dourado
+**Versão:** 1.3 — Fase 34, layout de referência com identidade verde
 **Fonte executável:** `apps/web/src/styles/tokens.css` e arquivos importados por `apps/web/src/styles.css`
 
 Este documento define como o Torkout deve parecer e se comportar. Toda alteração de interface deve
@@ -12,8 +12,8 @@ alinhar ambos e validar o laboratório `/design-system`.
 
 1. **Clareza antes de decoração.** A ação principal e o estado atual aparecem antes de métricas,
    explicações e ações secundárias.
-2. **Focado, tátil e pessoal.** O produto usa preto profundo, superfícies quentes quase pretas e um
-   único acento dourado. Não usa gradiente azul/roxo, neon fitness, sombras pretas genéricas nem
+2. **Focado, tátil e pessoal.** O produto usa a base escura verde-neutra e o acento lima originais.
+   Não usa gradiente azul/roxo, neon fitness, sombras pretas genéricas nem
    cartões para todo bloco de conteúdo.
 3. **Mobile first, desktop composto.** A ordem semântica é definida para 320 px; telas maiores
    reorganizam a mesma informação sem deixar cartões órfãos ou criar grandes vazios.
@@ -25,10 +25,10 @@ alinhar ambos e validar o laboratório `/design-system`.
 6. **Acessibilidade é estrutural.** Teclado, leitor de tela, zoom de 200%, contraste forçado e redução
    de movimento pertencem ao componente, não a uma etapa posterior.
 
-Cena de uso: uma pessoa consulta o celular entre séries, sob luz variável de academia ou em casa,
-e precisa distinguir a próxima ação em poucos segundos. A estratégia de cor é restrita: preto e
-superfícies quentes ocupam a maior parte da interface; dourado fica abaixo de 10% e sinaliza ação,
-seleção, foco ou o resumo principal do dia.
+Cena de uso: uma pessoa consulta a PWA instalada em um iPhone 14 Pro Max entre séries, sob luz
+variável de academia ou em casa, e precisa distinguir a próxima ação em poucos segundos. A
+estratégia de cor é restrita: superfícies verde-neutras escuras ocupam a maior parte da interface; o
+lima original fica abaixo de 10% e sinaliza ação, seleção, foco ou o resumo principal do dia.
 
 ## 2. Tokens obrigatórios
 
@@ -39,22 +39,22 @@ uma justificativa óptica documentada no CSS.
 
 | Token                         |                    Valor | Uso                             |
 | ----------------------------- | -----------------------: | ------------------------------- |
-| `--color-canvas`              |                `#050505` | fundo principal                 |
-| `--color-canvas-soft`         |                `#0a0908` | navegação e áreas rebaixadas    |
-| `--color-surface`             |                `#100e0c` | cartões e controles             |
-| `--color-surface-raised`      |                `#17130f` | botões, modal e métricas        |
-| `--color-surface-highlighted` |                `#211b14` | hover, seleção e destaque       |
-| `--color-border`              | `rgb(239 203 118 / 16%)` | divisores e contornos comuns    |
-| `--color-border-strong`       | `rgb(239 203 118 / 32%)` | controles e limites importantes |
-| `--color-text`                |                `#f7f3ed` | texto principal                 |
-| `--color-text-muted`          |                `#bbb3aa` | texto de apoio                  |
-| `--color-text-subtle`         |                `#978e84` | metadados não essenciais        |
-| `--color-primary`             |                `#efcb76` | única cor de ação e foco        |
-| `--color-primary-strong`      |                `#ffdc8b` | hover e destaque de texto       |
-| `--color-primary-ink`         |                `#171004` | texto sobre o acento            |
-| `--color-danger`              |                `#ff8c83` | erro e ação destrutiva          |
-| `--color-warning`             |                `#f0b766` | alerta e segurança              |
-| `--color-success`             |                `#91d6aa` | sincronização e confirmação     |
+| `--color-canvas`              |                `#0b0f0e` | fundo principal                 |
+| `--color-canvas-soft`         |                `#0f1513` | navegação e áreas rebaixadas    |
+| `--color-surface`             |                `#151b19` | cartões e controles             |
+| `--color-surface-raised`      |                `#1a2320` | botões, modal e métricas        |
+| `--color-surface-highlighted` |                `#202d27` | hover, seleção e destaque       |
+| `--color-border`              | `rgb(202 222 211 / 16%)` | divisores e contornos comuns    |
+| `--color-border-strong`       | `rgb(202 222 211 / 30%)` | controles e limites importantes |
+| `--color-text`                |                `#f2f6f3` | texto principal                 |
+| `--color-text-muted`          |                `#a7b3ad` | texto de apoio                  |
+| `--color-text-subtle`         |                `#7e8d85` | metadados não essenciais        |
+| `--color-primary`             |                `#b7df4b` | única cor de ação e foco        |
+| `--color-primary-strong`      |                `#cef46a` | hover e destaque de texto       |
+| `--color-primary-ink`         |                `#101600` | texto sobre o acento            |
+| `--color-danger`              |                `#ff7b73` | erro e ação destrutiva          |
+| `--color-warning`             |                `#efbd68` | alerta e segurança              |
+| `--color-success`             |                `#92d6aa` | sincronização e confirmação     |
 
 Fundos semânticos usam as variantes `--color-danger-soft`, `--color-warning-soft` e
 `--color-success-soft`. Branco translúcido pode ser usado somente como microtextura de superfície,
@@ -104,7 +104,7 @@ breakpoint justificado pode empilhá-los.
 | `--radius-sm`      |                        11,2 px | controles e itens internos |
 | `--radius-md`      |                        14,4 px | métricas e agrupadores     |
 | `--radius-lg`      |                          16 px | cartões, painéis e modal   |
-| `--shadow-popover` | `0 8px 8px rgb(25 17 5 / 34%)` | somente modal/popover      |
+| `--shadow-popover` | `0 8px 8px rgb(0 20 12 / 34%)` | somente modal/popover      |
 
 Camadas: base `0`, sticky `20`, navegação `30`, popover `40`, dialog `50`. Não criar `z-index`
 arbitrário. A iluminação parte do topo: elevação usa borda clara sutil e sombra para baixo.
@@ -128,7 +128,7 @@ offline.
 
 ### 3.1 Marca e ícones de instalação
 
-- a fonte oficial é `/icons/torkout-source.svg`: T escuro sobre quadrado dourado inclinado;
+- a fonte oficial é `/icons/torkout-source.svg`: T escuro sobre quadrado lima inclinado;
 - login, shell autenticado e favicon usam diretamente essa mesma fonte vetorial;
 - Apple Touch Icon e PNGs PWA de 192/512 px são renderizações da fonte oficial;
 - o ícone maskable mantém o mesmo símbolo, centralizado na área segura sobre `--color-canvas`;
@@ -171,7 +171,7 @@ a coluna final de uma linha.
 - foco: contorno de 3 px em `--color-primary`, offset de 3 px;
 - no máximo uma ação primária por grupo de decisão.
 - ações terciárias dentro de modais mantêm alvo mínimo de 44 px e padding de 8 × 12 px; o texto
-  fica alinhado por margem óptica negativa e o hover usa acento a 8%, borda sutil e texto dourado.
+  fica alinhado por margem óptica negativa e o hover usa acento a 8%, borda sutil e texto lima.
 
 ### 5.2 Campos e formulários
 
@@ -195,7 +195,8 @@ a coluna final de uma linha.
 
 ### 5.4 Navegação e cabeçalho
 
-- mobile: cinco destinos fixos no rodapé, com `safe-area` e destino atual explícito;
+- mobile: quatro destinos diretos e um botão Menu no rodapé flutuante, com `safe-area` e destino
+  atual explícito; Menu abre Conta, Fotos, Progressão e sincronização em uma folha sobreposta;
 - desktop: trilho lateral de 232 px; conteúdo ativo recebe fundo e contorno completos, nunca uma
   listra lateral decorativa;
 - cabeçalhos alinham eyebrow, `h1`, apoio e ações; a ação Voltar fica em barra própria quando uma
@@ -217,15 +218,18 @@ a coluna final de uma linha.
 
 ## 6. Contratos por área
 
-- **Hoje:** sessão e ação principal antes das métricas. Hábitos, Dor e Peso formam “Registros
-  complementares”; uma coluna no mobile e três colunas equivalentes no desktop. Em estado vazio,
-  ícone e título ficam na mesma linha.
-- **Planejamento:** tabs antes do conteúdo. Título do catálogo → 16 px → lista → 16 px → formulário.
+- **Hoje:** faixa semanal, resumo da sessão, exercícios planejados e ação principal antes das
+  métricas. Hábitos, Dor e Peso formam “Registros complementares”; uma coluna no mobile e três
+  colunas equivalentes no desktop. Em estado vazio, ícone e título ficam na mesma linha.
+- **Planejamento:** resumo quantitativo e tabs antes do conteúdo. Título do catálogo → 16 px → lista
+  → 16 px → formulário.
 - **Histórico:** calendário e detalhe lado a lado somente quando há largura; detalhe pode ser sticky.
-- **Progresso:** filtros e período antecedem indicadores. Sugestões explicam evidência e decisão;
-  Voltar fica 24 px acima da eyebrow.
-- **Conta:** seções usam divisores, não cartões aninhados. Checkbox de exportação e botões pertencem
-  a um grupo com gap de 16 px. Zona de risco é a última seção.
+- **Progresso:** filtros e período antecedem um instrumento semicircular de aderência, seguido dos
+  indicadores detalhados. Sugestões explicam evidência e decisão; Voltar fica 24 px acima da
+  eyebrow.
+- **Conta:** não usa um cartão externo gigante; cada seção constitui uma superfície independente.
+  Checkbox de exportação e botões pertencem a um grupo com gap de 16 px. Zona de risco é a última
+  seção.
 
 ## 7. Estados, movimento e acessibilidade
 

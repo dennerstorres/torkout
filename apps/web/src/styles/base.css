@@ -17,8 +17,7 @@ body {
   margin: 0;
   overflow-x: clip;
   background:
-    radial-gradient(circle at 18% -8%, rgb(239 203 118 / 7%), transparent 24rem),
-    var(--color-canvas);
+    radial-gradient(circle at 18% -8%, rgb(183 223 75 / 7%), transparent 24rem), var(--color-canvas);
   color: var(--color-text);
 }
 
@@ -116,7 +115,7 @@ textarea {
 input:hover,
 select:hover,
 textarea:hover {
-  border-color: rgb(239 203 118 / 48%);
+  border-color: rgb(202 222 211 / 46%);
 }
 
 textarea {
@@ -149,7 +148,7 @@ button {
 }
 
 button:hover:not(:disabled) {
-  border-color: rgb(239 203 118 / 52%);
+  border-color: rgb(202 222 211 / 50%);
   background: var(--color-surface-highlighted);
 }
 
@@ -177,7 +176,7 @@ button.primary:hover:not(:disabled),
 
 button.danger,
 .button--danger {
-  border-color: rgb(255 140 131 / 42%);
+  border-color: rgb(255 123 115 / 42%);
   background: var(--color-danger-soft);
   color: var(--color-danger);
 }
@@ -203,7 +202,7 @@ fieldset {
   margin: 0;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: rgb(239 203 118 / 2.5%);
+  background: rgb(183 223 75 / 2.5%);
   padding: var(--space-4);
 }
 

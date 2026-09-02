@@ -162,19 +162,62 @@ function VolumeCard({
 
 export function ProgressPanel({ panel }: ProgressPanelProps) {
   const levels = panel.levels;
+  const adherence = Math.min(100, Math.max(0, panel.adherence.general.percentage ?? 0));
   return (
     <div className="progress-panel">
-      <section className="card" aria-label="Indicadores de progressão">
-        <h2>Indicadores de progressão</h2>
+      <section className="progress-overview" aria-label="Resumo visual do progresso">
+        <header className="progress-overview__heading">
+          <div>
+            <p className="eyebrow">Visão geral</p>
+            <h2>Seu progresso</h2>
+          </div>
+          <span>
+            {localDateLabel(panel.range.from)} — {localDateLabel(panel.range.through)}
+          </span>
+        </header>
+        <div className="progress-overview__body">
+          <div
+            aria-label="Aderência geral no período"
+            aria-valuemax={100}
+            aria-valuemin={0}
+            aria-valuenow={adherence}
+            className="progress-dial"
+            role="meter"
+          >
+            <svg aria-hidden="true" viewBox="0 0 200 112">
+              <path
+                className="progress-dial__track"
+                d="M20 100 A80 80 0 0 1 180 100"
+                pathLength="100"
+              />
+              <path
+                className="progress-dial__value"
+                d="M20 100 A80 80 0 0 1 180 100"
+                pathLength="100"
+                style={{ strokeDasharray: `${adherence} 100` }}
+              />
+            </svg>
+            <span className="progress-dial__copy">
+              <strong>{percentage(panel.adherence.general.percentage)}</strong>
+              <small>Aderência geral</small>
+            </span>
+          </div>
+          <div
+            aria-label="Indicadores de progressão"
+            className="progress-overview__metrics"
+            role="region"
+          >
+            <div className="today-summary">
+              <MetricCard label="Treinos concluídos" value={panel.concludedSessions} />
+              <MetricCard label="Sequência atual" value={panel.currentStreak} />
+              <MetricCard label="Melhor sequência" value={panel.longestStreak} />
+              <MetricCard label="Treinos na semana" value={panel.sessionsThisWeek} />
+            </div>
+          </div>
+        </div>
         <p className="field-hint">
           Estes indicadores resumem o que você registrou e não substituem avaliação profissional.
         </p>
-        <div className="today-summary">
-          <MetricCard label="Treinos concluídos" value={panel.concludedSessions} />
-          <MetricCard label="Sequência atual" value={panel.currentStreak} />
-          <MetricCard label="Melhor sequência" value={panel.longestStreak} />
-          <MetricCard label="Treinos na semana" value={panel.sessionsThisWeek} />
-        </div>
       </section>
 
       <section className="card" aria-label="Aderência">

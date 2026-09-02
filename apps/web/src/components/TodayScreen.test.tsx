@@ -96,6 +96,9 @@ describe('Today mobile tracking', () => {
     expect(screen.getByText('Treino de hoje')).toBeVisible();
     expect(await screen.findByRole('heading', { level: 2, name: 'Treino A' })).toBeVisible();
     expect(await screen.findByText('1 exercício · 1 série')).toBeVisible();
+    const exercisePreview = await screen.findByRole('list', { name: 'Exercícios de Treino A' });
+    expect(exercisePreview).toHaveTextContent('Flexão');
+    expect(exercisePreview).toHaveTextContent('1 série · meta 12 repetições');
     database.close();
   });
 

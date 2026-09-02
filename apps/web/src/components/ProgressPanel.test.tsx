@@ -136,6 +136,16 @@ function panel(overrides: Partial<ProgressPanelResponse> = {}): ProgressPanelRes
 }
 
 describe('progression panel', () => {
+  it('opens with a visual instrument for general adherence', () => {
+    render(<ProgressPanel panel={panel()} />);
+    const overview = screen.getByRole('region', { name: 'Resumo visual do progresso' });
+    const meter = within(overview).getByRole('meter', { name: 'Aderência geral no período' });
+    expect(meter).toHaveAttribute('aria-valuenow', '80');
+    expect(overview).toHaveTextContent('80%');
+    expect(overview).toHaveTextContent('Treinos concluídos4');
+    expect(overview).toHaveTextContent('Sequência atual2');
+  });
+
   it('shows the consistency indicators', () => {
     render(<ProgressPanel panel={panel()} />);
     const indicators = screen.getByRole('region', { name: /indicadores de progressão/i });

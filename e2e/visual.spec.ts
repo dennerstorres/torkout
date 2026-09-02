@@ -63,6 +63,13 @@ async function mockToday(page: Page): Promise<void> {
   );
 }
 
+async function navigateTo(page: Page, destination: string): Promise<void> {
+  if (destination === 'Conta') {
+    await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  }
+  await page.getByRole('button', { name: destination, exact: true }).click();
+}
+
 function progressPayload(from: string, through: string) {
   return {
     consistency: {
@@ -188,7 +195,7 @@ test('phase 15 preserves internal field and heading rhythm across authenticated 
   }
 
   for (const destination of ['Histórico', 'Progresso', 'Conta']) {
-    await page.getByRole('button', { name: destination, exact: true }).click();
+    await navigateTo(page, destination);
     await expect(page.getByRole('heading', { name: destination, exact: true })).toBeVisible();
     expect(await internalRhythmViolations(page)).toEqual([]);
   }
@@ -258,13 +265,13 @@ for (const viewport of [
     await mockToday(page);
     await page.goto('/');
     for (const destination of ['Hoje', 'Planejamento', 'Histórico', 'Progresso', 'Conta']) {
-      await page.getByRole('button', { name: destination, exact: true }).click();
+      await navigateTo(page, destination);
       const heading = page.getByRole('heading', { name: destination, exact: true });
       await expect(heading).toBeVisible();
-      await expect(page.getByRole('button', { name: destination, exact: true })).toHaveAttribute(
-        'aria-current',
-        'page',
-      );
+      const activeDestination = destination === 'Conta' ? 'Menu' : destination;
+      await expect(
+        page.getByRole('button', { name: activeDestination, exact: true }),
+      ).toHaveAttribute('aria-current', 'page');
       const width = await page.evaluate(() => {
         const outlet = document.querySelector('.page-outlet')?.getBoundingClientRect();
         const main = document.querySelector('.page-outlet > main')?.getBoundingClientRect();
@@ -423,7 +430,7 @@ test('phase 21 keeps focusing a field from zooming the page on iOS', async ({ pa
   expect(await controlsBelowIosZoomThreshold(page)).toEqual([]);
 
   for (const destination of ['Planejamento', 'Histórico', 'Progresso', 'Conta']) {
-    await page.getByRole('button', { name: destination, exact: true }).click();
+    await navigateTo(page, destination);
     await expect(page.getByRole('heading', { name: destination, exact: true })).toBeVisible();
     expect(await controlsBelowIosZoomThreshold(page)).toEqual([]);
   }
@@ -719,4 +726,35 @@ test('phase 25 keeps the progress panel readable instead of colliding labels and
     ['83%', '100%'],
     ['67%', '100%'],
   ]);
+});
+
+test('phase 34 fits the installed experience on an iPhone 14 Pro Max', async ({ page }) => {
+  await page.setViewportSize({ height: 932, width: 430 });
+  await mockToday(page);
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Hoje', exact: true })).toBeVisible();
+
+  const geometry = await page.evaluate(() => {
+    const navigation = document.querySelector('.primary-navigation')?.getBoundingClientRect();
+    const hero = document
+      .querySelector('.sessions-section--summary > .section-heading')
+      ?.getBoundingClientRect();
+    return {
+      heroBottom: hero?.bottom ?? 0,
+      heroTop: hero?.top ?? 0,
+      navigationBottom: navigation?.bottom ?? 0,
+      navigationLeft: navigation?.left ?? 0,
+      navigationRight: navigation?.right ?? 0,
+      navigationTop: navigation?.top ?? 0,
+      viewport: document.querySelector('meta[name="viewport"]')?.getAttribute('content') ?? '',
+    };
+  });
+
+  expect(geometry.viewport).toContain('viewport-fit=cover');
+  expect(geometry.navigationLeft).toBeGreaterThanOrEqual(12);
+  expect(geometry.navigationRight).toBeLessThanOrEqual(418);
+  expect(geometry.navigationBottom).toBeLessThanOrEqual(932);
+  expect(geometry.heroTop).toBeGreaterThan(0);
+  expect(geometry.heroBottom).toBeLessThan(geometry.navigationTop);
+  await expect(page.getByRole('button', { name: 'Menu' })).toBeVisible();
 });

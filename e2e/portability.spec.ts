@@ -50,6 +50,7 @@ test('exports portable data and erases the account plus its local replica on mob
   });
 
   await page.goto('/');
+  await page.getByRole('button', { name: 'Menu' }).click();
   await page.getByRole('button', { name: 'Conta' }).click();
   await expect(page.getByRole('heading', { name: 'Conta' })).toBeVisible();
   await expect(page.getByText(/7 diárias, 5 semanais e 12 mensais/i)).toBeVisible();
